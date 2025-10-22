@@ -1,0 +1,267 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Hồ sơ cá nhân</h2>
+
+<div class="profile-grid">
+  <section class="profile-card profile-summary">
+    <div class="profile-identity">
+      <div class="avatar-ring">
+        <img class="avatar-preview" src="{{ url_for('static', filename=current_user.avatar_path) }}" alt="Ảnh đại diện"
+             onerror="this.onerror=null;this.src='{{ url_for('static', filename='img/ttcn.png') }}';">
+      </div>
+      <div class="avatar-meta">
+        <form method="post" enctype="multipart/form-data" class="avatar-form">
+          <input type="hidden" name="form_name" value="change_avatar">
+          <label for="avatar" class="upload-label">Chọn ảnh mới</label>
+          <input type="file" name="avatar" id="avatar" accept="image/png,image/jpeg,image/gif">
+          <p class="avatar-hint">Hỗ trợ PNG, JPG hoặc GIF. Dung lượng tối đa 2MB.</p>
+          <button class="primary" type="submit">Cập nhật ảnh</button>
+        </form>
+      </div>
+    </div>
+
+    <div class="profile-info">
+      <header class="card-heading">
+        <span class="card-subtitle">Tài khoản</span>
+        <h3>Thông tin chi tiết</h3>
+      </header>
+      <dl class="profile-info-list">
+        <div class="profile-info-item">
+          <dt>Tên đăng nhập</dt>
+          <dd>{{ current_user.ten_dang_nhap }}</dd>
+        </div>
+        <div class="profile-info-item">
+          <dt>Họ và tên</dt>
+          <dd>{{ current_user.ten }}</dd>
+        </div>
+        <div class="profile-info-item">
+          <dt>Vai trò</dt>
+          <dd>
+            <span class="role-pill role-{{ current_user.loai }}">{{ 'Quản trị viên' if current_user.loai == 'admin' else 'Nhân viên' }}</span>
+          </dd>
+        </div>
+        <div class="profile-info-item">
+          <dt>Ngày vào làm</dt>
+          <dd>{{ current_user.ngay_vao_lam.strftime('%d/%m/%Y') if current_user.ngay_vao_lam else 'N/A' }}</dd>
+        </div>
+      </dl>
+    </div>
+  </section>
+
+  <section class="profile-card password-card">
+    <header class="card-heading">
+      <span class="card-subtitle">Bảo mật</span>
+      <h3>Đổi mật khẩu</h3>
+      <p class="card-description">Tạo mật khẩu mạnh với tối thiểu 8 ký tự, chứa cả chữ và số để tăng mức độ bảo vệ tài khoản.</p>
+    </header>
+    <form method="post" class="password-form">
+      <input type="hidden" name="form_name" value="change_password">
+
+      <label for="mat_khau_cu">Mật khẩu hiện tại</label>
+      <input type="password" name="mat_khau_cu" id="mat_khau_cu" autocomplete="current-password" required>
+
+      <label for="mat_khau_moi">Mật khẩu mới</label>
+      <input type="password" name="mat_khau_moi" id="mat_khau_moi" autocomplete="new-password" minlength="8" required>
+
+      <label for="xac_nhan_mk">Xác nhận mật khẩu mới</label>
+      <input type="password" name="xac_nhan_mk" id="xac_nhan_mk" autocomplete="new-password" minlength="8" required>
+
+      <div class="form-actions">
+        <button class="primary" type="submit">Lưu thay đổi</button>
+      </div>
+    </form>
+  </section>
+</div>
+
+<style>
+.profile-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 24px;
+  align-items: stretch;
+}
+.profile-card {
+  background: linear-gradient(165deg, rgba(255,255,255,0.94) 0%, rgba(244,250,247,0.9) 100%);
+  border-radius: 18px;
+  padding: 28px;
+  box-shadow: 0 18px 35px rgba(20, 73, 56, 0.08);
+  border: 1px solid rgba(47, 125, 90, 0.12);
+}
+.profile-summary {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+.profile-identity {
+  width: 260px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.avatar-ring {
+  width: 190px;
+  height: 190px;
+  border-radius: 50%;
+  background: radial-gradient(circle at top, #2f7d5a 0%, #0b3d2a 65%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  box-shadow: 0 16px 30px rgba(18, 64, 46, 0.18);
+}
+.avatar-preview {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+  border: 6px solid rgba(255, 255, 255, 0.65);
+}
+.avatar-form {
+  margin-top: 22px;
+  width: 100%;
+  display: grid;
+  gap: 12px;
+}
+.upload-label {
+  font-weight: 600;
+  color: #1c5b45;
+}
+.avatar-form input[type="file"] {
+  padding: 12px;
+  border: 1px dashed rgba(47, 125, 90, 0.45);
+  border-radius: 12px;
+  background: rgba(238, 246, 241, 0.7);
+  cursor: pointer;
+}
+.avatar-form input[type="file"]:hover {
+  border-color: #2f7d5a;
+}
+.avatar-hint {
+  font-size: 0.85em;
+  color: #6f897a;
+  margin: 0;
+}
+.profile-info {
+  flex: 1;
+}
+.card-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 22px;
+}
+.card-heading h3 {
+  margin: 0;
+  color: #0b3d2a;
+  font-size: 1.4em;
+}
+.card-subtitle {
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: rgba(12, 62, 44, 0.6);
+}
+.profile-info-list {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+.profile-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 24px;
+  padding: 16px 18px;
+  background: rgba(255, 255, 255, 0.88);
+  border-radius: 12px;
+  border: 1px solid rgba(47, 125, 90, 0.08);
+  box-shadow: 0 8px 18px rgba(12, 62, 44, 0.05);
+}
+.profile-info-item dt {
+  font-weight: 600;
+  color: #1c5b45;
+}
+.profile-info-item dd {
+  margin: 0;
+  color: #234c3a;
+  font-weight: 600;
+}
+.role-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-size: 0.9em;
+  background: rgba(47, 125, 90, 0.15);
+  color: #0b3d2a;
+}
+.role-pill::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #2f7d5a;
+}
+.password-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+.password-card .card-heading {
+  margin-bottom: 18px;
+}
+.card-description {
+  margin: 0;
+  font-size: 0.92em;
+  color: #5f7c6d;
+}
+.password-form {
+  display: grid;
+  gap: 14px;
+}
+.password-form label {
+  font-weight: 600;
+  color: #1c5b45;
+}
+.password-form input[type="password"] {
+  border-radius: 10px;
+  border: 1px solid rgba(47, 125, 90, 0.25);
+  padding: 12px;
+  background: rgba(255,255,255,0.92);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.password-form input[type="password"]:focus {
+  border-color: #2f7d5a;
+  box-shadow: 0 0 0 4px rgba(47, 125, 90, 0.2);
+  outline: none;
+}
+.form-actions {
+  margin-top: 10px;
+  display: flex;
+  justify-content: flex-end;
+}
+@media (max-width: 1100px) {
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+  .profile-summary {
+    flex-direction: column;
+    align-items: center;
+  }
+  .profile-identity {
+    width: 100%;
+  }
+  .profile-info-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .form-actions {
+    justify-content: center;
+  }
+}
+</style>
+{% endblock %}

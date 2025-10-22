@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="vi">
+{% extends "base.html" %}
+{% block content %}
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thanh toán chưa hoàn tất</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .pending-payments {
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .pending-payments h1 {
+            color: #2f7d5a;
+            margin-bottom: 20px;
+        }
+        .session-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .session-table th, .session-table td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: left;
+        }
+        .session-table th {
+            background-color: #f2f2f2;
+            font-weight: bold;
+        }
+        .session-table tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .session-table tr:hover {
+            background-color: #f5f5f5;
+        }
+        .table-container {
+            overflow-x: auto;
+            margin-top: 20px;
+        }
+        .btn-continue {
+            background-color: #2f7d5a;
+            color: white;
+            padding: 8px 12px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-right: 5px;
+        }
+        .btn-cancel {
+            background-color: #dc2626;
+            color: white;
+            padding: 8px 12px;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .btn-cleanup {
+            background: linear-gradient(135deg, #ff6b35, #f7931e);
+            color: white;
+            padding: 12px 20px;
+            text-decoration: none;
+            border-radius: 8px;
+            border: none;
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-shadow: 0 4px 15px rgba(255, 107, 53, 0.3);
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+        }
+        .btn-cleanup:hover {
+            background: linear-gradient(135deg, #e55a2b, #e8851a);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(255, 107, 53, 0.4);
+            color: white;
+            text-decoration: none;
+        }
+        .btn-cleanup:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(255, 107, 53, 0.3);
+        }
+        .btn-cleanup i {
+            font-size: 20px;
+        }
+
+        /* Combined Settings and Cleanup Row */
+        .settings-cleanup-row {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            align-items: stretch; /* Đảm bảo các panel có chiều cao bằng nhau */
+        }
+
+        /* Settings Panel */
+        .settings-panel {
+            flex: 0 0 44%; /* left smaller */
+            background: linear-gradient(180deg, #ffffff 0%, #f7fbf9 100%);
+            border: 1px solid #e2efe7;
+            border-radius: 10px;
+            padding: 18px 20px;
+            box-shadow: 0 2px 6px rgba(16,24,40,0.03);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 80px;
+        }
+        .settings-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 14px;
+        }
+        .settings-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #155e3b;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .settings-title i {
+            color: #2f7d5a;
+        }
+        .settings-form {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .settings-form label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #495057;
+            white-space: nowrap;
+        }
+        .settings-form input[type="number"] {
+            width: 60px;
+            padding: 6px 8px;
+            border: 1px solid #ced4da;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 14px;
+        }
+        .settings-form .unit {
+            font-size: 14px;
+            color: #6c757d;
+            font-weight: 500;
+        }
+        .settings-form .btn-update {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 13px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        .settings-form .btn-update:hover {
+            background: #218838;
+            color: white;
+        }
+        .timeout-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: #e7f3ff;
+            color: #007bff;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+            border: 1px solid #b3d7ff;
+        }
+        .timeout-indicator i {
+            font-size: 10px;
+        }
+
+        /* Cleanup Panel */
+        .cleanup-panel {
+            flex: 1;
+            background: linear-gradient(90deg, #fff7e6 0%, #fff6e0 100%);
+            border: 1px solid #ffe8b8;
+            border-radius: 10px;
+            padding: 18px 22px;
+            box-shadow: 0 2px 6px rgba(16,24,40,0.03);
+            display: flex;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 80px;
+        }
+        .cleanup-content {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .auto-cleanup-info {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #8a6b00;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        .auto-cleanup-info i {
+            color: #28a745;
+            font-size: 16px;
+        }
+
+        /* Empty state */
+        .no-sessions {
+            text-align: center;
+            margin: 40px 0;
+            padding: 40px 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+        }
+        .no-sessions i {
+            color: #10b981;
+            margin-bottom: 20px;
+        }
+        .no-sessions h2 {
+            color: #0f5132;
+            margin: 0 0 10px 0;
+            font-size: 24px;
+        }
+        .no-sessions p {
+            color: #6c757d;
+            margin: 0;
+            font-size: 16px;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .settings-cleanup-row {
+                flex-direction: column;
+                gap: 15px;
+            }
+            .settings-panel {
+                flex: 1 1 auto;
+            }
+            .cleanup-panel {
+                flex: 1 1 auto;
+                justify-content: center;
+            }
+            .session-table {
+                font-size: 14px;
+            }
+            .session-table th, .session-table td {
+                padding: 8px;
+            }
+            .btn-continue, .btn-cancel {
+                padding: 6px 8px;
+                font-size: 12px;
+            }
+        }
+        @media (max-width: 480px) {
+            .pending-payments {
+                padding: 10px;
+            }
+            .session-table {
+                font-size: 12px;
+            }
+            .session-table th, .session-table td {
+                padding: 6px;
+            }
+            .settings-form {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
+            .settings-form label {
+                white-space: normal;
+            }
+        }
+
+        .countdown {
+            color: red !important;
+            font-weight: bold !important;
+            background-color: rgba(255, 0, 0, 0.1) !important;
+            padding: 2px 4px !important;
+            border-radius: 4px !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="pending-payments">
+            <h1><i class="fas fa-clock"></i> Thanh toán chưa hoàn tất</h1>
+
+            <!-- Combined Settings and Cleanup Row -->
+            <div class="settings-cleanup-row">
+                <!-- Settings Panel -->
+                <div class="settings-panel">
+                    <div class="settings-header">
+                        <h3 class="settings-title">
+                            <i class="fas fa-cog"></i>
+                            Cấu hình timeout
+                        </h3>
+                        <div class="timeout-indicator">
+                            <i class="fas fa-clock"></i>
+                            <span>{{ timeout_minutes }} phút</span>
+                        </div>
+                    </div>
+                    {% if current_user.loai == 'admin' %}
+                    <form method="POST" action="{{ url_for('cap_nhat_timeout_thanh_toan') }}" class="settings-form">
+                        <label for="timeout_minutes">Hủy tự động sau:</label>
+                        <input type="number" id="timeout_minutes" name="timeout_minutes" min="1" max="60"
+                               value="{{ timeout_minutes }}" required>
+                        <span class="unit">phút</span>
+                        <button type="submit" class="btn-update">
+                            Lưu
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+
+                <!-- Cleanup Panel -->
+                <div class="cleanup-panel">
+                    <div class="cleanup-content">
+                        <a href="{{ url_for('test_timeout_cleanup') }}" class="btn-cleanup"
+                           onclick="return confirm('Dọn dẹp tất cả giao dịch đã hết thời gian?')"
+                           title="Dọn dẹp các booking và payment session timeout">
+                            <i class="fas fa-broom"></i>
+                            <span>Dọn dẹp</span>
+                        </a>
+                        <div class="auto-cleanup-info">
+                            <i class="fas fa-robot"></i>
+                            <span>Tự động mỗi phút</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <p>Danh sách các đặt phòng và phiên thanh toán QR đang chờ khách hàng hoàn tất. Bạn có thể tiếp tục thanh toán hoặc hủy.</p>
+            
+            {% if sessions %}
+            <div class="table-container">
+            <table class="session-table">
+                <thead>
+                    <tr>
+                        <th>Loại</th>
+                        <th>Khách hàng</th>
+                        <th>Phòng</th>
+                        <th>Số tiền</th>
+                        <th>Thời gian</th>
+                        <th>Thời gian còn lại</th>
+                        <th>Hành động</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for session in sessions %}
+                    <tr>
+                        <td>
+                            {% if session.type == 'booking' %}
+                                <i class="fas fa-calendar-check"></i> Đặt phòng
+                            {% elif session.kind == 'deposit' %}
+                                <i class="fas fa-coins"></i> Tiền cọc (QR)
+                            {% elif session.kind == 'service' %}
+                                <i class="fas fa-concierge-bell"></i> Dịch vụ (QR)
+                            {% elif session.kind == 'room' %}
+                                <i class="fas fa-door-open"></i> Trả phòng (QR)
+                            {% else %}
+                                {{ session.kind }}
+                            {% endif %}
+                        </td>
+                        <td>{{ session.khach_hang or 'N/A' }}</td>
+                        <td>{{ session.phong or 'N/A' }}</td>
+                        <td>{{ session.so_tien | vnd }}</td>
+                        <td>
+                            {% if session.type == 'booking' %}
+                                {{ session.ngay_nhan.strftime('%d/%m/%Y %H:%M') }} - {{ session.ngay_tra.strftime('%d/%m/%Y %H:%M') }}
+                            {% else %}
+                                {{ session.created_at.strftime('%d/%m/%Y %H:%M') }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if session.type == 'booking' %}
+                                <span class="countdown" id="countdown-booking-{{ session.id }}">
+                                    {{ session.remaining_seconds // 60 }}:{{ '%02d' % (session.remaining_seconds % 60) }}
+                                </span>
+                            {% else %}
+                                <span class="countdown" id="countdown-{{ session.token }}">
+                                    {{ session.remaining_seconds // 60 }}:{{ '%02d' % (session.remaining_seconds % 60) }}
+                                </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if session.type == 'booking' %}
+                                <a href="{{ url_for('thanh_toan_coc', dat_id=session.id) }}" class="btn-continue">
+                                    <i class="fas fa-credit-card"></i> Thanh toán
+                                </a>
+                                <a href="{{ url_for('huy_dat_phong', dat_id=session.id) }}" class="btn-cancel" onclick="return confirm('Bạn có chắc muốn hủy đặt phòng này?')">
+                                    <i class="fas fa-times"></i> Hủy
+                                </a>
+                            {% else %}
+                                <a href="{{ url_for('show_qr_' + session.kind, token=session.token) }}" class="btn-continue" target="_blank">
+                                    <i class="fas fa-qrcode"></i> Tiếp tục QR
+                                </a>
+                                <a href="{{ url_for('huy_thanh_toan', token=session.token) }}" class="btn-cancel" onclick="return confirm('Bạn có chắc muốn hủy phiên thanh toán này?')">
+                                    <i class="fas fa-times"></i> Hủy
+                                </a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            </div>
+            {% else %}
+            <div class="no-sessions">
+                <i class="fas fa-check-circle fa-3x"></i>
+                <h2>Không có thanh toán nào đang chờ</h2>
+                <p>Tất cả các phiên thanh toán đều đã hoàn tất hoặc đã hết hạn.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        // Session data for countdown
+        const sessionData = {};
+        const bookingData = {};
+        {% for session in sessions %}
+        {% if session.type == 'booking' %}
+        bookingData['{{ session.id }}'] = {{ session.remaining_seconds }};
+        {% else %}
+        sessionData['{{ session.token }}'] = {{ session.remaining_seconds }};
+        {% endif %}
+        {% endfor %}
+
+        // Update countdowns
+        function updateCountdowns() {
+            // Update payment sessions
+            document.querySelectorAll('[id^="countdown-"]').forEach(function(el) {
+                const id = el.id.replace('countdown-', '');
+                let data, prefix;
+                
+                if (el.id.includes('booking-')) {
+                    data = bookingData;
+                    prefix = 'booking-';
+                } else {
+                    data = sessionData;
+                    prefix = '';
+                }
+                
+                const key = el.id.replace('countdown-' + prefix, '');
+                
+                if (data[key] !== undefined) {
+                    const remaining = data[key] - 1;
+                    if (remaining >= 0) {
+                        data[key] = remaining;
+                        const minutes = Math.floor(remaining / 60);
+                        const seconds = remaining % 60;
+                        el.textContent = minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+                        if (remaining <= 60) {
+                            el.style.color = '#dc2626';
+                        }
+                    } else {
+                        el.textContent = 'Hết hạn';
+                        el.style.color = '#dc2626';
+                    }
+                }
+            });
+        }
+        setInterval(updateCountdowns, 1000);
+    </script>
+</body>
+{% endblock %}

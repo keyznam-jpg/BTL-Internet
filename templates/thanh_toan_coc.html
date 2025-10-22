@@ -1,0 +1,81 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='payments.css') }}">
+
+<div class="payment-shell">
+  <div class="payment-card">
+    <h1>Thanh toán tiền cọc</h1>
+    <p class="muted-text">Đảm bảo tiền cọc được ghi nhận trước khi khách nhận phòng.</p>
+
+    <div class="payment-meta">
+      <div class="meta-item">
+        <span class="meta-label">Khách hàng</span>
+        <span class="meta-value">{{ dp.khachhang.ho_ten }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Số điện thoại</span>
+        <span class="meta-value">{{ dp.khachhang.sdt or '—' }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Phòng</span>
+        <span class="meta-value">{{ dp.phong.ten }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Thời gian nhận</span>
+        <span class="meta-value">{{ dp.ngay_nhan.strftime('%d/%m/%Y %H:%M') }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Thời gian trả</span>
+        <span class="meta-value">{{ dp.ngay_tra.strftime('%d/%m/%Y %H:%M') }}</span>
+      </div>
+    </div>
+
+    <div class="amount-highlight">
+      <div>
+        <small>Số tiền cọc cần thanh toán</small>
+        <strong data-amount="{{ dp.tien_coc | vnd }}">{{ dp.tien_coc | vnd }}</strong>
+      </div>
+      <div class="muted-text">
+        Vui lòng xác nhận chính xác số tiền trước khi thu hoặc gửi QR cho khách hàng.
+      </div>
+    </div>
+
+    <div class="payment-card">
+      <h2>Chọn phương thức thanh toán</h2>
+      <form class="method-buttons" method="POST">
+        <button class="method-button" name="payment_method" value="cash">
+          <i class="fas fa-money-bill-wave"></i>
+          <span>Thanh toán tiền mặt tại quầy</span>
+        </button>
+        <button class="method-button" name="payment_method" value="qr">
+          <i class="fas fa-qrcode"></i>
+          <span>Thanh toán bằng QR VietQR</span>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const amountElement = document.querySelector('.amount-highlight strong[data-amount]');
+    if (amountElement) {
+        const amountText = amountElement.getAttribute('data-amount');
+        const length = amountText.length;
+        let fontSize = 36; // default
+        
+        if (length > 12) {
+            fontSize = 24;
+        } else if (length > 9) {
+            fontSize = 28;
+        } else if (length > 6) {
+            fontSize = 32;
+        }
+        
+        amountElement.style.fontSize = fontSize + 'px';
+    }
+});
+</script>
+
+{% endblock %}

@@ -1,0 +1,413 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='service.css') }}">
+
+<div class="service-payment-management">
+  <div class="service-page-header">
+    <div class="header-content">
+      <h2><i class="fas fa-concierge-bell"></i> Dịch vụ & Thanh toán</h2>
+    </div>
+  </div>
+
+  <!-- CONTENT LAYOUT -->
+  <div class="content-layout">
+    <!-- LEFT: ROOM SELECTION -->
+    <div class="section-panel">
+      <div class="panel-header">
+        <h3 class="panel-title"><i class="fas fa-home"></i> Danh sách Phòng</h3>
+      </div>
+
+      <!-- SEARCH & FILTER -->
+      <div class="room-filter-section">
+        <div class="form-group">
+          <label class="form-label"><i class="fas fa-search"></i> Tìm kiếm phòng</label>
+          <input 
+            type="text" 
+            id="room-search" 
+            class="form-control" 
+            placeholder="Nhập tên phòng (VD: 101, 202...)">
+        </div>
+        <div class="form-group">
+          <label class="form-label"><i class="fas fa-filter"></i> Lọc theo trạng thái</label>
+          <select id="room-status-filter" class="form-select">
+            <option value="all"><i class="fas fa-list"></i> Tất cả phòng</option>
+            <option value="dang_o" selected><i class="fas fa-circle" style="color: #dc3545;"></i> Đang có khách</option>
+            <option value="trong"><i class="fas fa-circle" style="color: #28a745;"></i> Phòng trống</option>
+            <option value="da_dat"><i class="fas fa-circle" style="color: #ffc107;"></i> Đã đặt (chưa nhận)</option>
+          </select>
+        </div>
+      </div>
+
+      {% if chon_dat %}
+      <div class="selected-room-info">
+        <strong><i class="fas fa-check"></i> Đang xử lý:</strong>
+        <div class="room-detail">
+          <i class="fas fa-user"></i> {{ chon_dat.khachhang.ho_ten }}<br>
+          <i class="fas fa-door-open"></i> {{ chon_dat.phong.ten }}
+        </div>
+      </div>
+      {% endif %}
+
+      <div class="rooms-grid">
+        {% for p in phongs %}
+        {% set room_class = 'available' %}
+        {% set room_title = 'Phòng trống' %}
+        {% if p.trang_thai == 'dang_o' %}
+          {% set room_class = 'occupied' %}
+          {% set room_title = 'Phòng đang ở - Click để chọn' %}
+        {% elif p.trang_thai == 'da_dat' %}
+          {% set room_class = 'booked' %}
+          {% set room_title = 'Phòng đã đặt (chưa nhận)' %}
+        {% endif %}
+        <button
+          type="button"
+          class="room-btn {{ room_class }}"
+          data-phong-id="{{ p.id }}"
+          data-trang-thai="{{ p.trang_thai }}"
+          title="{{ room_title }}"
+        >
+          {{ p.ten }}
+        </button>
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- MIDDLE: SERVICE SELECTION -->
+    <div class="section-panel">
+      <div class="panel-header">
+        <h3 class="panel-title"><i class="fas fa-list"></i> Chọn Dịch vụ</h3>
+      </div>
+
+      <form method="post" action="{{ url_for('them_dich_vu') }}" id="form-dv" class="service-form">
+        <input type="hidden" name="dat_id" value="{{ chon_dat.id if chon_dat else '' }}" />
+        <input type="hidden" name="dv_id" id="dv_id">
+
+        <!-- Service Category -->
+        <div class="form-group">
+          <label class="form-label"><i class="fas fa-tag"></i> Loại dịch vụ</label>
+          <select id="loai_id" class="form-select">
+            <option value="" selected disabled>— Chọn loại dịch vụ —</option>
+            <option value="0"><i class="fas fa-box"></i> Tất cả loại dịch vụ</option>
+            {% for l in loais %}
+            <option value="{{ l.id }}">{{ l.ten }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <!-- Service Selection -->
+        <div class="form-group">
+          <label class="form-label"><i class="fas fa-star"></i> Dịch vụ</label>
+          <select id="dv_select" class="form-select" required>
+            <option value="" selected disabled>— Chọn dịch vụ —</option>
+          </select>
+        </div>
+
+        <!-- Filter & Sort Row -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label"><i class="fas fa-search"></i> Tìm kiếm</label>
+            <input id="filter" class="form-input" placeholder="Nhập tên dịch vụ...">
+          </div>
+          <div class="form-group">
+            <label class="form-label">↕️ Sắp xếp</label>
+            <select id="sort" class="form-select">
+              <option value="name">Tên (A–Z)</option>
+              <option value="price-asc">Giá tăng dần</option>
+              <option value="price-desc">Giá giảm dần</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label class="form-label"><i class="fas fa-dollar-sign"></i> Đơn giá</label>
+            <input id="gia_view" class="form-input price-display" readonly placeholder="0 đ">
+          </div>
+        </div>
+
+        <!-- Quantity & Total Row -->
+        <div class="form-row">
+          <div class="form-group">
+            <label class="form-label"><i class="fas fa-hashtag"></i> Số lượng</label>
+            <div class="quantity-control">
+              <button type="button" class="qty-btn" onclick="chgQty(-1)">−</button>
+              <input type="number" min="1" value="1" name="so_luong" id="so_luong" class="form-input qty-input">
+              <button type="button" class="qty-btn" onclick="chgQty(1)">+</button>
+            </div>
+          </div>
+          <div class="form-group" style="grid-column: span 2;">
+            <label class="form-label"><i class="fas fa-calculator"></i> Tạm tính</label>
+            <input id="tam_tinh" class="form-input total-display" readonly value="0 đ">
+          </div>
+        </div>
+
+        <!-- Add Button -->
+        <button id="btn-add" class="btn-add-service" type="submit" {% if not chon_dat %}disabled{% endif %}>
+          <span><i class="fas fa-plus"></i></span> Thêm Dịch vụ
+        </button>
+
+      </form>
+    </div>
+
+    <!-- RIGHT: SERVICE INVOICE -->
+    <div class="section-panel">
+      <div class="panel-header">
+        <h3 class="panel-title">🧾 Hóa đơn Dịch vụ</h3>
+      </div>
+
+      <div class="invoice-table-wrapper">
+        <table class="invoice-table">
+        <thead>
+          <tr>
+            <th style="width: 40px;">STT</th>
+            <th>Tên dịch vụ</th>
+            <th style="width: 120px;">Đơn giá</th>
+            <th style="width: 60px;">SL</th>
+            <th style="width: 120px;">Thành tiền</th>
+            <th style="width: 80px;">Thao tác</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% set ns = namespace(tong=0) %}
+          {% if hoa_don_dv %}
+            {% for r in hoa_don_dv %}
+            {% set thanh = r.dichvu.gia * r.so_luong %}
+            {% set ns.tong = ns.tong + thanh %}
+            <tr>
+              <td style="text-align: center;">{{ loop.index }}</td>
+              <td><strong>{{ r.dichvu.ten }}</strong></td>
+              <td>{{ r.dichvu.gia|vnd }}</td>
+              <td style="text-align: center;">{{ r.so_luong }}</td>
+              <td><strong>{{ thanh|vnd }}</strong></td>
+              <td>
+                <form method="post" action="{{ url_for('xoa_sudung_dichvu', sudungdv_id=r.id) }}" 
+                      onsubmit="return confirm('Bạn có chắc muốn xóa dịch vụ này?');" style="margin: 0;">
+                  <button type="submit" class="btn-delete"><i class="fas fa-trash"></i> Xóa</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" class="empty-state">
+                <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+                <div class="empty-text">Chưa có dịch vụ nào</div>
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+        <tfoot>
+          <tr>
+            <th colspan="4" style="text-align: right; font-size: 16px;">Tổng cộng:</th>
+            <th colspan="2" style="font-size: 18px;">{{ ns.tong|vnd }}</th>
+          </tr>
+        </tfoot>
+        </table>
+      </div>
+
+      {% if chon_dat and hoa_don_dv|length > 0 %}
+      <div class="invoice-footer">
+        <form method="post" action="{{ url_for('thanh_toan_dv', dat_id=chon_dat.id) }}">
+          <button class="btn-payment" type="submit">
+            <span><i class="fas fa-credit-card"></i></span> Thanh toán Dịch vụ
+          </button>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<script>
+// ========== ROOM SELECTION ==========
+async function selectPhongAndRedirect(pid) {
+  try {
+    const res = await fetch('/api/dat-theo-phong/' + pid);
+    if (!res.ok) {
+      alert('Phòng chưa có khách đang thuê.');
+      return;
+    }
+    const d = await res.json();
+    window.location.href = '{{ url_for("dich_vu_thanh_toan") }}?dat_id=' + d.id;
+  } catch (e) {
+    console.error(e);
+    alert('Không thể lấy thông tin đặt phòng.');
+  }
+}
+
+document.querySelectorAll('.room-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const trangThai = btn.dataset.trangThai;
+    if (trangThai === 'dang_o') {
+      selectPhongAndRedirect(btn.dataset.phongId);
+    } else if (trangThai === 'da_dat') {
+      alert('Phòng đã được đặt nhưng chưa nhận. Không thể thêm dịch vụ.');
+    }
+  });
+});
+
+// ========== ROOM SEARCH & FILTER ==========
+const roomSearchInput = document.getElementById('room-search');
+const roomStatusFilter = document.getElementById('room-status-filter');
+const allRoomBtns = document.querySelectorAll('.room-btn');
+
+function filterRooms() {
+  const searchText = roomSearchInput.value.toLowerCase().trim();
+  const statusFilter = roomStatusFilter.value;
+  
+  let visibleCount = 0;
+  
+  allRoomBtns.forEach(btn => {
+    const roomName = btn.textContent.trim().toLowerCase();
+    const roomStatus = btn.dataset.trangThai;
+    
+    // Check search text match
+    const matchesSearch = !searchText || roomName.includes(searchText);
+    
+    // Check status filter
+    let matchesStatus = false;
+    if (statusFilter === 'all') {
+      matchesStatus = true;
+    } else if (statusFilter === 'trong') {
+      matchesStatus = (roomStatus !== 'dang_o' && roomStatus !== 'da_dat');
+    } else {
+      matchesStatus = (roomStatus === statusFilter);
+    }
+    
+    // Show/hide button
+    if (matchesSearch && matchesStatus) {
+      btn.style.display = 'block';
+      visibleCount++;
+    } else {
+      btn.style.display = 'none';
+    }
+  });
+  
+  // Show message if no rooms found
+  const roomsGrid = document.querySelector('.rooms-grid');
+  let noResultMsg = roomsGrid.querySelector('.no-rooms-message');
+  
+  if (visibleCount === 0) {
+    if (!noResultMsg) {
+      noResultMsg = document.createElement('div');
+      noResultMsg.className = 'no-rooms-message';
+      noResultMsg.innerHTML = 'Không tìm thấy phòng phù hợp';
+      roomsGrid.appendChild(noResultMsg);
+    }
+  } else {
+    if (noResultMsg) {
+      noResultMsg.remove();
+    }
+  }
+}
+
+// Event listeners for search and filter
+if (roomSearchInput) {
+  roomSearchInput.addEventListener('input', filterRooms);
+}
+if (roomStatusFilter) {
+  roomStatusFilter.addEventListener('change', filterRooms);
+  // Auto filter on page load to show only occupied rooms
+  filterRooms();
+}
+
+// ========== SERVICE MANAGEMENT ==========
+let SERVICES_CACHE = [], SERVICES_VIEW = [];
+const loaiSel = document.getElementById('loai_id');
+const dvSel = document.getElementById('dv_select');
+const dvIdInp = document.getElementById('dv_id');
+const priceInp = document.getElementById('gia_view');
+const qtyInp = document.getElementById('so_luong');
+const sumInp = document.getElementById('tam_tinh');
+const filterI = document.getElementById('filter');
+const sortSel = document.getElementById('sort');
+const addBtn = document.getElementById('btn-add');
+
+function vnd(n) {
+  return (n || 0).toLocaleString('vi-VN') + ' đ';
+}
+
+function chgQty(delta) {
+  let v = parseInt(qtyInp.value || '1', 10) + delta;
+  if (v < 1) v = 1;
+  qtyInp.value = v;
+  updateSubtotal();
+}
+
+function updateAddEnabled() {
+  const selected = !!dvIdInp.value;
+  const hasBooking = {% if chon_dat %}true{% else %}false{% endif %};
+  if (addBtn) addBtn.disabled = !selected || !hasBooking;
+}
+
+function updateSubtotal() {
+  const op = dvSel.options[dvSel.selectedIndex];
+  const gia = op ? Number(op.dataset.gia || 0) : 0;
+  const sl = Number(qtyInp.value || 1);
+  sumInp.value = vnd(gia * sl);
+}
+
+function fillServicesSelect() {
+  dvSel.innerHTML = '<option value="" disabled selected>— Chọn dịch vụ —</option>';
+  SERVICES_VIEW.forEach(d => {
+    const op = document.createElement('option');
+    op.value = d.id;
+    op.dataset.gia = d.gia;
+    op.textContent = `${d.ten} — ${vnd(d.gia)}`;
+    dvSel.appendChild(op);
+  });
+  dvIdInp.value = '';
+  priceInp.value = '';
+  updateSubtotal();
+  updateAddEnabled();
+}
+
+function applyFilterSort() {
+  const kw = (filterI.value || '').toLowerCase().trim();
+  SERVICES_VIEW = SERVICES_CACHE.filter(d => d.ten.toLowerCase().includes(kw));
+  const s = sortSel.value;
+  if (s === 'name') SERVICES_VIEW.sort((a, b) => a.ten.localeCompare(b.ten, 'vi'));
+  if (s === 'price-asc') SERVICES_VIEW.sort((a, b) => a.gia - b.gia);
+  if (s === 'price-desc') SERVICES_VIEW.sort((a, b) => b.gia - a.gia);
+  fillServicesSelect();
+}
+
+async function loadByLoai() {
+  const loai = loaiSel.value;
+  if (!loai) return;
+  const res = await fetch('/api/dichvu-theo-loai/' + loai);
+  SERVICES_CACHE = await res.json();
+  applyFilterSort();
+}
+
+// Event Listeners
+loaiSel && loaiSel.addEventListener('change', loadByLoai);
+filterI && filterI.addEventListener('input', applyFilterSort);
+sortSel && sortSel.addEventListener('change', applyFilterSort);
+
+dvSel && dvSel.addEventListener('change', () => {
+  const op = dvSel.options[dvSel.selectedIndex];
+  if (!op) return;
+  dvIdInp.value = op.value;
+  priceInp.value = vnd(Number(op.dataset.gia || 0));
+  updateSubtotal();
+  updateAddEnabled();
+});
+
+qtyInp && qtyInp.addEventListener('input', updateSubtotal);
+
+document.getElementById('form-dv').addEventListener('submit', (e) => {
+  if (!dvIdInp.value) {
+    e.preventDefault();
+    alert('Vui lòng chọn dịch vụ trước khi thêm.');
+  }
+});
+
+// Initialize
+window.addEventListener('DOMContentLoaded', () => {
+  if (loaiSel) {
+    loaiSel.value = "0";
+    loadByLoai();
+  }
+  updateAddEnabled();
+});
+</script>
+
+{% endblock %}

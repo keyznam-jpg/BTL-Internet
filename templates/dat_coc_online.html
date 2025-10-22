@@ -1,0 +1,250 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Thanh toán tiền cọc</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f7f9fc;
+      color: #1f2a3c;
+    }
+    .container {
+      max-width: 820px;
+      margin: 40px auto;
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 32px;
+      box-shadow: 0 20px 45px -28px rgba(15, 54, 90, 0.35);
+    }
+    h1 { margin-top: 0; font-size: 28px; color: #1b5e20; }
+    .lead { color: #52606d; margin-bottom: 24px; }
+    .summary, .instructions {
+      background: #f5f8ff;
+      border: 1px solid rgba(82, 96, 109, 0.15);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 24px;
+    }
+    .summary table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 15px;
+    }
+    .summary td { padding: 6px 0; color: #2f3d4a; }
+    .summary td:last-child { text-align: right; font-weight: 600; }
+    .qr-wrapper {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      background: #ffffff;
+      border: 1px dashed rgba(34, 139, 34, 0.4);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 24px;
+    }
+    .qr-wrapper img {
+      max-width: 240px;
+      border-radius: 12px;
+      border: 1px solid #e0e7ef;
+    }
+    .qr-wrapper strong { font-size: 18px; color: #1b5e20; }
+    .actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: flex-end; }
+    button {
+      padding: 12px 22px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    button.primary {
+      background: linear-gradient(135deg, #2e7d32 0%, #43a047 100%);
+      color: #ffffff;
+      box-shadow: 0 12px 18px -12px rgba(46, 125, 50, 0.6);
+    }
+    button.secondary {
+      background: #eef3f8;
+      color: #1f2a3c;
+    }
+    button:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+    button.primary:not(:disabled):hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 24px -14px rgba(46, 125, 50, 0.5);
+    }
+    .message {
+      padding: 14px 16px;
+      border-radius: 10px;
+      margin-bottom: 20px;
+      font-size: 15px;
+      line-height: 1.4;
+    }
+    .message.success { background: #e6ffed; color: #0a4f2b; border: 1px solid #35b36b; }
+    .message.info { background: #eaf4ff; color: #145494; border: 1px solid #82b3e9; }
+    .message.warning { background: #fff7e0; color: #8a5a00; border: 1px solid #f6c36d; }
+    a.back-link { display: inline-flex; align-items: center; gap: 6px; margin-bottom: 20px; text-decoration: none; color: #1b5e20; font-weight: 600; }
+    a.back-link:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a class="back-link" href="{{ url_for('dat_phong_online') }}">← Quay lại đặt phòng</a>
+    <h1>Thanh toán tiền cọc</h1>
+    {% if dp.trang_thai == 'dat' %}
+    <div class="message success">Đơn đặt phòng đã được xác nhận. Hẹn gặp bạn vào ngày nhận phòng!</div>
+    {% elif dp.trang_thai == 'huy' %}
+    <div class="message danger">Yêu cầu đã bị từ chối. Vui lòng liên hệ lễ tân nếu cần hỗ trợ thêm.</div>
+    {% else %}
+    <div class="message info">Sau khi chuyển khoản, vui lòng gửi yêu cầu để chúng tôi hoàn tất xác nhận.</div>
+    {% endif %}
+
+    <p class="lead">
+      Cảm ơn {{ dp.khachhang.ho_ten }} đã đặt phòng tại khách sạn chúng tôi. Vui lòng chuyển khoản tiền cọc để chúng tôi giữ phòng. Trạng thái đặt phòng hiện tại: <strong>{% if dp.trang_thai == 'cho_xac_nhan' %}Đang chờ nhân viên xác nhận{% elif dp.trang_thai == 'dat' %}Đã xác nhận{% elif dp.trang_thai == 'huy' %}Đã từ chối{% else %}{{ dp.trang_thai }}{% endif %}</strong>.
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for cat, msg in messages %}
+          <div class="message {{ cat }}" style="display:none;" data-category="{{cat}}" data-message="{{msg}}"></div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="summary">
+      <table>
+        <tr><td>Mã đặt phòng</td><td>#{{ dp.id }}</td></tr>
+        <tr><td>Khách hàng</td><td>{{ dp.khachhang.ho_ten }}</td></tr>
+        <tr><td>Phòng</td><td>{{ dp.phong.ten }}{% if dp.phong.loai %} ({{ dp.phong.loai.ten }}){% endif %}</td></tr>
+        <tr><td>Hình thức đặt</td><td>{% if dp.hinh_thuc_thue == 'gio' %}Theo giờ{% else %}Theo ngày{% endif %}</td></tr>
+        <tr><td>Thời gian nhận</td><td>{{ dp.ngay_nhan|fmt_dt }}</td></tr>
+        <tr><td>Thời gian trả</td><td>{{ dp.ngay_tra|fmt_dt }}</td></tr>
+        <tr><td>Tiền cọc cần thanh toán</td><td>{{ vnd(dp.tien_coc or qr_amount) }} ({{ deposit_percent }}%)</td></tr>
+        {% if duration_text %}<tr><td>Thời lượng lưu trú</td><td>{{ duration_text }}</td></tr>{% endif %}
+      </table>
+    </div>
+
+    <div class="qr-wrapper">
+      <strong>Quét mã VietQR để chuyển khoản tiền cọc</strong>
+      <img src="{{ qr_code_url }}" alt="Mã QR thanh toán">
+      <div>Số tiền: <strong>{{ vnd(qr_amount) }}</strong></div>
+      <div>Nội dung chuyển khoản: <code>Coc HD{{ dp.id }} {{ dp.khachhang.ho_ten }}</code></div>
+    </div>
+
+    <div class="instructions">
+      <ul>
+        <li>Sau khi chuyển khoản, hãy nhấn nút <strong>Tôi đã thanh toán cọc</strong> để nhân viên kiểm tra.</li>
+        <li>Nhân viên sẽ xác nhận và gửi email thông báo (nếu bạn đã nhập email).</li>
+        <li>Bạn có thể tải lại trang để cập nhật trạng thái.</li>
+        <li>Nếu cần hỗ trợ, vui lòng liên hệ hotline 028 8888 9999.</li>
+      </ul>
+    </div>
+
+    {% if can_request %}
+    <div id="requestMessage" class="message" style="display:none;"></div>
+    <div class="actions">
+      <button type="button" class="secondary" id="refreshStatusBtn">Tải lại trạng thái</button>
+      <button type="button" class="primary" id="requestConfirmBtn">Tôi đã thanh toán cọc</button>
+    </div>
+    {% else %}
+    <div class="actions">
+      <button type="button" class="secondary" id="refreshStatusBtn">Tải lại trạng thái</button>
+    </div>
+    {% endif %}
+  </div>
+
+  <script>
+    const refreshBtn = document.getElementById('refreshStatusBtn');
+    if (refreshBtn) {
+      refreshBtn.addEventListener('click', () => window.location.reload());
+    }
+    const requestBtn = document.getElementById('requestConfirmBtn');
+    const messageBox = document.getElementById('requestMessage');
+    if (requestBtn) {
+      requestBtn.addEventListener('click', async () => {
+        requestBtn.disabled = true;
+        requestBtn.textContent = 'Đang gửi yêu cầu...';
+        try {
+          const response = await fetch("{{ url_for('dat_phong_online_request_confirmation', token=dp.chat_token) }}", {
+            method: 'POST',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+          });
+          const data = await response.json();
+          messageBox.style.display = 'block';
+          messageBox.className = `message ${data.status || 'info'}`;
+          messageBox.textContent = data.message;
+          if (data.status === 'success') {
+            requestBtn.style.display = 'none';
+          } else {
+            requestBtn.disabled = false;
+            requestBtn.textContent = 'Tôi đã thanh toán cọc';
+          }
+        } catch (error) {
+          messageBox.style.display = 'block';
+          messageBox.className = 'message warning';
+          messageBox.textContent = 'Không thể gửi yêu cầu. Vui lòng thử lại sau ít phút.';
+          requestBtn.disabled = false;
+          requestBtn.textContent = 'Tôi đã thanh toán cọc';
+        }
+      });
+    }
+
+    // Toast for flash messages
+    const toastContainer = document.createElement('div');
+    toastContainer.id = 'toast-container';
+    toastContainer.className = 'toast-notification';
+    toastContainer.innerHTML = `
+      <div class="toast-icon" id="toast-icon"></div>
+      <div class="toast-body">
+        <h4 id="toast-title"></h4>
+        <p id="toast-message"></p>
+      </div>
+    `;
+    document.body.appendChild(toastContainer);
+
+    const toastIcon = document.getElementById('toast-icon');
+    const toastTitle = document.getElementById('toast-title');
+    const toastMessage = document.getElementById('toast-message');
+    let toastTimeout;
+
+    function showToast(icon, title, message) {
+      if (!toastContainer) { return; }
+      toastIcon.innerHTML = icon || '<i class="fas fa-bell"></i>';
+      toastTitle.textContent = title || '';
+      toastMessage.textContent = message || '';
+      toastContainer.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => toastContainer.classList.remove('show'), 5000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const messages = document.querySelectorAll('.message');
+      messages.forEach(function(msg) {
+        const category = msg.classList.contains('success') ? 'success' : 
+                         msg.classList.contains('danger') ? 'danger' : 
+                         msg.classList.contains('warning') ? 'warning' : 'info';
+        const message = msg.getAttribute('data-message');
+        let icon = '<i class="fas fa-bell"></i>';
+        let title = 'Thông báo';
+        if (category === 'success') {
+          icon = '<i class="fas fa-check"></i>';
+          title = 'Thành công';
+        } else if (category === 'danger') {
+          icon = '<i class="fas fa-times"></i>';
+          title = 'Lỗi';
+        } else if (category === 'warning') {
+          icon = '<i class="fas fa-exclamation-triangle"></i>';
+          title = 'Cảnh báo';
+        } else if (category === 'info') {
+          icon = 'ℹ️';
+          title = 'Thông tin';
+        }
+        showToast(icon, title, message);
+      });
+    });
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,797 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="checkin-checkout-page">
+  <!-- Header Section -->
+  <div class="page-title-section">
+    <div class="title-wrapper">
+      <h2 class="page-title">
+        <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+          <polyline points="10 17 15 12 10 7"></polyline>
+          <line x1="15" y1="12" x2="3" y2="12"></line>
+        </svg>
+        Nhận &amp; Trả Phòng
+      </h2>
+    </div>
+    <div class="search-wrapper">
+      <input type="text" id="searchInput" class="search-input" placeholder="Tìm theo tên, CMND, phòng...">
+      <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <circle cx="11" cy="11" r="8"></circle>
+        <path d="m21 21-4.35-4.35"></path>
+      </svg>
+    </div>
+  </div>
+
+  <!-- Voucher Notice Banner -->
+  <div class="notice-banner">
+    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="12" cy="12" r="10"></circle>
+      <path d="M12 16v-4"></path>
+      <path d="M12 8h.01"></path>
+    </svg>
+    <span><strong>Lưu ý:</strong> Khi nhận phòng <strong>Cao cấp</strong> hoặc <strong>Tổng thống</strong>, khách hàng sẽ nhận voucher giảm giá <strong>{{ voucher_discount }}%</strong> cho lần đặt tiếp theo.</span>
+  </div>
+
+  <!-- Tab Navigation -->
+  <div class="tabs-container">
+    <div class="tabs-header">
+      <button class="tab-btn active" data-tab="checkin">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+          <polyline points="10 17 15 12 10 7"></polyline>
+          <line x1="15" y1="12" x2="3" y2="12"></line>
+        </svg>
+        Check-in hôm nay
+        <span class="tab-badge">{{ ds_nhan|length }}</span>
+      </button>
+      <button class="tab-btn" data-tab="checkout">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+          <polyline points="16 17 21 12 16 7"></polyline>
+          <line x1="21" y1="12" x2="9" y2="12"></line>
+        </svg>
+        Khách đang ở
+        <span class="tab-badge checkout-badge">{{ ds_thue|length }}</span>
+      </button>
+    </div>
+
+    <!-- Tab Content: Check-in -->
+    <div class="tab-content active" id="checkin-tab">
+      {% if ds_nhan %}
+      <form method="post">
+        <div class="booking-grid">
+          {% for d in ds_nhan %}
+          <div class="booking-card checkin-card" data-search="{{ d.khachhang.ho_ten|lower }} {{ d.khachhang.cmnd }} {{ d.phong.ten|lower }}">
+            <div class="card-header">
+              <div class="room-badge room-badge-{{ d.phong.loai.id }}">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                </svg>
+                {{ d.phong.ten }}
+              </div>
+              <span class="status-tag pending">Chờ nhận</span>
+            </div>
+            
+            <div class="card-body">
+              <div class="guest-info">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                <div class="guest-details">
+                  <strong>{{ d.khachhang.ho_ten }}</strong>
+                  <small>CMND: {{ d.khachhang.cmnd }}</small>
+                </div>
+              </div>
+
+              <div class="time-info">
+                <div class="time-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                    <polyline points="10 17 15 12 10 7"></polyline>
+                    <line x1="15" y1="12" x2="3" y2="12"></line>
+                  </svg>
+                  <div>
+                    <span class="time-label">Check-in</span>
+                    <span class="time-value">{{ d.ngay_nhan.strftime('%H:%M - %d/%m/%Y') }}</span>
+                  </div>
+                </div>
+                <div class="time-item">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                    <polyline points="16 17 21 12 16 7"></polyline>
+                    <line x1="21" y1="12" x2="9" y2="12"></line>
+                  </svg>
+                  <div>
+                    <span class="time-label">Check-out</span>
+                    <span class="time-value">{{ d.ngay_tra.strftime('%H:%M - %d/%m/%Y') }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="room-type-info">
+                <span>{{ d.phong.loai.ten }}</span>
+                <span class="price">{{ d.phong.loai.gia|vnd }}</span>
+              </div>
+            </div>
+
+            <div class="card-footer">
+              {% if d.trang_thai != 'nhan' %}
+              <button class="btn-checkin" name="dat_id" value="{{ d.id }}" type="submit">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <polyline points="20 6 9 17 4 12"></polyline>
+                </svg>
+                Nhận phòng ngay
+              </button>
+              {% else %}
+              <span class="checked-in"><i class="fas fa-check"></i> Đã nhận phòng</span>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </form>
+      {% else %}
+      <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        <h3>Không có đặt phòng nào cần check-in</h3>
+        <p>Hiện tại không có khách hàng nào cần nhận phòng trong ngày hôm nay.</p>
+      </div>
+      {% endif %}
+    </div>
+
+    <!-- Tab Content: Check-out -->
+    <div class="tab-content" id="checkout-tab">
+      {% if ds_thue %}
+      <div class="booking-grid">
+        {% for d in ds_thue %}
+        <div class="booking-card checkout-card" data-search="{{ d.khachhang.ho_ten|lower }} {{ d.khachhang.cmnd }} {{ d.phong.ten|lower }}">
+          <div class="card-header">
+            <div class="room-badge room-badge-{{ d.phong.loai.id }}">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+              </svg>
+              {{ d.phong.ten }}
+            </div>
+            <span class="status-tag occupied">Đang ở</span>
+          </div>
+          
+          <div class="card-body">
+            <div class="guest-info">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+              <div class="guest-details">
+                <strong>{{ d.khachhang.ho_ten }}</strong>
+                <small>CMND: {{ d.khachhang.cmnd }}</small>
+              </div>
+            </div>
+
+            <div class="time-info">
+              <div class="time-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                  <polyline points="10 17 15 12 10 7"></polyline>
+                  <line x1="15" y1="12" x2="3" y2="12"></line>
+                </svg>
+                <div>
+                  <span class="time-label">Đã nhận lúc</span>
+                  <span class="time-value">{{ (d.thuc_te_nhan or d.ngay_nhan).strftime('%H:%M - %d/%m/%Y') }}</span>
+                </div>
+              </div>
+              <div class="time-item">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                  <polyline points="16 17 21 12 16 7"></polyline>
+                  <line x1="21" y1="12" x2="9" y2="12"></line>
+                </svg>
+                <div>
+                  <span class="time-label">Dự kiến trả</span>
+                  <span class="time-value">{{ d.ngay_tra.strftime('%H:%M - %d/%m/%Y') }}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="room-type-info">
+              <span>{{ d.phong.loai.ten }}</span>
+              <span class="rent-type">{{ 'Thuê theo giờ' if d.hinh_thuc_thue == 'gio' else 'Thuê theo ngày' }}</span>
+            </div>
+          </div>
+
+          <div class="card-footer actions-footer">
+            <a class="btn-checkout-print" href="{{ url_for('thanh_toan', dat_id=d.id) }}" style="flex: 1; display: flex; align-items: center; justify-content: center;">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path>
+                <rect x="6" y="14" width="12" height="8"></rect>
+              </svg>
+                Trả phòng
+            </a>
+            <a href="{{ url_for('qr_chat', dat_id=d.id) }}" target="_blank" class="btn-qr-code">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="7" height="7"></rect>
+                <rect x="14" y="3" width="7" height="7"></rect>
+                <rect x="14" y="14" width="7" height="7"></rect>
+                <rect x="3" y="14" width="7" height="7"></rect>
+              </svg>
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}
+      <div class="empty-state">
+        <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <h3>Không có khách hàng nào đang ở</h3>
+        <p>Tất cả phòng hiện đang trống hoặc chưa có khách check-in.</p>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<style>
+/* ===== PAGE LAYOUT ===== */
+.checkin-checkout-page {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-title-section {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.title-wrapper {
+  flex: 1;
+  min-width: 300px;
+}
+
+.page-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 0 8px 0;
+  font-size: 2em;
+  color: #2f7d5a;
+  font-weight: 700;
+}
+
+.page-title svg {
+  flex-shrink: 0;
+}
+
+.page-subtitle {
+  margin: 0;
+  color: #6b8a7a;
+  font-size: 1.05em;
+}
+
+.search-wrapper {
+  position: relative;
+  flex: 1;
+  max-width: 400px;
+  min-width: 280px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 12px 16px 12px 44px;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  font-size: 15px;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.search-input:focus {
+  border-color: #2f7d5a;
+  outline: none;
+  box-shadow: 0 0 0 4px rgba(47, 125, 90, 0.1);
+}
+
+.search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #999;
+  pointer-events: none;
+}
+
+/* ===== NOTICE BANNER ===== */
+.notice-banner {
+  background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 100%);
+  border-left: 4px solid #4caf50;
+  padding: 16px 20px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.notice-banner svg {
+  color: #2e7d32;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.notice-banner span {
+  color: #1b5e20;
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+/* ===== TABS ===== */
+.tabs-container {
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  overflow: hidden;
+}
+
+.tabs-header {
+  display: flex;
+  background: #f8f9fa;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 18px 24px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 600;
+  color: #6c757d;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  position: relative;
+  border-radius: 0;
+  margin: 0;
+  width: auto;
+}
+
+.tab-btn:hover {
+  background: #e9ecef;
+  color: #495057;
+}
+
+.tab-btn.active {
+  color: #2f7d5a;
+  background: white;
+}
+
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: #2f7d5a;
+}
+
+.tab-badge {
+  background: #2f7d5a;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 28px;
+  text-align: center;
+}
+
+.checkout-badge {
+  background: #ff9800;
+}
+
+.tab-content {
+  display: none;
+  padding: 28px;
+  animation: fadeIn 0.4s ease;
+}
+
+.tab-content.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ===== BOOKING CARDS GRID ===== */
+.booking-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  gap: 24px;
+}
+
+.booking-card {
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 16px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.booking-card:hover {
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+  transform: translateY(-4px);
+  border-color: #2f7d5a;
+}
+
+.booking-card.hidden {
+  display: none;
+}
+
+/* Card Header */
+.card-header {
+  padding: 16px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-bottom: 2px solid #dee2e6;
+}
+
+.room-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 16px;
+  color: #2f7d5a;
+  padding: 8px 14px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+.room-badge-1 { border-left: 4px solid #4CAF50; }
+.room-badge-2 { border-left: 4px solid #2196F3; }
+.room-badge-3 { border-left: 4px solid #FF9800; }
+.room-badge-4 { border-left: 4px solid #9C27B0; }
+
+.status-tag {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-tag.pending {
+  background: #fff3cd;
+  color: #856404;
+  border: 1px solid #ffc107;
+}
+
+.status-tag.occupied {
+  background: #d1ecf1;
+  color: #0c5460;
+  border: 1px solid #17a2b8;
+}
+
+/* Card Body */
+.card-body {
+  padding: 20px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.guest-info {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #e9ecef;
+}
+
+.guest-info svg {
+  color: #2f7d5a;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.guest-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.guest-details strong {
+  font-size: 16px;
+  color: #212529;
+}
+
+.guest-details small {
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.time-info {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.time-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.time-item svg {
+  color: #495057;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.time-item > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.time-label {
+  font-size: 12px;
+  color: #6c757d;
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.time-value {
+  font-size: 14px;
+  color: #212529;
+  font-weight: 500;
+}
+
+.room-type-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 12px;
+  border-top: 1px solid #e9ecef;
+}
+
+.room-type-info span:first-child {
+  color: #495057;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.price {
+  color: #2f7d5a;
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.rent-type {
+  background: #e3f2fd;
+  color: #1976d2;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Card Footer */
+.card-footer {
+  padding: 16px 20px;
+  background: #f8f9fa;
+  border-top: 2px solid #e9ecef;
+}
+
+.btn-checkin {
+  width: 100%;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, #2f7d5a 0%, #1e5a3d 100%);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.btn-checkin:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(47, 125, 90, 0.4);
+  background: linear-gradient(135deg, #256348 0%, #133d2a 100%);
+}
+
+.checked-in {
+  display: block;
+  text-align: center;
+  color: #28a745;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 12px;
+  background: #d4edda;
+  border-radius: 8px;
+}
+
+.actions-footer {
+  display: flex;
+  gap: 10px;
+  padding: 16px;
+}
+
+.btn-checkout-print,
+.btn-qr-code {
+  padding: 12px 18px;
+  border: 2px solid #dee2e6;
+  background: white;
+  color: #495057;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.3s ease;
+  width: 100%;
+  margin: 0;
+  text-decoration: none;
+}
+
+.btn-checkout-print {
+  border-color: #2f7d5a;
+  color: #2f7d5a;
+}
+
+.btn-checkout-print:hover {
+  background: #2f7d5a;
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(47, 125, 90, 0.3);
+}
+
+.btn-qr-code {
+  flex: 0 0 auto;
+  width: auto;
+  border-color: #6c757d;
+  color: #6c757d;
+}
+
+.btn-qr-code:hover {
+  background: #6c757d;
+  color: white;
+  transform: translateY(-2px);
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  text-align: center;
+  padding: 80px 40px;
+  color: #6c757d;
+}
+
+.empty-state svg {
+  color: #dee2e6;
+  margin-bottom: 24px;
+}
+
+.empty-state h3 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  font-size: 1.4em;
+}
+
+.empty-state p {
+  margin: 0;
+  font-size: 15px;
+}
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 768px) {
+  .booking-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .page-title-section {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-wrapper {
+    max-width: 100%;
+  }
+  
+  .tabs-header {
+    flex-direction: column;
+  }
+  
+  .tab-btn {
+    width: 100%;
+  }
+  
+  .actions-footer {
+    flex-wrap: wrap;
+  }
+  
+  
+  .btn-qr-code {
+    flex: 1 1 100%;
+  }
+}
+</style>
+
+<script>
+// Tab switching
+document.querySelectorAll('.tab-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const tabId = btn.dataset.tab;
+    
+    // Remove active from all tabs
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    
+    // Add active to clicked tab
+    btn.classList.add('active');
+    document.getElementById(tabId + '-tab').classList.add('active');
+  });
+});
+
+// Search functionality
+document.getElementById('searchInput').addEventListener('input', function(e) {
+  const searchTerm = e.target.value.toLowerCase();
+  const activeTab = document.querySelector('.tab-content.active');
+  const cards = activeTab.querySelectorAll('.booking-card');
+  
+  cards.forEach(card => {
+    const searchData = card.dataset.search || '';
+    if (searchData.includes(searchTerm)) {
+      card.classList.remove('hidden');
+    } else {
+      card.classList.add('hidden');
+    }
+  });
+});
+
+
+</script>
+
+{% endblock %}

@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Lương & thưởng cá nhân</h2>
+
+<div class="modern-salary-wrapper">
+  <div class="modern-salary-header">
+    <div class="modern-salary-title-section">
+      <span class="modern-salary-title"><i class="fa fa-user-circle"></i> Lương & thưởng cá nhân</span>
+      <a href="{{ url_for('tai_xuong_luong_excel') }}" class="btn-excel-download" title="Tải xuống file Excel lương">
+        <i class="fas fa-file-excel"></i> Tải Excel
+      </a>
+    </div>
+    <span class="modern-salary-desc">Thông tin cập nhật theo kỳ lương hiện tại (<b>{{ start_month.strftime('%m/%Y') }}</b>). Số liệu doanh thu chỉ tính các hóa đơn đã hoàn tất.</span>
+  </div>
+  <div class="modern-salary-main">
+    <div class="modern-salary-card">
+      <div class="modern-salary-section">
+        <span class="modern-section-title"><i class="fa fa-wallet"></i> Thu nhập tạm tính</span>
+        <div class="modern-salary-grid">
+          <div class="modern-salary-box">
+            <span>Lương cơ bản</span>
+            <strong>{{ salary_info.luong_co_ban|vnd }}</strong>
+          </div>
+          <div class="modern-salary-box">
+            <span>Phụ cấp</span>
+            <strong>{{ salary_info.phu_cap|vnd }}</strong>
+          </div>
+          <div class="modern-salary-box">
+            <span>Doanh thu tháng</span>
+            <strong>{{ salary_info.doanh_thu|vnd }}</strong>
+          </div>
+          <div class="modern-salary-box">
+            <span>Thưởng doanh thu</span>
+            <strong>{{ salary_info.thuong_thang|vnd }}{% if salary_info.ty_le %} ({{ salary_info.ty_le|round(2) }}%) {% endif %}</strong>
+          </div>
+        </div>
+        <div class="modern-salary-total">
+          <span>Tổng thu nhập tạm tính</span>
+          <strong>{{ salary_info.tong|vnd }}</strong>
+        </div>
+      </div>
+      <div class="modern-salary-section">
+        <span class="modern-section-title"><i class="fa fa-gift"></i> Thang thưởng</span>
+        <ul class="modern-tier-list">
+          {% for tier in tiers %}
+          <li>
+            <div>
+              <strong>Từ {{ tier.moc_duoi|vnd }}{% if tier.moc_tren %} đến {{ tier.moc_tren|vnd }}{% else %}+{% endif %}</strong>
+              <span class="modern-tier-rate">Tỷ lệ thưởng: {{ tier.ty_le }}%</span>
+            </div>
+            <span class="modern-tier-note">{{ tier.ghi_chu or '' }}</span>
+          </li>
+          {% else %}
+          <li class="modern-tier-empty">Chưa có cấu hình thưởng. Liên hệ quản trị viên để cập nhật.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .modern-salary-wrapper {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 24px 0;
+  }
+  .modern-salary-header {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 18px;
+    align-items: flex-start;
+  }
+  .modern-salary-title-section {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    justify-content: space-between;
+  }
+  .btn-excel-download {
+    background: linear-gradient(135deg, #217346 0%, #0f5132 100%);
+    color: white;
+    padding: 10px 18px;
+    border-radius: 12px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 12px rgba(33, 115, 70, 0.3);
+    transition: all 0.3s ease;
+    border: none;
+    cursor: pointer;
+  }
+  .btn-excel-download:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(33, 115, 70, 0.4);
+    background: linear-gradient(135deg, #0f5132 0%, #217346 100%);
+  }
+  .btn-excel-download i {
+    font-size: 1.1em;
+  }
+  .modern-salary-title {
+    font-size: 2em;
+    font-weight: 700;
+    color: #176d4c;
+    letter-spacing: 0.02em;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .modern-salary-title i { font-size: 1.2em; color: #2f7d5a; }
+  .modern-salary-desc {
+    font-size: 1.08em;
+    color: #3f6d5a;
+    background: #f6fbf8;
+    border-radius: 10px;
+    padding: 8px 18px;
+    box-shadow: 0 2px 8px rgba(47,125,90,0.04);
+  }
+  .modern-salary-main {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 32px;
+  }
+  .modern-salary-card {
+    background: linear-gradient(135deg, #f6fbf8 0%, #eafaf2 100%);
+    border-radius: 24px;
+    box-shadow: 0 8px 32px rgba(47,125,90,0.08);
+    padding: 32px 38px;
+    display: flex;
+    flex-direction: row;
+    gap: 38px;
+    min-width: 700px;
+    max-width: 900px;
+  }
+  .modern-salary-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .modern-section-title {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: #2f7d5a;
+    letter-spacing: 0.04em;
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .modern-section-title i { font-size: 1.1em; color: #176d4c; }
+  .modern-salary-grid {
+    display: grid;
+    gap: 18px;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  }
+  .modern-salary-box {
+    padding: 18px 20px;
+    border-radius: 16px;
+    background: linear-gradient(120deg, #eafaf2 0%, #f6fbf8 100%);
+    border: 1px solid #d2e7dd;
+    color: #176d4c;
+    box-shadow: 0 2px 8px rgba(47,125,90,0.06);
+    font-size: 1.08em;
+    transition: box-shadow .2s, transform .2s;
+  }
+  .modern-salary-box strong {
+    display: block;
+    margin-top: 8px;
+    color: #0b3d2a;
+    font-size: 1.3em;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+  }
+  .modern-salary-box:hover {
+    box-shadow: 0 8px 24px rgba(47,125,90,0.12);
+    transform: translateY(-2px) scale(1.03);
+    background: linear-gradient(120deg, #eafaf2 0%, #d2e7dd 100%);
+  }
+  .modern-salary-total {
+    margin-top: 22px;
+    padding: 18px 22px;
+    border-radius: 18px;
+    background: linear-gradient(120deg, #d2e7dd 0%, #eafaf2 100%);
+    border: 1px solid #b7e2d0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: 700;
+    color: #0b3d2a;
+    font-size: 1.15em;
+    box-shadow: 0 2px 8px rgba(47,125,90,0.08);
+  }
+  .modern-tier-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 14px;
+  }
+  .modern-tier-list li {
+    padding: 16px 18px;
+    border-radius: 14px;
+    border: 1px solid #d2e7dd;
+    background: linear-gradient(120deg, #f6fbf8 0%, #eafaf2 100%);
+    display: flex;
+    justify-content: space-between;
+    gap: 18px;
+    align-items: center;
+    font-size: 1.05em;
+    box-shadow: 0 2px 8px rgba(47,125,90,0.06);
+    transition: box-shadow .2s, transform .2s;
+  }
+  .modern-tier-list li strong { color: #0b3d2a; }
+  .modern-tier-list li .modern-tier-rate { color: #466a59; font-size: 0.98em; }
+  .modern-tier-note { color: #6b8a7a; font-size: 0.95em; }
+  .modern-tier-list li:hover {
+    box-shadow: 0 8px 24px rgba(47,125,90,0.12);
+    transform: translateY(-2px) scale(1.03);
+    background: linear-gradient(120deg, #eafaf2 0%, #d2e7dd 100%);
+  }
+  .modern-tier-empty {
+    justify-content: center;
+    color: #6b8a7a;
+    font-style: italic;
+    font-size: 1.05em;
+    padding: 18px 0;
+  }
+  @media (max-width: 1100px) {
+    .modern-salary-main { flex-direction: column; gap: 24px; }
+    .modern-salary-card { flex-direction: column; min-width: 100%; max-width: 100%; padding: 18px 8px; gap: 18px; }
+  }
+  @media (max-width: 768px) {
+    .modern-salary-title-section {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    .btn-excel-download {
+      align-self: flex-end;
+      padding: 8px 14px;
+      font-size: 0.9em;
+    }
+  }
+</style>
+{% endblock %}

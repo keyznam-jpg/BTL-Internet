@@ -1,0 +1,904 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<!-- Page Header -->
+<div class="page-header-service">
+  <div class="header-content">
+    <div>
+      <h1>
+        <i class="fas fa-concierge-bell"></i>
+        Quản lý Dịch vụ
+      </h1>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Notification -->
+<div id="toast" class="toast">
+  <i class="fas fa-check-circle"></i>
+  <span id="toast-message"></span>
+</div>
+
+{% if current_user.loai == 'admin' %}
+<!-- Voucher Settings Card -->
+<div class="voucher-settings-card">
+  <div class="card-header-custom">
+    <div class="header-left">
+      <i class="fas fa-ticket-alt"></i>
+      <h3>Cài đặt Voucher</h3>
+    </div>
+    <div class="badge-info">
+      <i class="fas fa-info-circle"></i>
+      Áp dụng cho voucher mới
+    </div>
+  </div>
+  <form id="voucherForm" class="voucher-form">
+    <div class="form-row">
+      <div class="form-group">
+        <label>
+          <i class="fas fa-percentage"></i>
+          Mức giảm giá (%)
+        </label>
+        <input type="number" name="discount_percent" min="1" max="100" value="{{ voucher_discount or 10 }}" required>
+      </div>
+      <div class="form-group">
+        <label>
+          <i class="fas fa-calendar-alt"></i>
+          Hạn sử dụng (ngày)
+        </label>
+        <input type="number" name="expires_days" min="1" max="365" value="{{ voucher_expires or 60 }}" required>
+      </div>
+      <div class="form-group">
+        <button class="btn-save" type="submit">
+          <i class="fas fa-save"></i>
+          Cập nhật
+        </button>
+      </div>
+    </div>
+  </form>
+</div>
+{% endif %}
+<!-- Service Management Grid -->
+<div class="service-grid">
+  <!-- Add/Edit Service Card -->
+  <div class="service-form-card">
+    <div class="card-header-custom">
+      <div class="header-left">
+        <i class="fas fa-plus-circle" id="formIcon"></i>
+        <h3 id="formTitle">Thêm dịch vụ mới</h3>
+      </div>
+    </div>
+    <form id="serviceForm" class="service-form">
+      <input type="hidden" id="serviceId" name="dichvu_id" value="{% if dv_edit %}{{ dv_edit.id }}{% endif %}">
+      
+      <div class="form-group">
+        <label>
+          <i class="fas fa-tag"></i>
+          Tên dịch vụ
+        </label>
+        <input type="text" name="ten" id="serviceName" placeholder="Ví dụ: Bữa sáng buffet" value="{% if dv_edit %}{{ dv_edit.ten }}{% endif %}" required>
+      </div>
+
+      <div class="form-group">
+        <label>
+          <i class="fas fa-dollar-sign"></i>
+          Đơn giá (VNĐ)
+        </label>
+        <input type="number" name="gia" id="servicePrice" placeholder="Ví dụ: 80000" value="{% if dv_edit %}{{ dv_edit.gia }}{% endif %}" required min="0">
+      </div>
+
+      <div class="form-group">
+        <label>
+          <i class="fas fa-list-alt"></i>
+          Loại dịch vụ
+        </label>
+        <select name="loai_id" id="serviceType" required>
+          {% for l in ds_loai %}
+            <option value="{{ l.id }}" {% if dv_edit and l.id == dv_edit.loai_id %}selected{% endif %}>{{ l.ten }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn-primary" id="submitBtn">
+          <i class="fas fa-{% if dv_edit %}edit{% else %}plus{% endif %}"></i>
+          <span id="submitText">{% if dv_edit %}Cập nhật{% else %}Thêm mới{% endif %}</span>
+        </button>
+        <button type="button" class="btn-secondary" id="cancelBtn" {% if not dv_edit %}style="display: none;"{% endif %} onclick="resetForm()">
+          <i class="fas fa-times"></i>
+          Hủy
+        </button>
+      </div>
+    </form>
+  </div>
+
+    <!-- Service List Card -->
+  <div class="service-list-card">
+    <div class="card-header-custom">
+      <div class="header-left">
+        <i class="fas fa-list"></i>
+        <h3>Danh sách dịch vụ</h3>
+      </div>
+      <div class="badge-count">
+        <i class="fas fa-database"></i>
+        <span id="serviceCount">{{ ds_dv|length }}</span> dịch vụ
+      </div>
+    </div>
+
+    <!-- Search Bar -->
+    <div class="search-bar">
+      <i class="fas fa-search"></i>
+      <input type="text" id="searchInput" placeholder="Tìm kiếm theo tên hoặc loại...">
+    </div>
+
+    <!-- Service Table -->
+    <div class="table-container">
+      <table class="service-table">
+        <thead>
+          <tr>
+            <th><i class="fas fa-hashtag"></i> STT</th>
+            <th><i class="fas fa-tag"></i> Tên dịch vụ</th>
+            <th><i class="fas fa-list-alt"></i> Loại</th>
+            <th><i class="fas fa-dollar-sign"></i> Đơn giá</th>
+            <th><i class="fas fa-cog"></i> Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="serviceTableBody">
+          {% for dv in ds_dv %}
+          <tr data-id="{{ dv.id }}">
+            <td>{{ loop.index }}</td>
+            <td class="service-name">
+              <div class="service-icon">
+                <i class="fas fa-concierge-bell"></i>
+              </div>
+              <span>{{ dv.ten }}</span>
+            </td>
+            <td>
+              <span class="category-badge">{{ dv.loai.ten }}</span>
+            </td>
+            <td class="price">{{ dv.gia|vnd }}</td>
+            <td class="actions">
+              <button class="btn-edit" onclick="editService({{ dv.id }}, '{{ dv.ten }}', {{ dv.gia }}, {{ dv.loai_id }})" title="Chỉnh sửa">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-delete" onclick="deleteService({{ dv.id }}, '{{ dv.ten }}')" title="Xóa">
+                <i class="fas fa-trash-alt"></i>
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+  * {
+    box-sizing: border-box;
+  }
+
+  /* Page Header */
+  .page-header-service {
+    margin-bottom: 30px;
+  }
+
+  .header-content h1 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .header-content h1 i {
+    color: #2f7d5a;
+    font-size: 2rem;
+  }
+
+  .header-content p {
+    color: #718096;
+    font-size: 0.95rem;
+    margin: 0;
+  }
+
+  /* Toast Notification */
+  .toast {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    padding: 16px 24px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(16, 185, 129, 0.3);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    z-index: 9999;
+    transform: translateX(400px);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    font-weight: 600;
+  }
+
+  .toast.show {
+    transform: translateX(0);
+  }
+
+  .toast i {
+    font-size: 1.3rem;
+  }
+
+  /* Voucher Settings Card */
+  .voucher-settings-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    padding: 25px;
+    margin-bottom: 25px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+  }
+
+  .card-header-custom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+
+  .header-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .header-left i {
+    color: #2f7d5a;
+    font-size: 1.5rem;
+  }
+
+  .header-left h3 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: #2d3748;
+    font-weight: 700;
+  }
+
+  .badge-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    background: #e0f2fe;
+    color: #0c4a6e;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+
+  .badge-count {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: linear-gradient(135deg, #2f7d5a 0%, #1e5a3d 100%);
+    color: white;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(47, 125, 90, 0.3);
+  }
+
+  /* Voucher Form */
+  .voucher-form .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: 20px;
+    align-items: end;
+  }
+
+  /* Service Grid */
+  .service-grid {
+    display: grid;
+    grid-template-columns: 400px 1fr;
+    gap: 25px;
+  }
+
+  .service-form-card,
+  .service-list-card {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    padding: 25px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+  }
+
+  .service-form-card {
+    height: fit-content;
+    position: sticky;
+    top: 20px;
+  }
+
+  /* Form Groups */
+  .form-group {
+    margin-bottom: 20px;
+  }
+
+  .form-group label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+  }
+
+  .form-group label i {
+    color: #2f7d5a;
+    font-size: 1rem;
+  }
+
+  .form-group input,
+  .form-group select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: #f7fafc;
+    font-family: inherit;
+  }
+
+  .form-group input:focus,
+  .form-group select:focus {
+    outline: none;
+    border-color: #2f7d5a;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(47, 125, 90, 0.1);
+  }
+
+  /* Form Actions */
+  .form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 25px;
+  }
+
+  .btn-primary,
+  .btn-save {
+    flex: 1;
+    padding: 13px 20px;
+    background: linear-gradient(135deg, #2f7d5a 0%, #1e5a3d 100%);
+    color: white;
+    border: none;
+    border-radius: 10px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 12px rgba(47, 125, 90, 0.3);
+    font-size: 0.95rem;
+  }
+
+  .btn-primary:hover,
+  .btn-save:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(47, 125, 90, 0.4);
+  }
+
+  .btn-secondary {
+    padding: 13px 20px;
+    background: #f1f5f9;
+    color: #64748b;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s ease;
+    font-size: 0.95rem;
+  }
+
+  .btn-secondary:hover {
+    background: #e2e8f0;
+    border-color: #cbd5e0;
+  }
+
+  /* Search Bar */
+  .search-bar {
+    position: relative;
+    margin-bottom: 20px;
+  }
+
+  .search-bar i {
+    position: absolute;
+    left: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #a0aec0;
+    font-size: 1rem;
+  }
+
+  .search-bar input {
+    width: 100%;
+    padding: 12px 18px 12px 45px;
+    border: 2px solid #e2e8f0;
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: #f7fafc;
+  }
+
+  .search-bar input:focus {
+    outline: none;
+    border-color: #2f7d5a;
+    background: white;
+    box-shadow: 0 0 0 3px rgba(47, 125, 90, 0.1);
+  }
+
+  /* Service Table */
+  .table-container {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+  }
+
+  .service-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .service-table thead {
+    background: linear-gradient(135deg, #f6f8fb 0%, #edf2f7 100%);
+  }
+
+  .service-table thead th {
+    padding: 16px;
+    text-align: left;
+    font-weight: 700;
+    color: #2d3748;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 2px solid #e2e8f0;
+  }
+
+  .service-table thead th i {
+    color: #2f7d5a;
+    margin-right: 6px;
+  }
+
+  .service-table tbody tr {
+    transition: all 0.2s ease;
+    border-bottom: 1px solid #f1f5f9;
+  }
+
+  .service-table tbody tr:hover {
+    background: #f8fafc;
+  }
+
+  .service-table tbody td {
+    padding: 16px;
+    color: #4a5568;
+    font-size: 0.9rem;
+  }
+
+  .service-name {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+    color: #2d3748;
+  }
+
+  .service-icon {
+    width: 38px;
+    height: 38px;
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #2f7d5a;
+    font-size: 1rem;
+  }
+
+  .category-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    background: #e0e7ff;
+    color: #4c51bf;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+  }
+
+  .price {
+    font-weight: 700;
+    color: #2f7d5a;
+    font-size: 1rem;
+  }
+
+  .actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .btn-edit,
+  .btn-delete {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .btn-edit {
+    background: #dbeafe;
+    color: #1e40af;
+  }
+
+  .btn-edit:hover {
+    background: #bfdbfe;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(30, 64, 175, 0.2);
+  }
+
+  .btn-delete {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  .btn-delete:hover {
+    background: #fecaca;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(153, 27, 27, 0.2);
+  }
+
+  /* Loading State */
+  .btn-primary.loading,
+  .btn-save.loading {
+    opacity: 0.7;
+    pointer-events: none;
+  }
+
+  .btn-primary.loading::after,
+  .btn-save.loading::after {
+    content: '';
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    margin-left: 8px;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  /* Responsive */
+  @media (max-width: 1200px) {
+    .service-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .service-form-card {
+      position: relative;
+      top: 0;
+    }
+
+    .voucher-form .form-row {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .table-container {
+      overflow-x: scroll;
+    }
+
+    .service-table {
+      min-width: 600px;
+    }
+  }
+</style>
+<script>
+  // Toast notification
+  function showToast(message, type = 'success') {
+    const toast = document.getElementById('toast');
+    const toastMessage = document.getElementById('toast-message');
+    const icon = toast.querySelector('i');
+    
+    toastMessage.textContent = message;
+    
+    if (type === 'success') {
+      toast.style.background = 'linear-gradient(135deg, #10b981 0%, #059669 100%)';
+      icon.className = 'fas fa-check-circle';
+    } else if (type === 'error') {
+      toast.style.background = 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)';
+      icon.className = 'fas fa-exclamation-circle';
+    }
+    
+    toast.classList.add('show');
+    setTimeout(() => {
+      toast.classList.remove('show');
+    }, 3000);
+  }
+
+  // Voucher Form
+  document.getElementById('voucherForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const btn = this.querySelector('button[type="submit"]');
+    
+    btn.classList.add('loading');
+    
+    try {
+      const response = await fetch('{{ url_for("cai_dat_voucher") }}', {
+        method: 'POST',
+        body: formData
+      });
+      
+      if (response.ok) {
+        showToast('Đã cập nhật cấu hình voucher thành công!', 'success');
+      } else {
+        showToast('Có lỗi xảy ra, vui lòng thử lại!', 'error');
+      }
+    } catch (error) {
+      showToast('Có lỗi xảy ra, vui lòng thử lại!', 'error');
+    } finally {
+      btn.classList.remove('loading');
+    }
+  });
+
+  // Service Form
+  document.getElementById('serviceForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    const serviceId = document.getElementById('serviceId').value;
+    const btn = document.getElementById('submitBtn');
+    
+    btn.classList.add('loading');
+    
+    try {
+      let url = '{{ url_for("quan_li_dich_vu") }}';
+      if (serviceId) {
+        url = `/sua-dich-vu/${serviceId}`;
+      }
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        }
+      });
+
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        data = null;
+      }
+
+      if (response.ok) {
+        const defaultMessage = serviceId ? 'Đã cập nhật dịch vụ thành công!' : 'Đã thêm dịch vụ mới thành công!';
+        const successMessage = data && data.message ? data.message : defaultMessage;
+        showToast(successMessage, 'success');
+
+        if (serviceId) {
+          if (data) {
+            updateServiceRow(data);
+          }
+        } else {
+          if (data) {
+            addServiceRow(data);
+          }
+        }
+
+        resetForm();
+        updateServiceCount();
+      } else {
+        const errorMessage = data && data.message ? data.message : 'Có lỗi xảy ra, vui lòng thử lại!';
+        showToast(errorMessage, 'error');
+      }
+    } catch (error) {
+      showToast('Có lỗi xảy ra, vui lòng thử lại!', 'error');
+    } finally {
+      btn.classList.remove('loading');
+    }
+  });
+
+  // Edit Service
+  function editService(id, ten, gia, loai_id) {
+    document.getElementById('serviceId').value = id;
+    document.getElementById('serviceName').value = ten;
+    document.getElementById('servicePrice').value = gia;
+    document.getElementById('serviceType').value = loai_id;
+    
+    document.getElementById('formTitle').textContent = 'Chỉnh sửa dịch vụ';
+    document.getElementById('formIcon').className = 'fas fa-edit';
+    document.getElementById('submitBtn').querySelector('i').className = 'fas fa-save';
+    document.getElementById('submitText').textContent = 'Cập nhật';
+    document.getElementById('cancelBtn').style.display = 'flex';
+    
+    // Scroll to form
+    document.querySelector('.service-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // Reset Form
+  function resetForm() {
+    document.getElementById('serviceForm').reset();
+    document.getElementById('serviceId').value = '';
+    document.getElementById('formTitle').textContent = 'Thêm dịch vụ mới';
+    document.getElementById('formIcon').className = 'fas fa-plus-circle';
+    document.getElementById('submitBtn').querySelector('i').className = 'fas fa-plus';
+    document.getElementById('submitText').textContent = 'Thêm mới';
+    document.getElementById('cancelBtn').style.display = 'none';
+  }
+
+  // Delete Service
+  async function deleteService(id, ten) {
+    if (!confirm(`Bạn có chắc muốn xóa dịch vụ "${ten}"?`)) {
+      return;
+    }
+    
+    try {
+      const response = await fetch(`/xoa-dich-vu/${id}`, {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        }
+      });
+
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        data = null;
+      }
+
+      if (response.ok) {
+        const successMessage = data && data.message ? data.message : `Đã xóa dịch vụ "${ten}" thành công!`;
+        showToast(successMessage, 'success');
+
+        // Remove row from table
+        const row = document.querySelector(`tr[data-id="${id}"]`);
+        if (row) {
+          row.style.opacity = '0';
+          row.style.transform = 'translateX(-20px)';
+          setTimeout(() => {
+            row.remove();
+            updateServiceCount();
+            reindexTable();
+          }, 300);
+        }
+      } else {
+        const errorMessage = data && data.message ? data.message : 'Có lỗi xảy ra, vui lòng thử lại!';
+        showToast(errorMessage, 'error');
+      }
+    } catch (error) {
+      showToast('Có lỗi xảy ra, vui lòng thử lại!', 'error');
+    }
+  }
+
+  // Update Service Row
+  function updateServiceRow(data) {
+    const row = document.querySelector(`tr[data-id="${data.id}"]`);
+    if (row) {
+      row.querySelector('.service-name span').textContent = data.ten;
+      row.querySelector('.category-badge').textContent = data.loai_ten;
+      row.querySelector('.price').textContent = formatCurrency(data.gia);
+      row.querySelector('.btn-edit').setAttribute('onclick', `editService(${data.id}, '${data.ten}', ${data.gia}, ${data.loai_id})`);
+      row.querySelector('.btn-delete').setAttribute('onclick', `deleteService(${data.id}, '${data.ten}')`);
+      
+      // Highlight updated row
+      row.style.background = '#d1fae5';
+      setTimeout(() => {
+        row.style.background = '';
+      }, 1000);
+    }
+  }
+
+  // Add Service Row
+  function addServiceRow(data) {
+    const tbody = document.getElementById('serviceTableBody');
+    const newRow = document.createElement('tr');
+    newRow.setAttribute('data-id', data.id);
+    newRow.style.opacity = '0';
+    newRow.style.transform = 'translateY(-10px)';
+    
+    const rowCount = tbody.querySelectorAll('tr').length + 1;
+    
+    newRow.innerHTML = `
+      <td>${rowCount}</td>
+      <td class="service-name">
+        <div class="service-icon">
+          <i class="fas fa-concierge-bell"></i>
+        </div>
+        <span>${data.ten}</span>
+      </td>
+      <td>
+        <span class="category-badge">${data.loai_ten}</span>
+      </td>
+      <td class="price">${formatCurrency(data.gia)}</td>
+      <td class="actions">
+        <button class="btn-edit" onclick="editService(${data.id}, '${data.ten}', ${data.gia}, ${data.loai_id})" title="Chỉnh sửa">
+          <i class="fas fa-edit"></i>
+        </button>
+        <button class="btn-delete" onclick="deleteService(${data.id}, '${data.ten}')" title="Xóa">
+          <i class="fas fa-trash-alt"></i>
+        </button>
+      </td>
+    `;
+    
+    tbody.appendChild(newRow);
+    
+    setTimeout(() => {
+      newRow.style.transition = 'all 0.3s ease';
+      newRow.style.opacity = '1';
+      newRow.style.transform = 'translateY(0)';
+    }, 10);
+  }
+
+  // Update Service Count
+  function updateServiceCount() {
+    const count = document.querySelectorAll('#serviceTableBody tr').length;
+    document.getElementById('serviceCount').textContent = count;
+  }
+
+  // Reindex Table
+  function reindexTable() {
+    const rows = document.querySelectorAll('#serviceTableBody tr');
+    rows.forEach((row, index) => {
+      row.querySelector('td:first-child').textContent = index + 1;
+    });
+  }
+
+  // Format Currency
+  function formatCurrency(value) {
+    return new Intl.NumberFormat('vi-VN', {
+      style: 'currency',
+      currency: 'VND'
+    }).format(value);
+  }
+
+  // Search Functionality
+  document.getElementById('searchInput').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('#serviceTableBody tr');
+    
+    rows.forEach(row => {
+      const text = row.textContent.toLowerCase();
+      if (text.includes(searchTerm)) {
+        row.style.display = '';
+      } else {
+        row.style.display = 'none';
+      }
+    });
+  });
+</script>
+{% endblock %}

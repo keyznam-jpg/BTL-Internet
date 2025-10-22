@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='email_settings.css') }}">
+
+<div class="email-settings">
+  <div class="settings-header">
+    <div>
+      <h2><i class="fas fa-envelope"></i> Cấu hình Email</h2>
+      <p>Thiết lập SMTP và biên soạn mẫu thư tự động cho hệ thống khách sạn.</p>
+    </div>
+  </div>
+
+  <div class="settings-grid">
+    <section class="settings-card">
+      <header>
+        <h3>SMTP server</h3>
+        <p>Thông tin máy chủ gửi thư. Hệ thống đã được cấu hình sẵn cho <strong>Office 365</strong> (hotelservice@88c0c7.onmicrosoft.com).</p>
+      </header>
+      <form method="post" class="form-grid">
+        <input type="hidden" name="form_name" value="save_smtp">
+        <div class="form-row">
+          <label>Máy chủ (Host)</label>
+          <input type="text" name="smtp_host" placeholder="smtp.office365.com" value="{{ email_settings.smtp_host }}" required>
+          <small style="color: #666; font-size: 12px;">Mặc định: smtp.office365.com</small>
+        </div>
+        <div class="form-row">
+          <label>Cổng (Port)</label>
+          <input type="text" name="smtp_port" placeholder="587" value="{{ email_settings.smtp_port }}" required>
+          <small style="color: #666; font-size: 12px;">Mặc định: 587 (TLS)</small>
+        </div>
+        <div class="form-row">
+          <label>Tên đăng nhập</label>
+          <input type="text" name="smtp_username" placeholder="hotelservice@88c0c7.onmicrosoft.com" value="{{ email_settings.smtp_username }}">
+          <small style="color: #666; font-size: 12px;">Email đầy đủ</small>
+        </div>
+        <div class="form-row">
+          <label>Mật khẩu / App password</label>
+          <input type="password" name="smtp_password" placeholder="••••••" value="{{ email_settings.smtp_password }}">
+          <small style="color: #666; font-size: 12px;">Nếu bật MFA, dùng App Password</small>
+        </div>
+        <div class="form-row">
+          <label>Email gửi đi</label>
+          <input type="email" name="sender_email" placeholder="hotelservice@88c0c7.onmicrosoft.com" value="{{ email_settings.sender_email }}" required>
+          <small style="color: #666; font-size: 12px;">Địa chỉ người gửi</small>
+        </div>
+        <div class="form-row inline">
+          <label class="checkbox">
+            <input type="checkbox" name="smtp_use_tls" {% if email_settings.smtp_use_tls %}checked{% endif %}>
+            <span>Dùng TLS (Khuyến nghị cho port 587)</span>
+          </label>
+          <label class="checkbox">
+            <input type="checkbox" name="smtp_use_ssl" {% if email_settings.smtp_use_ssl %}checked{% endif %}>
+            <span>Dùng SSL (Chỉ dùng cho port 465)</span>
+          </label>
+        </div>
+        <div class="form-actions">
+          <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Lưu cấu hình</button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="settings-card tips">
+      <header>
+        <h3><i class="fas fa-envelope"></i> Hướng dẫn cấu hình</h3>
+      </header>
+      <div style="background: #e7f3ff; padding: 15px; border-radius: 6px; margin-bottom: 15px;">
+        <h4 style="margin: 0 0 8px 0; color: #0066cc;"><i class="fas fa-building"></i> Office 365 (Đã cấu hình sẵn)</h4>
+        <ul style="margin: 5px 0; padding-left: 20px; font-size: 13px; line-height: 1.6;">
+          <li><strong>Email:</strong> hotelservice@88c0c7.onmicrosoft.com</li>
+          <li><strong>SMTP:</strong> smtp.office365.com:587</li>
+          <li><strong>Mã hóa:</strong> TLS (STARTTLS)</li>
+          <li>Nếu bật MFA: Tạo <strong>App Password</strong></li>
+        </ul>
+      </div>
+      <div class="placeholders">
+        <h4>Biến có thể sử dụng</h4>
+        <p>Dán các biến sau vào nội dung mẫu để được thay thế tự động:</p>
+        <code>{{ '{{ ten_khach_hang }}' }}</code>
+        <code>{{ '{{ ten_khach_san }}' }}</code>
+        <code>{{ '{{ ma_dat_phong }}' }}</code>
+        <code>{{ '{{ ten_phong }}' }}</code>
+        <code>{{ '{{ thoi_gian_nhan }}' }}</code>
+        <code>{{ '{{ thoi_gian_tra }}' }}</code>
+        <code>{{ '{{ thoi_gian_nhan_thuc_te }}' }}</code>
+        <code>{{ '{{ tong_tien }}' }}</code>
+        <code>{{ '{{ chi_tiet_dich_vu }}' }}</code>
+        <code>{{ '{{ so_dien_thoai_khach_san }}' }}</code>
+      </div>
+    </aside>
+  </div>
+
+  <section class="templates-section">
+    <div class="section-header">
+      <h3>Mẫu email</h3>
+      <p>Chỉnh sửa nội dung gửi tự động cho từng giai đoạn của khách hàng.</p>
+    </div>
+
+    <div class="template-grid">
+      {% for tpl in templates %}
+      <form method="post" class="template-card">
+        <input type="hidden" name="template_key" value="{{ tpl.key }}">
+        <header>
+          <h4>{{ tpl.name }}</h4>
+        </header>
+        <div class="form-row">
+          <label>Tiêu đề</label>
+          <input type="text" name="template_subject" value="{{ tpl.subject }}" required>
+        </div>
+        <div class="form-row">
+          <label>Nội dung</label>
+          <textarea name="template_body" rows="10" required>{{ tpl.body }}</textarea>
+        </div>
+        <div class="template-actions">
+          <button type="submit" name="action" value="save_template" class="btn-primary"><i class="fas fa-save"></i> Lưu mẫu</button>
+          <button type="submit" name="action" value="reset_template" class="btn-secondary" onclick="return confirm('Khôi phục mẫu mặc định?');"><i class="fas fa-undo"></i> Mặc định</button>
+        </div>
+      </form>
+      {% endfor %}
+    </div>
+  </section>
+</div>
+{% endblock %}

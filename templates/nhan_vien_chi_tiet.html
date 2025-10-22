@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+{% block content %}
+<a href="{{ url_for('nhan_vien') }}" class="back-link">← Quay lại danh sách nhân viên</a>
+<h2>Hồ sơ nhân viên</h2>
+
+<section class="card staff-detail-header">
+  <div class="detail-avatar">
+    <img src="{{ url_for('static', filename=nv.avatar_path) }}" alt="Ảnh nhân viên"
+         onerror="this.onerror=null;this.src='{{ url_for('static', filename='img/ttcn.png') }}';">
+  </div>
+  <div class="detail-main">
+    <div class="detail-title">
+      <h3>{{ nv.ten }}</h3>{% if salary_info.is_top %}
+      <span class="top-badge">Top doanh thu tháng</span>{% endif %}
+      <span class="role-chip {{ 'chip-admin' if nv.loai == 'admin' else 'chip-staff' }}">{{ 'Quản trị viên' if nv.loai == 'admin' else 'Nhân viên' }}</span>
+    </div>
+    <dl class="detail-meta">
+      <div>
+        <dt>Tên đăng nhập</dt>
+        <dd>{{ nv.ten_dang_nhap }}</dd>
+      </div>
+      <div>
+        <dt>Ngày vào làm</dt>
+        <dd>{{ nv.ngay_vao_lam.strftime('%d/%m/%Y') if nv.ngay_vao_lam else '—' }}</dd>
+      </div>
+      <div>
+        <dt>Khách phục vụ</dt>
+        <dd>{{ overall_stats.khach_phuc_vu }}</dd>
+      </div>
+    </dl>
+    <div class="detail-highlight">
+      <div>
+        <span class="label">Tổng doanh thu đảm nhiệm</span>
+        <strong>{{ overall_stats.tong_doanh_thu|vnd }}</strong>
+      </div>
+      <div>
+        <span class="label">Tổng đơn hoàn tất</span>
+        <strong>{{ overall_stats.tong_hoa_don }}</strong>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="stats-grid">
+  <section class="card stats-card">
+    <header>
+      <span class="stats-subtitle">Tổng kết</span>
+      <h3>Hiệu suất tích luỹ</h3>
+    </header>
+    <div class="stats-list">
+      <div>
+        <span>Tiền phòng</span>
+        <strong>{{ overall_stats.tong_tien_phong|vnd }}</strong>
+      </div>
+      <div>
+        <span>Tiền dịch vụ</span>
+        <strong>{{ overall_stats.tong_tien_dv|vnd }}</strong>
+      </div>
+      <div>
+        <span>Phí phạt</span>
+        <strong>{{ overall_stats.tong_tien_phat|vnd }}</strong>
+      </div>
+      <div>
+        <span>Giá trị trung bình hóa đơn</span>
+        <strong>{{ average_ticket|vnd }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="card stats-card">
+    <header>
+      <span class="stats-subtitle">Tháng {{ start_month.strftime('%m/%Y') }}</span>
+      <h3>Kết quả gần nhất</h3>
+    </header>
+    <div class="stats-list">
+      <div>
+        <span>Đơn hoàn tất</span>
+        <strong>{{ month_stats.tong_hoa_don }}</strong>
+      </div>
+      <div>
+        <span>Doanh thu</span>
+        <strong>{{ month_stats.tong_doanh_thu|vnd }}</strong>
+      </div>
+      <div>
+        <span>Tiền phòng</span>
+        <strong>{{ month_stats.tong_tien_phong|vnd }}</strong>
+      </div>
+      <div>
+        <span>Dịch vụ &amp; phụ phí</span>
+        <strong>{{ month_stats.tong_tien_dv|vnd }} • {{ month_stats.tong_tien_phat|vnd }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="card stats-card salary-card">
+    <header>
+      <span class="stats-subtitle">Lương & thưởng</span>
+      <h3>Kỳ {{ start_month.strftime('%m/%Y') }}</h3>
+    </header>
+    <div class="stats-list salary-list">
+      <div>
+        <span>Lương cơ bản</span>
+        <strong>{{ salary_info.luong_co_ban|vnd }}</strong>
+      </div>
+      <div>
+        <span>Phụ cấp</span>
+  <strong>{{ salary_info.phu_cap|vnd }}</strong>
+  <br>
+  {% if salary_info.phu_cap == 0 and salary_info.work_days < salary_info.min_days %}
+  <small style="color:#d9534f; display:block; margin-top:2px;">Chưa đạt chuyên cần ({{ salary_info.work_days }}/{{ salary_info.min_days }} ngày)</small>
+  {% endif %}
+      </div>
+      <div>
+        <span>Thưởng doanh thu</span>
+        <strong>{{ salary_info.thuong_thang|vnd }}{% if salary_info.ty_le %} ({{ salary_info.ty_le|round(2) }}%) {% endif %}</strong>
+      </div>
+      {% if salary_info.top_bonus %}
+      <div>
+        <span>Thưởng top doanh thu</span>
+        <strong>{{ salary_info.top_bonus|vnd }}</strong>
+      </div>
+      {% endif %}
+      <div class="salary-total-row">
+        <span>Tổng thu nhập tạm tính</span>
+        <strong>{{ salary_info.tong|vnd }}</strong>
+      </div>
+    </div>
+  </section>
+
+  <section class="card stats-card">
+    <header>
+      <span class="stats-subtitle">Cơ cấu doanh thu</span>
+      <h3>Tỷ trọng</h3>
+    </header>
+    <div class="ratio-list">
+      <div class="ratio-item">
+        <div class="ratio-bar">
+          <span style="width: {{ service_ratio }}%"></span>
+        </div>
+        <div class="ratio-label">
+          <strong>{{ service_ratio }}%</strong>
+          <span>Dịch vụ / Tổng doanh thu</span>
+        </div>
+      </div>
+      <div class="ratio-item">
+        <div class="ratio-bar penalty">
+          <span style="width: {{ penalty_ratio }}%"></span>
+        </div>
+        <div class="ratio-label">
+          <strong>{{ penalty_ratio }}%</strong>
+          <span>Phí phạt / Tổng doanh thu</span>
+        </div>
+      </div>
+    </div>
+    <p class="ratio-note">Tỷ lệ dựa trên các giao dịch đã hoàn tất.</p>
+  </section>
+</div>
+
+<div class="card">
+  <header class="section-heading">
+    <h3>Doanh thu 6 tháng gần đây</h3>
+  </header>
+  <div class="trend-grid">
+    {% for item in revenue_trend %}
+      <div class="trend-item">
+        <span class="trend-label">{{ item.label }}</span>
+        <strong class="trend-value">{{ item.value|vnd }}</strong>
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="detail-lists">
+  <section class="card">
+    <header class="section-heading">
+      <h3>Đơn hàng đã xử lý gần đây</h3>
+    </header>
+    <div class="table-scroll">
+      <table class="detail-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Phòng</th>
+            <th>Khách hàng</th>
+            <th>Nhận</th>
+            <th>Trả</th>
+            <th>Tổng thanh toán</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% if recent_bookings %}
+            {% for dp in recent_bookings %}
+              <tr>
+                <td>#{{ dp.id }}</td>
+                <td>{{ dp.phong.ten }}</td>
+                <td>{{ dp.khachhang.ho_ten }}</td>
+                <td>{{ dp.thuc_te_nhan|fmt_dt if dp.thuc_te_nhan else dp.ngay_nhan|fmt_dt }}</td>
+                <td>{{ dp.thuc_te_tra|fmt_dt if dp.thuc_te_tra else '—' }}</td>
+                <td>{{ dp.tong_thanh_toan|vnd }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="6" style="text-align:center; padding: 24px; color:#6b8a7a;">Chưa có giao dịch nào được ghi nhận.</td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <header class="section-heading">
+      <h3>Khách hàng thân thiết</h3>
+    </header>
+    <ul class="customer-list">
+      {% if top_customers %}
+        {% for c in top_customers %}
+          <li>
+            <div>
+              <strong>{{ c.ten }}</strong>
+              <span>{{ c.so_lan }} lượt lưu trú</span>
+            </div>
+            <span class="customer-spend">{{ c.tong_chi|vnd }}</span>
+          </li>
+        {% endfor %}
+      {% else %}
+        <li class="empty">Chưa có dữ liệu khách hàng thân thiết.</li>
+      {% endif %}
+    </ul>
+  </section>
+</div>
+
+<style>
+.back-link { display:inline-block; margin-bottom:16px; color:#2f7d5a; text-decoration:none; font-weight:600; }
+.back-link:hover { text-decoration:underline; }
+.staff-detail-header { display:flex; gap:28px; align-items:center; margin-bottom:24px; }
+.detail-avatar img { width:140px; height:140px; border-radius:50%; object-fit:cover; border:6px solid rgba(47,125,90,0.15); background:#f8fbf9; }
+.detail-main { flex:1; display:flex; flex-direction:column; gap:16px; }
+.detail-title { display:flex; align-items:center; gap:12px; }
+.detail-title h3 { margin:0; font-size:1.75em; color:#0b3d2a; }
+.role-chip { padding:6px 14px; border-radius:999px; font-size:0.85em; font-weight:600; }
+.chip-admin { background:rgba(208,76,58,0.12); color:#c0341e; }
+.chip-staff { background:rgba(47,125,90,0.12); color:#1c5b45; }
+.detail-meta { display:flex; gap:32px; margin:0; }
+.detail-meta div { display:flex; flex-direction:column; gap:2px; }
+.detail-meta dt { font-size:0.8em; text-transform:uppercase; letter-spacing:0.08em; color:#6b8a7a; }
+.detail-meta dd { margin:0; font-weight:600; color:#1c5b45; }
+.detail-highlight { display:flex; gap:32px; }
+.detail-highlight .label { font-size:0.8em; color:#6b8a7a; }
+.detail-highlight strong { font-size:1.4em; color:#0b3d2a; display:block; margin-top:4px; }
+
+.stats-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:24px; margin-bottom:24px; }
+.stats-card header { margin-bottom:18px; }
+.stats-subtitle { font-size:0.8em; text-transform:uppercase; letter-spacing:0.1em; color:rgba(12,62,44,0.6); }
+.stats-list, .ratio-list { display:grid; gap:12px; }
+.salary-list { background: rgba(47,125,90,0.05); padding:12px; border-radius:12px; }
+.salary-total-row { background: rgba(47,125,90,0.12); border-radius:10px; padding:12px; display:flex; justify-content:space-between; align-items:center; }
+
+.stats-list div { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-radius:12px; background:rgba(47,125,90,0.08); border:1px solid rgba(47,125,90,0.12); }
+.stats-list span { color:#3f6c58; }
+.stats-list strong { color:#0b3d2a; }
+.ratio-item { display:flex; align-items:center; gap:14px; }
+.ratio-bar { flex:1; height:10px; background:rgba(47,125,90,0.12); border-radius:999px; position:relative; }
+.ratio-bar span { position:absolute; left:0; top:0; bottom:0; border-radius:999px; background:#2f7d5a; }
+.ratio-bar.penalty { background:rgba(208,76,58,0.12); }
+.ratio-bar.penalty span { background:#d04c3a; }
+.ratio-label { display:flex; flex-direction:column; gap:2px; }
+.ratio-label span { font-size:0.85em; color:#556f62; }
+.ratio-note { margin-top:14px; font-size:0.85em; color:#6b8a7a; }
+
+.trend-grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap:12px; }
+.trend-item { padding:14px; border-radius:12px; border:1px solid rgba(47,125,90,0.12); background:#f6fbf8; text-align:center; }
+.trend-label { font-size:0.85em; color:#3f6c58; }
+.trend-value { display:block; margin-top:6px; font-size:1.1em; color:#0b3d2a; }
+
+.detail-lists { display:grid; grid-template-columns: 1.4fr 0.6fr; gap:24px; margin-top:24px; }
+.section-heading { margin-bottom:16px; }
+.section-heading h3 { margin:0; color:#0b3d2a; }
+.detail-table { width:100%; border-collapse:collapse; }
+.detail-table th, .detail-table td { padding:12px 14px; border-bottom:1px solid #edf2ee; text-align:left; }
+.detail-table th { background:#f4f8f5; color:#2f7d5a; font-weight:600; }
+.customer-list { list-style:none; margin:0; padding:0; display:grid; gap:12px; }
+.customer-list li { display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-radius:12px; background:rgba(47,125,90,0.08); border:1px solid rgba(47,125,90,0.12); }
+.customer-list li div { display:flex; flex-direction:column; gap:4px; }
+.customer-list li span { color:#3f6c58; font-size:0.85em; }
+.customer-spend { font-weight:600; color:#0b3d2a; }
+.customer-list li.empty { justify-content:center; color:#6b8a7a; }
+
+@media (max-width: 1100px) {
+  .staff-detail-header { flex-direction:column; align-items:flex-start; }
+  .detail-highlight { flex-direction:column; }
+  .detail-meta { flex-direction:column; gap:12px; }
+  .detail-lists { grid-template-columns:1fr; }
+}
+</style>
+{% endblock %}

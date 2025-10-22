@@ -1,0 +1,922 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='employee.css') }}">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+.employee-management {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+  min-height: 100vh;
+  padding: 20px;
+}
+
+/* Modern Header */
+.employee-page-header {
+  background: linear-gradient(135deg, #2f7d5a 0%, #16a34a 100%);
+  border-radius: 20px;
+  padding: 20px 25px;
+  margin-bottom: 30px;
+  box-shadow: 0 10px 30px rgba(47, 125, 90, 0.3);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+}
+
+.header-content h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 700;
+  background: linear-gradient(45deg, #ffffff, #e0e7ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.header-subtitle {
+  margin: 5px 0 0 0;
+  opacity: 0.9;
+  font-size: 1.1rem;
+}
+
+.btn-add-employee {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 6px 8px;
+  border-radius: 50px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  min-width: auto;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-add-employee:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(47, 125, 90, 0.4);
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.btn-export-excel {
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 50px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-export-excel:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(47, 125, 90, 0.4);
+}
+
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.stat-card {
+  background: white;
+  border-radius: 16px;
+  padding: 25px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.stat-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, #2f7d5a, #16a34a);
+}
+
+.stat-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.stat-card.primary::before { background: linear-gradient(90deg, #2f7d5a, #16a34a); }
+.stat-card.success::before { background: linear-gradient(90deg, #4ade80, #22c55e); }
+.stat-card.info::before { background: linear-gradient(90deg, #3b82f6, #1d4ed8); }
+.stat-card.warning::before { background: linear-gradient(90deg, #f59e0b, #d97706); }
+
+.stat-icon {
+  font-size: 2.5rem;
+  margin-bottom: 15px;
+  opacity: 0.8;
+}
+
+.stat-content .stat-label {
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-weight: 500;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 5px;
+}
+
+.stat-trend {
+  font-size: 0.8rem;
+  color: #10b981;
+}
+
+.stat-subtext {
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+/* Top Performers */
+.top-performers-section {
+  background: white;
+  border-radius: 16px;
+  padding: 30px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.top-performers-section h2 {
+  margin: 0 0 20px 0;
+  color: #1f2937;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.top-performers-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.top-performer-card {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+  border-radius: 12px;
+  padding: 20px;
+  text-align: center;
+  position: relative;
+  border: 2px solid #f59e0b;
+}
+
+.rank-badge {
+  position: absolute;
+  top: -10px;
+  right: -10px;
+  background: #f59e0b;
+  color: white;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+}
+
+.performer-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 auto 15px;
+}
+
+.performer-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 5px;
+}
+
+.performer-role {
+  font-size: 0.9rem;
+  color: #6b7280;
+  margin-bottom: 15px;
+}
+
+.performer-stats {
+  display: flex;
+  justify-content: space-around;
+}
+
+.stat-item {
+  text-align: center;
+}
+
+.stat-item .stat-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+  display: block;
+}
+
+.stat-item .stat-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+/* Toolbar */
+.toolbar {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 300px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #6b7280;
+}
+
+.search-box input {
+  width: 100%;
+  padding: 12px 15px 12px 45px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.search-box input:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.filter-group select {
+  padding: 12px 15px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Employee Grid */
+.employees-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 20px;
+}
+
+.employee-card {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transition: all 0.3s ease;
+  border: 1px solid rgba(255, 255, 255, 0.8);
+}
+
+.employee-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+}
+
+.employee-header {
+  background: linear-gradient(135deg, #2f7d5a 0%, #16a34a 100%);
+  color: white;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.employee-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.employee-info h3 {
+  margin: 0;
+  font-size: 1.3rem;
+  font-weight: 600;
+}
+
+.employee-role {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  margin: 2px 0 0 0;
+}
+
+.employee-body {
+  padding: 20px;
+}
+
+.employee-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  margin-bottom: 20px;
+}
+
+.stat-box {
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.stat-box .stat-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #1f2937;
+  display: block;
+}
+
+.stat-box .stat-label {
+  font-size: 0.8rem;
+  color: #6b7280;
+  margin-top: 5px;
+}
+
+.employee-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-secondary, .btn-primary {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  font-size: 0.9rem;
+}
+
+.btn-secondary {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.btn-secondary:hover {
+  background: #d1d5db;
+}
+
+.btn-primary {
+  background: #2f7d5a;
+  color: white;
+}
+
+.btn-primary:hover {
+  background: #1c5b45;
+}
+
+.btn-export {
+  background: #3b82f6;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: none;
+  font-size: 0.9rem;
+}
+
+.btn-export:hover {
+  background: #2563eb;
+}
+
+/* Modal */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1000;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  background: white;
+  margin: 5% auto;
+  padding: 30px;
+  border-radius: 16px;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: #1f2937;
+  font-size: 1.5rem;
+}
+
+.close {
+  font-size: 2rem;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+.form-group {
+  margin-bottom: 20px;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 5px;
+  font-weight: 500;
+  color: #374151;
+}
+
+.form-group input, .form-group select {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+
+.form-group input:focus, .form-group select:focus {
+  outline: none;
+  border-color: #2f7d5a;
+  box-shadow: 0 0 0 3px rgba(47, 125, 90, 0.1);
+}
+
+.modal-actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.btn-cancel {
+  background: #e5e7eb;
+  color: #374151;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-cancel:hover {
+  background: #d1d5db;
+}
+
+.btn-submit {
+  background: #2f7d5a;
+  color: white;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+}
+
+.btn-submit:hover {
+  background: #1c5b45;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .employee-page-header {
+    padding: 20px;
+    gap: 15px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-box {
+    min-width: auto;
+  }
+  
+  .employees-grid {
+    grid-template-columns: 1fr;
+  }
+}
+</style>
+  <!-- HEADER -->
+  <div class="employee-page-header">
+    <div class="header-content">
+      <h2>Quản lý Nhân viên</h2>
+    </div>
+    <div class="header-actions">
+      <button class="btn-export-excel" onclick="exportAllSalary()">
+        <i class="fas fa-file-excel"></i> Xuất lương tổng
+      </button>
+      <button class="btn-add-employee" onclick="openAddModal()">
+        <i class="fas fa-plus"></i>
+      </button>
+    </div>
+  </div>
+
+  <!-- STATISTICS CARDS -->
+  <div class="stats-grid">
+    <div class="stat-card primary">
+      <div class="stat-icon"><i class="fas fa-users"></i></div>
+      <div class="stat-content">
+        <div class="stat-label">Tổng nhân sự</div>
+        <div class="stat-value">{{ summary.total }}</div>
+        <div class="stat-trend">
+          <span class="trend-up">+{{ summary.new_this_month }}</span> tháng này
+        </div>
+      </div>
+    </div>
+
+    <div class="stat-card success">
+      <div class="stat-icon"><i class="fas fa-user-shield"></i></div>
+      <div class="stat-content">
+        <div class="stat-label">Quản trị viên</div>
+        <div class="stat-value">{{ summary.admins }}</div>
+        <div class="stat-subtext">Toàn quyền hệ thống</div>
+      </div>
+    </div>
+
+    <div class="stat-card info">
+      <div class="stat-icon"><i class="fas fa-user-tie"></i></div>
+      <div class="stat-content">
+        <div class="stat-label">Nhân viên</div>
+        <div class="stat-value">{{ summary.employees }}</div>
+        <div class="stat-subtext">Quyền hạn cơ bản</div>
+      </div>
+    </div>
+
+    <div class="stat-card warning">
+      <div class="stat-icon"><i class="fas fa-chart-line"></i></div>
+      <div class="stat-content">
+        <div class="stat-label">Đơn hoàn tất</div>
+        <div class="stat-value">{{ summary.handled_this_month }}</div>
+        <div class="stat-subtext">Tháng {{ start_month.strftime('%m/%Y') }}</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOP PERFORMERS -->
+  {% if top_staffs %}
+  <div class="top-performers-section">
+    <h2><i class="fas fa-trophy"></i> Top Nhân viên tháng {{ start_month.strftime('%m/%Y') }}</h2>
+    <div class="top-performers-grid">
+      {% for top in top_staffs %}
+        {% set summary_top = month_stats.get(top.id) or {'so_hd': 0, 'doanh_thu': 0} %}
+        <div class="top-performer-card">
+          <div class="rank-badge"><i class="fas fa-medal"></i></div>
+          <div class="performer-avatar">{{ top.ten[0] }}</div>
+          <div class="performer-name">{{ top.ten }}</div>
+          <div class="performer-role">{{ 'Quản trị viên' if top.loai == 'admin' else 'Nhân viên' }}</div>
+          <div class="performer-stats">
+            <div class="stat-item">
+              <span class="stat-label">Doanh thu</span>
+              <span class="stat-value">{{ summary_top.doanh_thu|vnd }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Đơn hàng</span>
+              <span class="stat-value">{{ summary_top.so_hd }}</span>
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- SEARCH AND FILTER -->
+  <div class="toolbar">
+    <div class="search-box">
+      <span class="search-icon"><i class="fas fa-search"></i></span>
+      <input type="text" id="search-input" placeholder="Tìm kiếm nhân viên (tên, username)..." oninput="filterEmployees()">
+    </div>
+    <div class="filter-group">
+      <select id="role-filter" onchange="filterEmployees()">
+        <option value="all">Tất cả vai trò</option>
+        <option value="admin">Quản trị viên</option>
+        <option value="nhanvien">Nhân viên</option>
+      </select>
+      <select id="sort-by" onchange="sortEmployees()">
+        <option value="name">Sắp xếp: Tên</option>
+        <option value="revenue">Sắp xếp: Doanh thu</option>
+        <option value="orders">Sắp xếp: Số đơn</option>
+        <option value="date">Sắp xếp: Ngày vào làm</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- EMPLOYEES GRID -->
+  <div class="employees-grid" id="employees-grid">
+    {% for nv in staffs %}
+      {% set stats = stats_map.get(nv.id) or {'tong_hoa_don': 0, 'tong_doanh_thu': 0} %}
+      {% set month = month_stats.get(nv.id) or {'so_hd': 0, 'doanh_thu': 0} %}
+      {% set preview = salary_preview.get(nv.id) or {'luong_co_ban': 0, 'phu_cap': 0, 'thuong': 0, 'top_bonus': 0, 'ty_le': 0, 'tong': 0, 'doanh_thu': 0, 'is_top': False} %}
+      {% set work_day = work_days_map.get(nv.id, 0) %}
+      
+      <div class="employee-card" data-name="{{ nv.ten }}" data-username="{{ nv.ten_dang_nhap }}" data-role="{{ nv.loai }}" data-revenue="{{ month.doanh_thu }}" data-orders="{{ month.so_hd }}" data-date="{{ nv.ngay_vao_lam.strftime('%Y%m%d') if nv.ngay_vao_lam else '0' }}">
+        <div class="employee-header">
+          <div class="employee-avatar">{{ nv.ten[0] }}</div>
+          <div class="employee-info">
+            <h3>{{ nv.ten }}</h3>
+            <div class="employee-role">
+              {% if nv.loai == 'admin' %}
+                <i class="fas fa-crown"></i> Quản trị viên
+              {% else %}
+                <i class="fas fa-user"></i> Nhân viên
+              {% endif %}
+            </div>
+          </div>
+        </div>
+
+        <div class="employee-body">
+          <div class="employee-stats">
+            <div class="stat-box">
+              <span class="stat-number">{{ month.so_hd }}</span>
+              <span class="stat-label">Đơn tháng này</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number">{{ month.doanh_thu|vnd if month.doanh_thu > 0 else '0 đ' }}</span>
+              <span class="stat-label">DT tháng này</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number">{{ stats.tong_hoa_don }}</span>
+              <span class="stat-label">Tổng đơn</span>
+            </div>
+            <div class="stat-box">
+              <span class="stat-number">{{ work_day }}/{{ min_days }}</span>
+              <span class="stat-label">Công tháng</span>
+            </div>
+          </div>
+
+          <div class="employee-actions">
+            <button class="btn-secondary" onclick="viewEmployee({{ nv.id }})"><i class="fas fa-eye"></i> Xem</button>
+            <button class="btn-export" onclick="exportEmployeeSalary({{ nv.id }}, '{{ nv.ten }}')"><i class="fas fa-file-invoice-dollar"></i> Lương</button>
+            {% if nv.id != current_user.id %}
+            <button class="btn-primary" onclick="deleteEmployee({{ nv.id }}, '{{ nv.ten }}')"><i class="fas fa-trash"></i> Xóa</button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+
+    {% if not staffs %}
+    <div class="empty-state">
+      <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+      <div class="empty-text">Chưa có nhân viên nào</div>
+      <button class="btn-add-first" onclick="openAddModal()">
+        <i class="fas fa-plus-circle"></i> Thêm nhân viên đầu tiên
+      </button>
+    </div>
+    {% endif %}
+  </div>
+</div>
+
+<!-- MODAL ADD EMPLOYEE -->
+<div class="modal" id="add-employee-modal">
+  <div class="modal-overlay" onclick="closeAddModal()"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2><i class="fas fa-user-plus"></i> Thêm nhân viên mới</h2>
+      <button class="btn-close" onclick="closeAddModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <form method="post" class="modal-form">
+      <div class="form-group">
+        <label for="ten_dn">
+          <span class="label-icon"><i class="fas fa-id-card"></i></span>
+          Tên đăng nhập <span class="required">*</span>
+        </label>
+        <input id="ten_dn" name="ten_dn" required placeholder="ví dụ: nguyen.van.a">
+      </div>
+
+      <div class="form-group">
+        <label for="mat_khau">
+          <span class="label-icon"><i class="fas fa-lock"></i></span>
+          Mật khẩu <span class="required">*</span>
+        </label>
+        <input id="mat_khau" name="mat_khau" required type="password" placeholder="Ít nhất 6 ký tự">
+      </div>
+
+      <div class="form-group">
+        <label for="ten">
+          <span class="label-icon"><i class="fas fa-user"></i></span>
+          Họ và tên <span class="required">*</span>
+        </label>
+        <input id="ten" name="ten" required placeholder="Nguyễn Văn A">
+      </div>
+
+      <div class="form-group">
+        <label for="loai">
+          <span class="label-icon"><i class="fas fa-user-tie"></i></span>
+          Vai trò <span class="required">*</span>
+        </label>
+        <select id="loai" name="loai">
+          <option value="nhanvien"><i class="fas fa-user"></i> Nhân viên</option>
+          <option value="admin"><i class="fas fa-crown"></i> Quản trị viên</option>
+        </select>
+      </div>
+
+      <div class="modal-actions">
+        <button type="button" class="btn-cancel" onclick="closeAddModal()">
+          Hủy
+        </button>
+        <button type="submit" class="btn-submit">
+          <span><i class="fas fa-check"></i></span> Thêm nhân viên
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- CONFIRM DELETE MODAL -->
+<div class="modal" id="delete-modal">
+  <div class="modal-overlay" onclick="closeDeleteModal()"></div>
+  <div class="modal-content small">
+    <div class="modal-header danger">
+      <h2><i class="fas fa-exclamation-triangle"></i> Xác nhận xóa</h2>
+      <button class="btn-close" onclick="closeDeleteModal()"><i class="fas fa-times"></i></button>
+    </div>
+    <div class="modal-body">
+      <p>Bạn có chắc chắn muốn xóa nhân viên <strong id="delete-employee-name"></strong>?</p>
+      <p class="warning-text">Hành động này không thể hoàn tác!</p>
+    </div>
+    <form method="post" id="delete-form" class="modal-actions">
+      <button type="button" class="btn-cancel" onclick="closeDeleteModal()">
+        Hủy
+      </button>
+      <button type="submit" class="btn-delete">
+        <span><i class="fas fa-trash"></i></span> Xóa nhân viên
+      </button>
+    </form>
+  </div>
+</div>
+
+<script>
+// ============ MODAL FUNCTIONS ============
+function openAddModal() {
+  document.getElementById('add-employee-modal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeAddModal() {
+  document.getElementById('add-employee-modal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function deleteEmployee(id, name) {
+  document.getElementById('delete-employee-name').textContent = name;
+  document.getElementById('delete-form').action = `/nhan-vien/xoa/${id}`;
+  document.getElementById('delete-modal').classList.add('show');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeDeleteModal() {
+  document.getElementById('delete-modal').classList.remove('show');
+  document.body.style.overflow = '';
+}
+
+function viewEmployee(id) {
+  window.location.href = `/nhan-vien/${id}`;
+}
+
+// ============ FILTER AND SEARCH ============
+function filterEmployees() {
+  const searchTerm = document.getElementById('search-input').value.toLowerCase();
+  const roleFilter = document.getElementById('role-filter').value;
+  const cards = document.querySelectorAll('.employee-card');
+
+  cards.forEach(card => {
+    const name = card.dataset.name.toLowerCase();
+    const username = card.dataset.username.toLowerCase();
+    const role = card.dataset.role;
+
+    const matchesSearch = name.includes(searchTerm) || username.includes(searchTerm);
+    const matchesRole = roleFilter === 'all' || role === roleFilter;
+
+    if (matchesSearch && matchesRole) {
+      card.style.display = 'block';
+    } else {
+      card.style.display = 'none';
+    }
+  });
+}
+
+function sortEmployees() {
+  const sortBy = document.getElementById('sort-by').value;
+  const grid = document.getElementById('employees-grid');
+  const cards = Array.from(document.querySelectorAll('.employee-card'));
+
+  cards.sort((a, b) => {
+    switch(sortBy) {
+      case 'name':
+        return a.dataset.name.localeCompare(b.dataset.name);
+      case 'revenue':
+        return parseInt(b.dataset.revenue) - parseInt(a.dataset.revenue);
+      case 'orders':
+        return parseInt(b.dataset.orders) - parseInt(a.dataset.orders);
+      case 'date':
+        return parseInt(b.dataset.date) - parseInt(a.dataset.date);
+      default:
+        return 0;
+    }
+  });
+
+  cards.forEach(card => grid.appendChild(card));
+}
+
+function exportEmployeeSalary(id, name) {
+  window.open(`/export-luong/${id}`, '_blank');
+}
+
+function exportAllSalary() {
+  window.open('/export-luong-all', '_blank');
+}
+
+// Close modal when clicking ESC
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    closeAddModal();
+    closeDeleteModal();
+  }
+});
+</script>
+
+{% endblock %}

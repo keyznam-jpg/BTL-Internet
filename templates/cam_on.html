@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cảm ơn bạn</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='payments.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="confirm-shell">
+    <div class="confirm-card">
+      <i class="fas fa-check-circle fa-3x" style="color:#10b981;"></i>
+      <h1>Cảm ơn bạn!</h1>
+      <p class="confirm-description">{{ message }}</p>
+      <a class="secondary-btn" href="javascript:window.close();">
+        <i class="fas fa-times"></i>
+        Đóng cửa sổ
+      </a>
+    </div>
+  </div>
+</body>
+</html>

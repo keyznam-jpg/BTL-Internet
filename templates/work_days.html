@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="card" style="max-width:600px;margin:auto;">
+  <h2 style="color:#2f7d5a;text-align:center;margin-bottom:18px;">Số ngày công trong tháng</h2>
+  <p><b>Nhân viên:</b> {{ user.ten }}</p>
+  <p><b>Tháng:</b> {{ month }}/{{ year }}</p>
+  <p><b>Số ngày công đã làm:</b> <span style="color:#1e8155;font-weight:700;">{{ work_days }}</span></p>
+  <p><b>Số ngày công tối thiểu để nhận phụ cấp:</b> <span style="color:#d32f2f;font-weight:700;">{{ min_days }}</span></p>
+  <table style="margin-top:24px;">
+    <thead>
+      <tr>
+        <th>Ngày</th>
+        <th>Trạng thái</th>
+        <th>Ghi chú</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for att in attendances %}
+      <tr>
+        <td>{{ att.checkin_time.strftime('%d/%m/%Y') }}</td>
+        <td>
+          {% if att.status=='approved' %}<span style="color:#1e8155;font-weight:600;">Đã duyệt</span>
+          {% elif att.status=='rejected' %}<span style="color:#d32f2f;font-weight:600;">Từ chối</span>
+          {% else %}<span style="color:#f5a623;font-weight:600;">Chờ duyệt</span>
+          {% endif %}
+        </td>
+        <td>{{ att.note or '' }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

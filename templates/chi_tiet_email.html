@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+{% block title %}Chi tiết Email{% endblock %}
+
+{% block content %}
+<style>
+  .email-detail-page {
+    padding: 2rem;
+    background: linear-gradient(180deg, #f4f6fb 0%, #ffffff 50%);
+    min-height: calc(100vh - 140px);
+    color: #1f2b3a;
+  }
+  .email-detail-page .page-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+  }
+  .email-detail-page .page-header h1 {
+    margin: 0;
+    font-size: 2rem;
+    color: #1a365d;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .email-detail-page .page-header h1 i {
+    color: #2f7d5a;
+  }
+  .email-detail-page .btn-back {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #2f7d5a;
+    color: #fff;
+    padding: 0.55rem 1.2rem;
+    border-radius: 10px;
+    text-decoration: none;
+    font-weight: 600;
+    box-shadow: 0 12px 24px -18px rgba(47, 125, 90, 0.8);
+    transition: transform 0.2s ease, background 0.2s ease;
+  }
+  .email-detail-page .btn-back:hover {
+    background: #276247;
+    transform: translateY(-1px);
+  }
+  .email-detail-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2.2fr) minmax(280px, 0.9fr);
+    gap: 1.5rem;
+  }
+  .email-card {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 18px 40px -26px rgba(15, 53, 90, 0.55);
+    overflow: hidden;
+    border: 1px solid rgba(26, 54, 93, 0.06);
+  }
+  .email-card .card-header {
+    padding: 1.15rem 1.6rem;
+    border-bottom: 1px solid #e4e9f2;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.75rem;
+  }
+  .email-card .card-header h2,
+  .email-card .card-header h3 {
+    margin: 0;
+    font-size: 1.2rem;
+    color: #1f2b3a;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .email-card .card-body {
+    padding: 1.6rem;
+  }
+  .email-info-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .email-info-table tr + tr th,
+  .email-info-table tr + tr td {
+    border-top: 1px solid #ecf1f8;
+  }
+  .email-info-table th {
+    width: 32%;
+    padding: 0.85rem 1rem 0.85rem 0;
+    font-size: 0.95rem;
+    color: #6b7c93;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .email-info-table td {
+    padding: 0.85rem 0;
+    font-size: 1rem;
+    color: #1f2b3a;
+    font-weight: 600;
+  }
+  .email-info-table td .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .badge-success-soft {
+    background: rgba(47, 125, 90, 0.16);
+    color: #276247;
+  }
+  .badge-danger-soft {
+    background: rgba(226, 80, 77, 0.16);
+    color: #a5302d;
+  }
+  .badge-warning-soft {
+    background: rgba(242, 161, 0, 0.2);
+    color: #b26504;
+  }
+  .email-preview-panel .preview-toolbar {
+    display: inline-flex;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid #d7e1f0;
+    background: #f4f7fb;
+  }
+  .email-preview-panel .preview-toolbar button {
+    border: none;
+    background: transparent;
+    padding: 0.55rem 1.4rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: #496080;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+  .email-preview-panel .preview-toolbar button.active {
+    background: #2f7d5a;
+    color: #fff;
+  }
+  .email-preview-container {
+    border: 1px solid #d7e1f0;
+    border-radius: 16px;
+    margin-top: 1.2rem;
+    overflow: hidden;
+    background: #fefefe;
+    min-height: 420px;
+    position: relative;
+  }
+  .email-preview-container .preview-frame {
+    background: #fff;
+    height: 100%;
+    width: 100%;
+    overflow: auto;
+  }
+  .email-preview-container .preview-frame::-webkit-scrollbar {
+    width: 10px;
+  }
+  .email-preview-container .preview-frame::-webkit-scrollbar-thumb {
+    background: rgba(47, 125, 90, 0.3);
+    border-radius: 6px;
+  }
+  .email-preview-container pre.email-source {
+    display: none;
+    margin: 0;
+    padding: 1.4rem;
+    height: 100%;
+    background: #111827;
+    color: #f9fafb;
+    font-size: 0.88rem;
+    overflow: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .email-preview-container pre.email-source code {
+    font-family: "Fira Code", "Source Code Pro", Menlo, Monaco, Consolas, monospace;
+  }
+  .email-preview-container.show-source .preview-frame {
+    display: none;
+  }
+  .email-preview-container.show-source pre.email-source {
+    display: block;
+  }
+  .email-sidebar .sidebar-card + .sidebar-card {
+    margin-top: 1.25rem;
+  }
+  .sidebar-card {
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 16px 36px -28px rgba(17, 45, 78, 0.6);
+    border: 1px solid rgba(26, 54, 93, 0.06);
+    overflow: hidden;
+  }
+  .sidebar-card .sidebar-header {
+    padding: 1.05rem 1.35rem;
+    background: linear-gradient(135deg, #2f7d5a 0%, #2c6a4f 100%);
+    color: #fff;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+  }
+  .sidebar-card .sidebar-body {
+    padding: 1.2rem 1.35rem 1.35rem;
+  }
+  .sidebar-card .sidebar-body p {
+    margin: 0 0 0.7rem;
+    color: #344665;
+    font-size: 0.95rem;
+  }
+  .sidebar-card .sidebar-body p strong {
+    display: inline-block;
+    min-width: 105px;
+    color: #5a6e8c;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-size: 0.85rem;
+  }
+  .sidebar-card .sidebar-body .badge {
+    margin-top: 0.4rem;
+  }
+  .email-preview-empty {
+    padding: 2rem;
+    text-align: center;
+    color: #6b7c93;
+  }
+  @media (max-width: 1100px) {
+    .email-detail-layout {
+      grid-template-columns: 1fr;
+    }
+  }
+  @media (max-width: 576px) {
+    .email-detail-page {
+      padding: 1.2rem;
+    }
+    .email-detail-page .page-header h1 {
+      font-size: 1.6rem;
+    }
+  }
+</style>
+
+<div class="email-detail-page">
+  <div class="page-header">
+    <h1><i class="fas fa-envelope"></i> Chi tiết email #{{ log.id }}</h1>
+    <a class="btn-back" href="{{ url_for('lich_su_email') }}"><i class="fas fa-arrow-left"></i> Quay lại</a>
+  </div>
+
+  <div class="email-detail-layout">
+    <div class="main-column">
+      <div class="email-card">
+        <div class="card-header">
+          <h2><i class="fas fa-info-circle"></i> Thông tin gửi</h2>
+        </div>
+        <div class="card-body">
+          <table class="email-info-table">
+            <tr>
+              <th>Thời gian gửi</th>
+              <td>{{ log.sent_at.strftime('%d/%m/%Y %H:%M:%S') if log.sent_at else '-' }}</td>
+            </tr>
+            <tr>
+              <th>Email nhận</th>
+              <td>{{ log.recipient_email or '-' }}</td>
+            </tr>
+            <tr>
+              <th>Tên người nhận</th>
+              <td>{{ log.recipient_name or '-' }}</td>
+            </tr>
+            <tr>
+              <th>Tiêu đề</th>
+              <td>{{ log.subject or '-' }}</td>
+            </tr>
+            <tr>
+              <th>Template</th>
+              <td>
+                {% if log.template_key == 'booking_confirmation' %}
+                  <span class="badge badge-info"><i class="fas fa-calendar-check"></i> Xác nhận đặt phòng</span>
+                {% elif log.template_key == 'checkin_notification' %}
+                  <span class="badge badge-primary"><i class="fas fa-door-open"></i> Thông báo check-in</span>
+                {% elif log.template_key == 'invoice_notice' %}
+                  <span class="badge badge-success"><i class="fas fa-file-invoice"></i> Hóa đơn</span>
+                {% else %}
+                  {{ log.template_key or 'Không xác định' }}
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <th>Trạng thái</th>
+              <td>
+                {% if log.status == 'success' %}
+                  <span class="badge badge-success-soft"><i class="fas fa-check-circle"></i> Gửi thành công</span>
+                {% elif log.status == 'failed' %}
+                  <span class="badge badge-danger-soft"><i class="fas fa-times-circle"></i> Gửi thất bại</span>
+                {% else %}
+                  <span class="badge badge-warning-soft"><i class="fas fa-clock"></i> Đang chờ</span>
+                {% endif %}
+              </td>
+            </tr>
+            <tr>
+              <th>Người gửi</th>
+              <td>{{ log.sender.ten if log.sender else 'Hệ thống' }}</td>
+            </tr>
+            {% if log.datphong_id %}
+            <tr>
+              <th>Đặt phòng liên quan</th>
+              <td>
+                <a class="table-link" href="{{ url_for('quan_li_hoa_don') }}">Xem đặt phòng #{{ log.datphong_id }}</a>
+              </td>
+            </tr>
+            {% endif %}
+            {% if log.error_message %}
+            <tr>
+              <th>Lỗi</th>
+              <td><span style="color:#c0392b;">{{ log.error_message }}</span></td>
+            </tr>
+            {% endif %}
+          </table>
+        </div>
+      </div>
+
+      <div class="email-card email-preview-panel">
+        <div class="card-header">
+          <h3><i class="fas fa-file-alt"></i> Nội dung email</h3>
+          {% if log.body %}
+          <div class="preview-toolbar">
+            <button type="button" class="active" data-mode="preview">Xem hiển thị</button>
+            <button type="button" data-mode="html">Xem mã HTML</button>
+          </div>
+          {% endif %}
+        </div>
+        <div class="card-body">
+          {% if log.body %}
+          <div class="email-preview-container" id="emailPreviewContainer">
+            <div class="preview-frame" id="emailPreview"></div>
+            <pre class="email-source" id="emailSource"><code></code></pre>
+          </div>
+          {% else %}
+          <div class="email-preview-empty">
+            <p>Không có nội dung email để hiển thị.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="email-sidebar">
+      {% if log.customer %}
+      <div class="sidebar-card">
+        <div class="sidebar-header"><i class="fas fa-user"></i> Khách hàng</div>
+        <div class="sidebar-body">
+          <p><strong>Họ tên</strong> {{ log.customer.ho_ten }}</p>
+          <p><strong>CMND/CCCD</strong> {{ log.customer.cmnd }}</p>
+          <p><strong>Số điện thoại</strong> {{ log.customer.sdt or '-' }}</p>
+          <p><strong>Địa chỉ</strong> {{ log.customer.dia_chi or '-' }}</p>
+          <p><strong>Email</strong> {{ log.customer.email or '-' }}</p>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if log.booking %}
+      <div class="sidebar-card">
+        <div class="sidebar-header" style="background: linear-gradient(135deg, #1e66c5 0%, #1a56a8 100%);">
+          <i class="fas fa-calendar-check"></i> Thông tin đặt phòng
+        </div>
+        <div class="sidebar-body">
+          <p><strong>Phòng</strong> {{ log.booking.phong.ten }}</p>
+          <p><strong>Loại phòng</strong> {{ log.booking.phong.loai.ten }}</p>
+          <p><strong>Nhận phòng</strong> {{ log.booking.ngay_nhan.strftime('%d/%m/%Y %H:%M') }}</p>
+          <p><strong>Trả phòng</strong> {{ log.booking.ngay_tra.strftime('%d/%m/%Y %H:%M') }}</p>
+          <p><strong>Trạng thái</strong> <span class="badge badge-info">{{ log.booking.trang_thai }}</span></p>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% if log.body %}
+<script>
+  (function () {
+    const rawHtml = {{ log.body | tojson | safe }};
+    const preview = document.getElementById('emailPreview');
+    const source = document.getElementById('emailSource');
+    const container = document.getElementById('emailPreviewContainer');
+    if (!preview || !source || !container) {
+      return;
+    }
+
+    preview.innerHTML = rawHtml;
+    source.querySelector('code').textContent = rawHtml;
+
+    const toolbarButtons = document.querySelectorAll('.email-preview-panel .preview-toolbar button');
+    toolbarButtons.forEach((btn) => {
+      btn.addEventListener('click', function () {
+        toolbarButtons.forEach((b) => b.classList.remove('active'));
+        this.classList.add('active');
+        const mode = this.getAttribute('data-mode');
+        container.classList.toggle('show-source', mode === 'html');
+      });
+    });
+  })();
+</script>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Mã QR Chat - Phòng {{ dp.phong.ten }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Roboto', sans-serif; 
+            text-align: center; 
+            padding: 30px 20px;
+            background: linear-gradient(135deg, #e9f6ef 0%, #f0f9ff 100%);
+            min-height: 100vh;
+        }
+        .print-container { 
+            max-width: 450px; 
+            margin: auto; 
+            padding: 30px; 
+            background: white;
+            border: 2px solid #2f7d5a; 
+            border-radius: 15px;
+            box-shadow: 0 8px 24px rgba(47, 125, 90, 0.15);
+        }
+        h1 { 
+            color: #2f7d5a; 
+            margin-bottom: 15px;
+            font-size: 2em;
+            font-weight: 700;
+        }
+        p { 
+            font-size: 1em; 
+            line-height: 1.6;
+            color: #333;
+        }
+        p.instruction {
+            margin: 15px 0 20px 0;
+            color: #555;
+        }
+        .room-info {
+            background: linear-gradient(135deg, #2f7d5a 0%, #3fa271 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin: 20px 0;
+            font-weight: 500;
+        }
+        .room-info strong {
+            display: block;
+            margin: 5px 0;
+        }
+        img { 
+            margin: 20px 0;
+            border: 3px solid #2f7d5a;
+            border-radius: 10px;
+            padding: 10px;
+            background: white;
+        }
+        .url-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .url-label {
+            display: block; 
+            margin-bottom: 10px; 
+            color: #666;
+            font-size: 0.9em;
+            font-weight: 500;
+        }
+        .chat-url-link {
+            color: #2f7d5a;
+            text-decoration: none;
+            font-weight: 500;
+            word-break: break-all;
+            display: inline-block;
+            padding: 12px 20px;
+            border: 2px solid #2f7d5a;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.95em;
+            background: white;
+        }
+        .chat-url-link:hover {
+            background-color: #2f7d5a;
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(47, 125, 90, 0.35);
+        }
+        .chat-url-link::before {
+            content: "\f0c1 ";
+            font-family: "Font Awesome 5 Free";
+            font-weight: 900;
+            margin-right: 5px;
+        }
+        .no-print { 
+            margin-top: 30px;
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            align-items: center;
+        }
+        .no-print button, .no-print a {
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .no-print button {
+            background: linear-gradient(135deg, #2f7d5a 0%, #3fa271 100%);
+            color: white;
+            border: none;
+        }
+        .no-print button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(47, 125, 90, 0.4);
+        }
+        .no-print a {
+            background: white;
+            color: #2f7d5a;
+            border: 2px solid #2f7d5a;
+        }
+        .no-print a:hover {
+            background: #2f7d5a;
+            color: white;
+            transform: translateY(-2px);
+        }
+        @media print { 
+            body {
+                background: white;
+            }
+            .no-print { display: none; }
+            .print-container {
+                box-shadow: none;
+                border: 2px solid #2f7d5a;
+            }
+        }
+        @media (max-width: 480px) {
+            .print-container {
+                padding: 20px;
+            }
+            h1 {
+                font-size: 1.5em;
+            }
+            .no-print {
+                flex-direction: column;
+            }
+            .no-print button, .no-print a {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="print-container">
+        <h1><i class="fas fa-hotel"></i> Khách sạn PTIT</h1>
+        <p class="instruction">Quý khách vui lòng quét mã QR dưới đây để gửi yêu cầu hoặc trò chuyện với lễ tân.</p>
+        <div class="room-info">
+            <strong><i class="fas fa-map-marker-alt"></i> Phòng: {{ dp.phong.ten }}</strong>
+            <strong><i class="fas fa-user"></i> Khách hàng: {{ dp.khachhang.ho_ten }}</strong>
+        </div>
+        <img src="{{ qr_code_url }}" alt="QR Code Chat" width="250" height="250">
+        <div class="url-section">
+            <small class="url-label"><i class="fas fa-comments"></i> Hoặc click vào link bên dưới:</small>
+            <a href="{{ chat_url }}" target="_blank" class="chat-url-link">{{ chat_url }}</a>
+        </div>
+    </div>
+    <div class="no-print">
+        <button onclick="window.print()"><i class="fas fa-print"></i> In mã QR</button>
+        <a href="{{ url_for('nhan_phong') }}">← Quay lại</a>
+    </div>
+</body>
+</html>

@@ -1,0 +1,257 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='salary.css') }}">
+
+<div class="salary-management">
+  <!-- PAGE HEADER -->
+  <div class="salary-page-header">
+    <div class="header-content">
+      <h2><i class="fas fa-money-bill-wave"></i> Cài đặt Lương & Thưởng</h2>
+      <p class="header-subtitle">Quản lý lương cơ bản, phụ cấp và mức thưởng theo doanh thu</p>
+    </div>
+  </div>
+
+  <!-- STATISTICS CARDS -->
+  <div class="stats-grid">
+    <!-- Config Card -->
+    <div class="stat-card config-card">
+      <div class="stat-label"><i class="fas fa-calendar-alt"></i> Ngày công tối thiểu</div>
+      <form method="post" class="config-form">
+        <input type="hidden" name="form_name" value="set_min_work_days">
+        <div class="config-row">
+          <input type="number" min="0" name="min_work_days" value="{{ min_days }}" class="config-input" required>
+          <button type="submit" class="btn-config">Cập nhật</button>
+        </div>
+        <div class="config-note">Nhân viên cần đạt số ngày này để nhận phụ cấp</div>
+      </form>
+    </div>
+
+    <!-- Auto Cancel Config -->
+    <div class="stat-card config-card">
+      <div class="stat-label"><i class="fas fa-clock"></i> Thời gian tự động hủy đặt phòng</div>
+      <form method="post" class="config-form">
+        <input type="hidden" name="form_name" value="save_auto_cancel">
+        <div class="config-row">
+          <input type="number" min="1" name="auto_cancel_minutes" value="{{ auto_cancel_minutes }}" class="config-input" required>
+          <span class="config-unit">phút</span>
+          <button type="submit" class="btn-config">Cập nhật</button>
+        </div>
+        <div class="config-note">Đặt phòng sẽ bị hủy tự động nếu khách không đến nhận phòng sau thời gian này</div>
+      </form>
+    </div>
+
+    <!-- Total Staff -->
+    <div class="stat-card primary">
+      <div class="stat-header">
+        <div class="stat-icon"><i class="fas fa-users"></i></div>
+      </div>
+      <div class="stat-label">Tổng nhân sự</div>
+      <div class="stat-value">{{ all_staffs|length }}</div>
+      <div class="stat-note">{{ configured_count }} đã cấu hình</div>
+    </div>
+
+    <!-- Base Salary Fund -->
+    <div class="stat-card success">
+      <div class="stat-header">
+        <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+      </div>
+      <div class="stat-label">Quỹ lương cơ bản</div>
+      <div class="stat-value" style="font-size: 20px;">{{ total_base|vnd }}</div>
+      <div class="stat-note">Không gồm phụ cấp & thưởng</div>
+    </div>
+
+    <!-- Allowance Fund -->
+    <div class="stat-card info">
+      <div class="stat-header">
+        <div class="stat-icon"><i class="fas fa-gem"></i></div>
+      </div>
+      <div class="stat-label">Quỹ phụ cấp</div>
+      <div class="stat-value" style="font-size: 20px;">{{ total_allowance|vnd }}</div>
+      <div class="stat-note">Tháng {{ now().strftime('%m/%Y') }}</div>
+    </div>
+  </div>
+
+  <!-- FILTER SECTION -->
+  <div class="filter-section">
+    <span class="filter-label"><i class="fas fa-search"></i> Lọc nhân viên:</span>
+    <form method="get" style="display: flex; gap: 12px; flex: 1;">
+      <select name="staff_id" class="filter-select" onchange="this.form.submit()">
+        <option value="">Tất cả nhân viên ({{ all_staffs|length }})</option>
+        {% for staff in all_staffs %}
+        <option value="{{ staff.id }}" {% if selected_id == staff.id %}selected{% endif %}>
+          {{ staff.ten }} - {{ staff.ten_dang_nhap }}
+        </option>
+        {% endfor %}
+      </select>
+      {% if selected_id %}
+      <a href="{{ url_for('cai_dat_luong_thuong') }}" class="btn-reset">
+        <span><i class="fas fa-undo"></i></span> Reset
+      </a>
+      {% endif %}
+    </form>
+  </div>
+
+  <!-- CONTENT GRID -->
+  <div class="content-grid">
+    <!-- LEFT: EMPLOYEE SALARY -->
+    <div class="section-panel">
+      <div class="panel-header">
+        <div class="panel-subtitle">Nhân viên</div>
+        <h3 class="panel-title">Lương cơ bản & Phụ cấp</h3>
+        <p class="panel-description">
+          Nhân viên dẫn đầu doanh thu tháng sẽ nhận thêm <strong>{{ bonus_amount|vnd }}</strong> thưởng top.
+        </p>
+      </div>
+
+      <div class="employee-list">
+        {% for nv in staffs %}
+        {% set record = salary_records.get(nv.id) %}
+        <form method="post" class="employee-salary-card">
+          <input type="hidden" name="form_name" value="save_salary">
+          <input type="hidden" name="nguoidung_id" value="{{ nv.id }}">
+          
+          <div class="employee-header">
+            <div class="employee-info">
+              <h4>
+                {{ nv.ten }}
+                {% if nv.id in top_staff_ids %}
+                <span class="top-badge"><i class="fas fa-trophy"></i> TOP +{{ bonus_amount|vnd }}</span>
+                {% endif %}
+              </h4>
+              <div class="employee-username">@{{ nv.ten_dang_nhap }}</div>
+            </div>
+            <span class="role-badge {{ 'admin' if nv.loai == 'admin' else 'staff' }}">
+              {% if nv.loai == 'admin' %}
+                <i class="fas fa-crown"></i> Quản trị viên
+              {% else %}
+                <i class="fas fa-user"></i> Nhân viên
+              {% endif %}
+            </span>
+          </div>
+
+          <div class="salary-fields">
+            <div class="field-group">
+              <label><i class="fas fa-dollar-sign"></i> Lương cơ bản (VNĐ)</label>
+              <input type="number" min="0" name="luong_co_ban" 
+                     value="{{ record.luong_co_ban if record else 0 }}" required>
+            </div>
+            <div class="field-group">
+              <label><i class="fas fa-gem"></i> Phụ cấp (VNĐ)</label>
+              <input type="number" min="0" name="phu_cap" 
+                     value="{{ record.phu_cap if record else 0 }}" required>
+            </div>
+          </div>
+
+          <div class="employee-footer">
+            <div class="total-info {% if not record %}unconfigured{% endif %}">
+              {% if record %}
+                Thu nhập cố định: <strong>{{ (record.luong_co_ban + record.phu_cap)|vnd }}</strong>
+                {% if nv.id in top_staff_ids %}
+                <span class="top-bonus-note">+ {{ bonus_amount|vnd }} thưởng top tháng</span>
+                {% endif %}
+              {% else %}
+                Chưa thiết lập lương
+              {% endif %}
+            </div>
+            <button type="submit" class="btn-save"><i class="fas fa-save"></i> Lưu</button>
+          </div>
+        </form>
+        {% endfor %}
+
+        {% if not staffs %}
+        <div style="text-align: center; padding: 40px; color: #999;">
+          <div style="font-size: 48px; margin-bottom: 16px;"><i class="fas fa-inbox"></i></div>
+          <p>Không có nhân viên nào</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- RIGHT: BONUS TIERS -->
+    <div class="section-panel">
+      <div class="panel-header">
+        <div class="panel-subtitle">Bảng thưởng</div>
+        <h3 class="panel-title">Mức thưởng theo Doanh thu</h3>
+        <p class="panel-description">
+          Áp dụng cho tổng doanh thu đã hoàn tất trong tháng. Để không giới hạn trên, để trống "Đến mức".
+        </p>
+      </div>
+
+      <div class="tier-list">
+        {% for tier in tiers %}
+        <div class="tier-card">
+          <form method="post">
+            <input type="hidden" name="tier_id" value="{{ tier.id }}">
+            
+            <div class="tier-fields">
+              <div class="tier-field">
+                <label><i class="fas fa-money-bill-wave"></i> Từ mức (VNĐ)</label>
+                <input type="number" min="0" name="moc_duoi" value="{{ tier.moc_duoi }}" required>
+              </div>
+              <div class="tier-field">
+                <label><i class="fas fa-money-bill-wave"></i> Đến mức (VNĐ)</label>
+                <input type="number" min="0" name="moc_tren" 
+                       value="{{ tier.moc_tren if tier.moc_tren is not none else '' }}" 
+                       placeholder="Không giới hạn">
+              </div>
+              <div class="tier-field">
+                <label><i class="fas fa-chart-pie"></i> Tỷ lệ (%)</label>
+                <input type="number" step="0.1" min="0" name="ty_le" value="{{ tier.ty_le }}" required>
+              </div>
+            </div>
+
+            <div class="tier-note">
+              <label><i class="fas fa-sticky-note"></i> Ghi chú</label>
+              <input type="text" name="ghi_chu" value="{{ tier.ghi_chu or '' }}" 
+                     placeholder="Ví dụ: Hoa hồng cao">
+            </div>
+
+            <div class="tier-actions">
+              <button type="submit" name="form_name" value="save_tier" class="btn-tier-save">
+                <i class="fas fa-save"></i> Lưu
+              </button>
+              <button type="submit" name="form_name" value="delete_tier" class="btn-tier-delete"
+                      onclick="return confirm('Xóa mức thưởng này?');">
+                <i class="fas fa-trash"></i> Xóa
+              </button>
+            </div>
+          </form>
+        </div>
+        {% endfor %}
+
+        <!-- ADD NEW TIER -->
+        <div class="tier-card add-new">
+          <form method="post">
+            <input type="hidden" name="form_name" value="save_tier">
+            
+            <div class="tier-fields">
+              <div class="tier-field">
+                <label><i class="fas fa-money-bill-wave"></i> Từ mức (VNĐ)</label>
+                <input type="number" min="0" name="moc_duoi" required placeholder="0">
+              </div>
+              <div class="tier-field">
+                <label><i class="fas fa-money-bill-wave"></i> Đến mức (VNĐ)</label>
+                <input type="number" min="0" name="moc_tren" placeholder="Không giới hạn">
+              </div>
+              <div class="tier-field">
+                <label><i class="fas fa-chart-pie"></i> Tỷ lệ (%)</label>
+                <input type="number" step="0.1" min="0" name="ty_le" required placeholder="0.0">
+              </div>
+            </div>
+
+            <div class="tier-note">
+              <label><i class="fas fa-sticky-note"></i> Ghi chú</label>
+              <input type="text" name="ghi_chu" placeholder="Ví dụ: Thưởng vượt KPI">
+            </div>
+
+            <button type="submit" class="btn-add-tier">
+              <span><i class="fas fa-plus"></i></span> Thêm mức thưởng mới
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

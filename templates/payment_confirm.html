@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Xác nhận thanh toán</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='payments.css') }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+  <div class="confirm-shell">
+    <div class="confirm-card">
+      {% if error %}
+        <i class="fas fa-exclamation-triangle fa-3x" style="color:#dc2626;"></i>
+        <h1>Không thể tiếp tục</h1>
+        <p class="confirm-description">{{ error }}</p>
+        <a class="secondary-btn" href="javascript:window.close();">
+          <i class="fas fa-arrow-left"></i>
+          Đóng cửa sổ
+        </a>
+      {% else %}
+        <i class="fas fa-shield-check fa-3x" style="color:#2563eb;"></i>
+        <h1>Xác nhận thanh toán</h1>
+        <div class="confirm-amount">{{ amount|vnd }}</div>
+        <p class="confirm-description">{{ description }}</p>
+        <div class="countdown-badge" id="countdown">--:--</div>
+        <div class="confirm-actions">
+          <button class="primary-btn" id="confirmButton">
+            <i class="fas fa-check-circle"></i>
+            Xác nhận thanh toán
+          </button>
+          <button class="secondary-btn" id="retryButton" style="display:none;">
+            <i class="fas fa-redo"></i>
+            Thử lại
+          </button>
+        </div>
+        <div class="muted-text">Nhấn xác nhận để hoàn tất thanh toán.</div>
+        <div class="qr-status" id="statusBox" style="display:none;"></div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if not error %}
+  <script src="{{ url_for('static', filename='payments.js') }}"></script>
+  <script>
+  document.addEventListener('DOMContentLoaded', function () {
+    const countdownEl = document.getElementById('countdown');
+    const statusBox = document.getElementById('statusBox');
+    const confirmBtn = document.getElementById('confirmButton');
+    const retryBtn = document.getElementById('retryButton');
+
+    startCountdown(countdownEl, {{ countdown_seconds }}, function () {
+      statusBox.textContent = 'Phiên thanh toán đã hết hạn. Vui lòng yêu cầu nhân viên tạo mã mới.';
+      statusBox.className = 'qr-status error';
+      statusBox.style.display = 'block';
+      confirmBtn.disabled = true;
+      retryBtn.style.display = 'inline-flex';
+    });
+
+    confirmBtn.addEventListener('click', function () {
+      confirmBtn.disabled = true;
+      statusBox.textContent = 'Đang gửi xác nhận...';
+      statusBox.className = 'qr-status';
+      statusBox.style.display = 'block';
+
+      fetch('{{ url_for("api_confirm_payment", token=token) }}', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) {
+            statusBox.textContent = 'Thanh toán đã được xác nhận thành công. Cảm ơn bạn!';
+            statusBox.className = 'qr-status success';
+            statusBox.style.display = 'block';
+            if (data.redirect_url) {
+              setTimeout(function () {
+                window.location.href = data.redirect_url;
+              }, 1500);
+            }
+          } else {
+            throw new Error(data.message || 'Không thể xác nhận thanh toán.');
+          }
+        })
+        .catch(err => {
+          statusBox.textContent = err.message || 'Không thể xác nhận thanh toán. Vui lòng thử lại.';
+          statusBox.className = 'qr-status error';
+          statusBox.style.display = 'block';
+          confirmBtn.disabled = false;
+        });
+    });
+
+    retryBtn.addEventListener('click', function () {
+      window.location.reload();
+    });
+  });
+  </script>
+  {% endif %}
+</body>
+</html>

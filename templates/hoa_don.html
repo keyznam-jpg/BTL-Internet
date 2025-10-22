@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Hóa Đơn Thanh Toán</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Roboto', sans-serif; background-color: #f4f6f7; margin: 0; padding: 20px; color: #333; }
+    .toolbar { max-width: 800px; margin: 0 auto 20px auto; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: stretch; gap: 12px; }
+    .toolbar-section { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+    .payment-form { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; background: #ffffff; padding: 10px 14px; border-radius: 10px; border: 1px solid #dbe7e2; box-shadow: 0 6px 16px rgba(47, 125, 90, 0.08); }
+    .method-options { display: flex; flex-wrap: wrap; gap: 10px; }
+    .method-option { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; border: 1px solid #cbd5f5; border-radius: 8px; background: #f9fbff; font-size: 14px; cursor: pointer; transition: all 0.2s ease; }
+    .method-option input { accent-color: #2f7d5a; }
+    .method-option input:checked + span { font-weight: 600; color: #1b5e20; }
+    .payment-summary { font-size: 15px; color: #1f2b3a; padding: 10px 14px; border-radius: 8px; background: #e8f5e9; border: 1px solid rgba(47, 125, 90, 0.2); }
+    .toolbar form { display: flex; gap: 10px; align-items: center; }
+    .toolbar input.email-input { padding: 10px 12px; border-radius: 5px; border: 1px solid #cbd5f5; font-size: 15px; min-width: 240px; }
+    .btn { background-color: #2f7d5a; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; border: none; cursor: pointer; font-size: 16px; }
+        .btn.light { background-color: #fff; color: #2f7d5a; border: 1px solid #2f7d5a; }
+        .invoice-box { max-width: 800px; margin: auto; padding: 30px; border: 1px solid #eee; box-shadow: 0 0 10px rgba(0, 0, 0, 0.15); font-size: 15px; line-height: 24px; background-color: #fff; }
+        .header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 20px; border-bottom: 2px solid #eee; }
+        .header .logo { width: 100%; max-width: 150px; }
+        .header .hotel-info { text-align: right; }
+        .hotel-info h1 { margin: 0; font-size: 24px; color: #2f7d5a; font-weight: 700; }
+        .hotel-info p { margin: 2px 0; font-size: 14px; }
+        .invoice-title { text-align: center; font-size: 26px; font-weight: 700; margin: 20px 0; }
+        .invoice-meta { display: flex; justify-content: space-between; padding-bottom: 20px; border-bottom: 1px solid #ccc; margin-bottom: 20px; }
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 20px; }
+        .info-grid div { display: grid; grid-template-columns: 120px 1fr; }
+        .info-grid strong { font-weight: 500; }
+        .item-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .item-table thead th { background-color: #f9f9f9; border-bottom: 2px solid #ddd; padding: 8px; text-align: left; }
+        .item-table td { padding: 8px; border-bottom: 1px solid #eee; }
+        .item-table .align-right { text-align: right; }
+        .totals { margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee; display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 15px; }
+        .totals div { display: flex; justify-content: space-between; padding: 4px 0; }
+        .totals .total-final { grid-column: 1 / -1; font-size: 18px; font-weight: 700; color: #2f7d5a; border-top: 1px solid #ddd; margin-top: 10px; padding-top: 10px; }
+        .payment-methods { margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee; }
+        .payment-methods h3 { text-align: center; margin-bottom: 20px; color: #2f7d5a; }
+        .payment-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 30px; align-items: flex-start; }
+        .payment-option { text-align: center; }
+        .payment-option h4 { margin-top: 0; }
+    .payment-option img { max-width: 180px; height: auto; border: 1px solid #ddd; padding: 5px; border-radius: 8px; }
+    .payment-option p { margin: 5px 0; line-height: 1.5; }
+        .payment-info { margin-top: 30px; padding-top: 20px; border-top: 2px solid #eee; }
+        .payment-info h3 { text-align: center; margin-bottom: 20px; color: #2f7d5a; }
+        .payment-details { background-color: #f8f9fa; padding: 20px; border-radius: 8px; border: 1px solid #e9ecef; }
+        .payment-details div { margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .payment-details div:last-child { margin-bottom: 0; }
+    .badge { display: inline-flex; align-items: center; justify-content: center; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; border: 1px solid transparent; margin-top: 10px; }
+    .badge.active { background: rgba(47, 125, 90, 0.12); color: #1b5e20; border-color: rgba(47, 125, 90, 0.24); }
+    .flash-messages { max-width: 800px; margin: 0 auto 20px auto; }
+    .flash { padding: 12px 16px; border-radius: 8px; margin-bottom: 12px; font-size: 15px; }
+    .flash.success { background: #e6ffed; color: #065f46; border: 1px solid #34d399; }
+    .flash.danger { background: #fee2e2; color: #b91c1c; border: 1px solid #f87171; }
+    .flash.warning { background: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
+        @media print { body { background-color: #fff; padding: 0; } .toolbar { display: none; } .invoice-box { box-shadow: none; border: none; max-width: 100%; padding: 0; } }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <div class="toolbar-section">
+            {% if not payment_confirmed %}
+            <form action="{{ url_for('thanh_toan', dat_id=dp.id) }}" method="post" class="payment-form" autocomplete="off">
+                <div class="method-options">
+                    {% for code, label in payment_methods %}
+                    <label class="method-option">
+                        <input type="radio" name="payment_method" value="{{ code }}" {% if selected_payment_method == code %}checked{% endif %}>
+                        <span>{{ label }}</span>
+                    </label>
+                    {% endfor %}
+                </div>
+                <button type="submit" class="btn">Xác nhận thanh toán</button>
+            </form>
+            {% else %}
+            <div class="payment-summary">
+                Đã thanh toán bằng: <strong>{{ payment_method_label or 'Đã xác nhận' }}</strong>
+            </div>
+            {% endif %}
+        </div>
+        <div class="toolbar-section">
+            <form action="{{ url_for('gui_hoa_don_email', dat_id=dp.id) }}" method="post" autocomplete="off">
+                <input type="email" name="email_to" class="email-input" placeholder="Email khách hàng" value="{{ email_prefill }}" required>
+                <button type="submit" class="btn">Gửi email</button>
+            </form>
+            <a class="btn light" href="{% if request.args.get('return_to') == 'quan_li_hoa_don' %}{{ url_for('quan_li_hoa_don') }}{% else %}{{ url_for('nhan_phong') }}{% endif %}">Quay lại</a>
+            <button class="btn" onclick="window.print()">In hóa đơn</button>
+        </div>
+    </div>
+
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+    <div class="flash-messages" style="display:none;">
+        {% for cat, msg in messages %}
+        <div class="flash {{ cat }}" data-category="{{cat}}" data-message="{{msg}}"></div>
+        {% endfor %}
+    </div>
+    {% endif %}
+    {% endwith %}
+
+    <div id="invoice-main" class="invoice-box">
+        <header class="header">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="logo">
+            <div class="hotel-info">
+                <h1>KHÁCH SẠN PTIT</h1>
+                <p><strong>Address:</strong> Khách sạn Ptit, Km10 Ha Dong</p>
+                <p><strong>Phone:</strong> 028 8888 9999</p>
+                <p><strong>Website:</strong> https://www.ptit.com</p>
+            </div>
+        </header>
+
+        <h2 class="invoice-title">HÓA ĐƠN THANH TOÁN</h2>
+
+        <div class="invoice-meta">
+            <div><strong>Mã hóa đơn:</strong> {{ dp.id }}</div>
+            <div><strong>Nhân viên lập:</strong> {{ dp.nhanvien.ten if dp.nhanvien else 'N/A' }}</div>
+            <div><strong>Ngày lập:</strong> {{ payment_time|fmt_dt }}</div>
+        </div>
+                    <div class="card" style="background:#eaf7ea; margin-bottom:16px;">
+                        <b>Lưu ý:</b> Nếu bạn vừa nhận phòng <span style="color:#1c5b45;font-weight:bold;">cao cấp</span> hoặc <span style="color:#1c5b45;font-weight:bold;">tổng thống</span>, bạn sẽ nhận được voucher giảm giá {{ voucher_policy_percent }}% cho lần đặt tiếp theo. Mã voucher sẽ được gửi qua tin nhắn cá nhân và nhập vào ô "Mã voucher" khi đặt phòng để được giảm giá.
+                    </div>
+
+        <div class="info-grid">
+            <div><strong>Tên khách hàng:</strong> <span>{{ dp.khachhang.ho_ten }}</span></div>
+            <div><strong>Tên phòng:</strong> <span>{{ dp.phong.ten }}</span></div>
+            <div><strong>CMND:</strong> <span>{{ dp.khachhang.cmnd }}</span></div>
+            <div><strong>Loại phòng:</strong> <span>{{ dp.phong.loai.ten }}</span></div>
+            <div><strong>Số điện thoại:</strong> <span>{{ dp.khachhang.sdt }}</span></div>
+            
+            {# ===== BẮT ĐẦU SỬA LỖI HIỂN THỊ ĐƠN GIÁ ===== #}
+            <div><strong>Đơn giá:</strong><span>{% if don_vi_tinh == 'giờ' %}{{ (dp.phong.loai.gia * 0.2)|int|vnd }} / giờ{% else %}{{ dp.phong.loai.gia|vnd }} / đêm{% endif %}</span></div>
+            {# ===== KẾT THÚC SỬA LỖI HIỂN THỊ ĐƠN GIÁ ===== #}
+            
+            <div><strong>Địa chỉ:</strong> <span>{{ dp.khachhang.dia_chi }}</span></div>
+            <div><strong>Số người:</strong> <span>{{ dp.phong.loai.so_nguoi_toi_da }}</span></div>
+            <div><strong>Ngày đến:</strong> <span>{{ checkin|fmt_dt }}</span></div>
+            <div><strong>Ngày đi:</strong> <span>{{ checkout|fmt_dt }}</span></div>
+            <div><strong>Quốc tịch:</strong> <span>Việt Nam</span></div>
+            <div><strong>{{ 'Số giờ' if don_vi_tinh == 'giờ' else 'Số đêm' }}:</strong><span>{{ so_luong_tinh }}</span></div>
+        </div>
+
+        <table class="item-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">STT</th><th>Tên dịch vụ</th><th class="align-right">Đơn giá</th><th class="align-right">Số lượng</th><th class="align-right">Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if dich_vu_su_dung %}
+                    {% for dv in dich_vu_su_dung %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>{{ dv.dichvu.ten }} <em style="font-size: 0.9em; color: #555;">(Đã thanh toán)</em></td>
+                        <td class="align-right">{{ dv.dichvu.gia|vnd }}</td><td class="align-right">{{ dv.so_luong }}</td><td class="align-right">{{ (dv.dichvu.gia * dv.so_luong)|vnd }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="5" style="text-align: center; padding: 20px;">Không sử dụng dịch vụ</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        {% if so_dv_chua_tinh %}
+        <p style="margin: 10px 0 0; font-size: 13px; color: #b35b00;">
+            * Có {{ so_dv_chua_tinh }} dịch vụ chưa thanh toán nên chưa được đưa vào hóa đơn này.
+        </p>
+        {% endif %}
+
+        <div class="totals">
+            <div><strong>Tiền phòng:</strong> <span>{{ tien_phong_goc|vnd }}</span></div>
+            {% if voucher_discount_amount and voucher_obj %}
+            <div><strong>Giảm giá voucher ({{ voucher_obj.code }}{% if voucher_applied_percent %} - {{ voucher_applied_percent }}%{% endif %}):</strong> <span style="color:#2f7d5a;">-{{ voucher_discount_amount|vnd }}</span></div>
+            {% endif %}
+            <div><strong>Tổng tiền dịch vụ:</strong> <span>{{ tien_dv|vnd }}</span></div>
+            {% if tien_phat > 0 %}
+            <div><strong>Phí trả phòng muộn:</strong> <span>{{ tien_phat|vnd }}</span></div>
+            {% endif %}
+            <div style="grid-column: 1 / -1; border-top: 1px solid #eee; margin: 5px 0; padding: 0;"></div>
+            <div><strong>Tổng cộng:</strong> <span>{{ tong|vnd }}</span></div>
+            <div></div> <div><strong>Đã thanh toán dịch vụ:</strong> <span>{{ tien_da_tra_truoc|vnd }}</span></div>
+            <div><strong>Đã cọc trước:</strong> <span>{{ tien_coc|vnd }}</span></div>
+            <div class="total-final">
+                <strong>Còn lại phải trả:</strong>
+                <span>{{ tien_con_lai|vnd }}</span>
+            </div>
+        </div>
+        {% if payment_confirmed %}
+        <div class="payment-info">
+            <h3>Thông Tin Thanh Toán</h3>
+            <div class="payment-details">
+                <div><strong>Phương thức thanh toán:</strong> {{ payment_method_label or 'Đã xác nhận' }}</div>
+                <div><strong>Thời gian thanh toán:</strong> {{ payment_time|fmt_dt }}</div>
+                <div><strong>Trạng thái:</strong> <span style="color: #2f7d5a; font-weight: bold;">Đã thanh toán hoàn tất</span></div>
+            </div>
+        </div>
+        {% else %}
+        <div class="payment-methods">
+            <h3>Phương thức thanh toán</h3>
+            <div class="payment-grid">
+                <div class="payment-option">
+                    <h4>Tiền mặt</h4>
+                    <p>Quý khách vui lòng thanh toán bằng tiền mặt (VND) trực tiếp tại quầy lễ tân.</p>
+                    {% if payment_method == 'cash' %}
+                    <span class="badge active">Đã chọn</span>
+                    {% endif %}
+                </div>
+                <div class="payment-option">
+                    <h4>Chuyển khoản VietQR</h4>
+                    {% if qr_code_url %}
+                    <p>Quét mã để thanh toán <strong>{{ qr_amount|vnd }}</strong></p>
+                    <img src="{{ qr_code_url }}" alt="Mã QR thanh toán">
+                    <p><strong>Ngân hàng:</strong> {{ qr_bank_name }}</p>
+                    <p><strong>Tài khoản:</strong> {{ qr_account_no }}</p>
+                    <p><strong>Chủ tài khoản:</strong> {{ qr_account_name }}</p>
+                    {% else %}
+                    {% if ghi_chu_mat_coc %}
+                    <p><strong>Lý do:</strong> {{ ghi_chu_mat_coc }}</p>
+                    {% else %}
+                    <p>Không cần hiển thị mã QR (đã hoàn tất hoặc không còn dư nợ).</p>
+                    {% endif %}
+                    {% endif %}
+                    {% if payment_method == 'qr' %}
+                    <span class="badge active">Đã chọn</span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Toast notification -->
+    <div id="toast-container" class="toast-notification">
+        <div class="toast-icon" id="toast-icon"></div>
+        <div class="toast-body">
+            <h4 id="toast-title"></h4>
+            <p id="toast-message"></p>
+        </div>
+    </div>
+
+    <script>
+        const toastContainer = document.getElementById('toast-container');
+        const toastIcon = document.getElementById('toast-icon');
+        const toastTitle = document.getElementById('toast-title');
+        const toastMessage = document.getElementById('toast-message');
+        let toastTimeout;
+
+        function showToast(icon, title, message) {
+            if (!toastContainer) { return; }
+            toastIcon.innerHTML = icon || '<i class="fas fa-bell"></i>';
+            toastTitle.textContent = title || '';
+            toastMessage.textContent = message || '';
+            toastContainer.classList.add('show');
+            clearTimeout(toastTimeout);
+            toastTimeout = setTimeout(() => toastContainer.classList.remove('show'), 5000);
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const flashes = document.querySelectorAll('.flash');
+            flashes.forEach(function(flash) {
+                const category = flash.classList.contains('success') ? 'success' : 
+                                 flash.classList.contains('danger') ? 'danger' : 
+                                 flash.classList.contains('warning') ? 'warning' : 'info';
+                const message = flash.getAttribute('data-message');
+                let icon = '<i class="fas fa-bell"></i>';
+                let title = 'Thông báo';
+                if (category === 'success') {
+                    icon = '<i class="fas fa-check"></i>';
+                    title = 'Thành công';
+                } else if (category === 'danger') {
+                    icon = '<i class="fas fa-times"></i>';
+                    title = 'Lỗi';
+                } else if (category === 'warning') {
+                    icon = '<i class="fas fa-exclamation-triangle"></i>';
+                    title = 'Cảnh báo';
+                } else if (category === 'info') {
+                    icon = '<i class="fas fa-info-circle"></i>';
+                    title = 'Thông tin';
+                }
+                showToast(icon, title, message);
+            });
+        });
+    </script>
+</body>
+</html>

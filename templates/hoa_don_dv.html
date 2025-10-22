@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Hóa Đơn Dịch Vụ</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f6f7;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .toolbar {
+            max-width: 800px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+        .btn {
+            background-color: #2f7d5a;
+            color: white;
+            padding: 10px 15px;
+            text-decoration: none;
+            border-radius: 5px;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .btn.light {
+            background-color: #fff;
+            color: #2f7d5a;
+            border: 1px solid #2f7d5a;
+        }
+        .invoice-box {
+            max-width: 800px;
+            margin: auto;
+            padding: 30px;
+            border: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+            font-size: 15px;
+            line-height: 24px;
+            background-color: #fff;
+        }
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #eee;
+        }
+        .header .logo {
+            width: 100%;
+            max-width: 150px;
+        }
+        .header .hotel-info {
+            text-align: right;
+        }
+        .hotel-info h1 {
+            margin: 0;
+            font-size: 24px;
+            color: #2f7d5a;
+            font-weight: 700;
+        }
+        .hotel-info p {
+            margin: 2px 0;
+            font-size: 14px;
+        }
+        .invoice-title {
+            text-align: center;
+            font-size: 26px;
+            font-weight: 700;
+            margin: 20px 0;
+        }
+        .invoice-meta {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #ccc;
+            margin-bottom: 20px;
+        }
+         .invoice-meta div {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+        }
+        .item-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .item-table thead th {
+            background-color: #f9f9f9;
+            border-bottom: 2px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        .item-table td {
+            padding: 8px;
+            border-bottom: 1px solid #eee;
+        }
+        .item-table .align-right {
+            text-align: right;
+        }
+        .totals {
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 2px solid #eee;
+            text-align: right;
+        }
+        .totals .total-final {
+            font-size: 18px;
+            font-weight: 700;
+            color: #2f7d5a;
+            margin-top: 10px;
+        }
+        .payment-methods {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #eee;
+        }
+        .payment-methods h3 {
+            text-align: center;
+            margin-bottom: 20px;
+            color: #2f7d5a;
+        }
+        .payment-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            align-items: flex-start;
+        }
+        .payment-option {
+            text-align: center;
+        }
+        .payment-option h4 { margin-top: 0; }
+        .payment-option img {
+            max-width: 180px;
+            height: auto;
+            border: 1px solid #ddd;
+            padding: 5px;
+            border-radius: 8px;
+        }
+        .payment-option p {
+            margin: 5px 0;
+            line-height: 1.5;
+        }
+
+        @media print {
+            body { background-color: #fff; padding: 0; }
+            .toolbar { display: none; }
+            .invoice-box { box-shadow: none; border: none; max-width: 100%; padding: 0; }
+        }
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <a class="btn light" href="{{ url_for('dich_vu_thanh_toan', dat_id=dp.id) }}">Quay lại</a>
+        <button class="btn" onclick="window.print()">In hoá đơn</button>
+    </div>
+
+    <div id="invoice-main" class="invoice-box">
+        <header class="header">
+            <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo" class="logo">
+            <div class="hotel-info">
+                <h1>KHÁCH SẠN PTIT</h1>
+                <p><strong>Địa chỉ:</strong> Khách sạn Ptit, Km10 Hà Đông</p>
+                <p><strong>Điện thoại:</strong> 028 8888 9999</p>
+                <p><strong>Website:</strong> https://www.ptit.com</p>
+            </div>
+        </header>
+
+        <h2 class="invoice-title">HÓA ĐƠN DỊCH VỤ</h2>
+
+        <div class="invoice-meta">
+            <div><strong>Khách hàng:</strong><span>{{ dp.khachhang.ho_ten }}</span></div>
+            <div><strong>Phòng:</strong><span>{{ dp.phong.ten }} ({{ dp.phong.loai.ten }})</span></div>
+            <div><strong>CMND:</strong><span>{{ dp.khachhang.cmnd }}</span></div>
+            <div><strong>Ngày lập:</strong><span>{{ paid_at|fmt_dt }}</span></div>
+        </div>
+        
+                    <div class="card" style="background:#eaf7ea; margin-bottom:16px;">
+                    </div>
+
+        <table class="item-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">STT</th>
+                    <th>Tên dịch vụ</th>
+                    <th class="align-right">Đơn giá</th>
+                    <th class="align-right">Số lượng</th>
+                    <th class="align-right">Thành tiền</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for it in items %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td>{{ it.ten }}</td>
+                    <td class="align-right">{{ it.gia|vnd }}</td>
+                    <td class="align-right">{{ it.so_luong }}</td>
+                    <td class="align-right">{{ it.thanh_tien|vnd }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="totals">
+            <div class="total-final">
+                <strong>TỔNG CỘNG:</strong>
+                <span>{{ tong|vnd }}</span>
+            </div>
+        </div>
+        
+        {% if show_payment_qr %}
+        <div class="payment-methods">
+            <h3>Phương Thức Thanh Toán</h3>
+            <div class="payment-grid">
+                <div class="payment-option">
+                    <h4>TIỀN MẶT</h4>
+                    <p>Quý khách vui lòng thanh toán bằng tiền mặt (VND) trực tiếp tại quầy lễ tân.</p>
+                </div>
+                <div class="payment-option">
+                    <h4>CHUYỂN KHOẢN VIETQR</h4>
+                    <p>Quét mã để thanh toán <strong>{{ tong|vnd }}</strong></p>
+                    <img src="{{ qr_code_url }}" alt="Mã QR thanh toán">
+                    <p><strong>Ngân hàng:</strong> TPBank</p>
+                    <p><strong>Tài khoản:</strong> 99992162001</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>

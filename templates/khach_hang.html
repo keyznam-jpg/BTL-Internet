@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Quản Lí Khách Hàng</h2>
+
+<div class="action-bar">
+  {% if current_user.loai == 'admin' %}
+  <a href="{{ url_for('xuat_excel_khach_hang') }}" class="btn-export">
+    <i class="fas fa-file-excel"></i> Xuất Excel
+  </a>
+  {% endif %}
+</div>
+
+<div class="card">
+  <h3>Danh sách khách hàng</h3>
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th style="width:70px">STT</th>
+        <th>Họ tên</th>
+        <th>CMND</th>
+        <th>Phòng</th>
+        <th>Nhận</th>
+        <th>Trả</th>
+        <th>Nhân viên check-in</th>
+        <th>Trạng thái</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for dp in ds_khach %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ dp.khachhang.ho_ten }}</td>
+        <td>{{ dp.khachhang.cmnd }}</td>
+        <td>{{ dp.phong.ten }}</td>
+        <td>{{ (dp.thuc_te_nhan or dp.ngay_nhan)|fmt_dt }}</td>
+        <td>{{ dp.ngay_tra|fmt_dt }}</td>
+        <td>{{ dp.nhanvien.ten if dp.nhanvien else 'N/A' }}</td>
+        <td>
+          {% if dp.trang_thai == 'nhan' %}
+            <span class="status status-checked-in">Đã nhận</span>
+          {% elif dp.trang_thai == 'da_thanh_toan' %}
+            <span class="status status-completed">Đã thanh toán</span>
+          {% elif dp.trang_thai == 'huy' %}
+            <span class="status status-cancelled">Đã hủy</span>
+          {% else %}
+            <span class="status status-booked">Chưa nhận</span>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+
+      {% if not ds_khach %}
+      <tr><td colspan="8" class="muted">Không có khách hàng nào.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+
+<style>
+.card{
+  background:#fff;border:1px solid #e6eee6;border-radius:12px;
+  padding:14px;margin-bottom:14px;box-shadow:0 4px 10px rgba(0,0,0,.04)
+}
+.card h3{margin:0 0 10px;color:#1b5e20}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th,.tbl td{border-bottom:1px solid #eef3ee;padding:10px 8px; vertical-align: middle;}
+.tbl thead th{background:#f7fbf7}
+.muted{color:#888;text-align:center}
+
+/* CSS cho cột trạng thái */
+.status {
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  font-weight: 600;
+  color: #fff;
+}
+.status-checked-in {
+  background-color: #2e7d32; /* Màu xanh lá */
+}
+.status-booked {
+  background-color: #ed6c02; /* Màu cam */
+}
+.status-completed {
+  background-color: #1976d2; /* Màu xanh dương */
+}
+.status-cancelled {
+  background-color: #d32f2f; /* Màu đỏ */
+}
+
+.action-bar {
+  text-align: right;
+  margin-bottom: 20px;
+}
+
+.btn-export {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  padding: 10px 20px;
+  text-decoration: none;
+  border-radius: 8px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+  transition: all 0.3s ease;
+}
+.btn-export:hover {
+  background: linear-gradient(135deg, #218838, #1aa085);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.4);
+  color: white;
+  text-decoration: none;
+}
+</style>
+
+{% endblock %}

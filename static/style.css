@@ -1,0 +1,519 @@
+﻿*{box-sizing:border-box;font-family:Segoe UI, Arial, sans-serif}
+
+/* Fix scrollbar jump when content changes */
+html {
+  height:100%;
+  margin:0;
+  background:#f4f6f7;
+  color:#1c5b45;
+  overflow-y:scroll;
+  scrollbar-gutter:stable;
+}
+
+body {
+  height:100%;
+  margin:0;
+  background:#f4f6f7;
+  color:#1c5b45;
+}
+
+:root{
+  --sidebar-width-collapsed: 88px;
+  --sidebar-width-expanded: 300px;
+}
+
+/* ====================================================== */
+/* ===== START: CSS CHO SIDEBAR CỐ ĐỊNH ===== */
+/* ====================================================== */
+.leftmenu{
+  position:fixed;
+  left:0;
+  top:0;
+  bottom:0;
+  width:var(--sidebar-width-collapsed);
+  background:#2f7d5a;
+  color:#fff;
+  display:flex;
+  flex-direction:column;
+  z-index:100;
+  transition:width .25s ease;
+  overflow:hidden;
+}
+
+.leftmenu:hover,.leftmenu:focus-within{
+  width:var(--sidebar-width-expanded);
+}
+
+.main{
+  margin-left:var(--sidebar-width-collapsed);
+  padding:20px;
+  transition:margin-left .25s ease;
+}
+.leftmenu:hover~.main,.leftmenu:focus-within~.main{
+  margin-left:var(--sidebar-width-expanded);
+}
+.menu-header {
+    padding: 20px 0;
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition:padding .25s ease;
+}
+.leftmenu:hover .menu-header,.leftmenu:focus-within .menu-header {
+    padding: 20px 0;
+}
+.logo-container {
+    text-align: center;
+}
+.brand-logo img {
+    width:48px;
+    transition:width .25s ease;
+}
+.leftmenu:hover .brand-logo img,.leftmenu:focus-within .brand-logo img {
+    width:80px;
+}
+.menu-links{
+  padding:12px 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex: 1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+/* Custom Scrollbar for Webkit browsers */
+.menu-links::-webkit-scrollbar {
+  width: 6px;
+}
+
+.menu-links::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.menu-links::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+}
+
+.menu-links::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Show scrollbar on hover */
+.leftmenu:hover .menu-links::-webkit-scrollbar-thumb,
+.leftmenu:focus-within .menu-links::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* Menu Groups */
+.menu-group {
+  margin-bottom: 8px;
+}
+
+.menu-group-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255, 255, 255, 0.5);
+  padding: 16px 0 8px 0;
+  padding-left: 26px;
+  white-space: nowrap;
+  max-width: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: opacity .25s ease, max-width .25s ease;
+}
+
+.leftmenu:hover .menu-group-title,
+.leftmenu:focus-within .menu-group-title {
+  opacity: 1;
+  max-width: 200px;
+}
+
+.menu-group:first-of-type .menu-group-title {
+  padding-top: 0;
+}
+
+.menu-group + .menu-group {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 8px;
+}
+
+.menu-links a{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:0;
+  padding:12px 0;
+  color:rgba(255,255,255,0.85);
+  text-decoration:none;
+  border-left:4px solid transparent;
+  font-size:16px;
+  width:100%;
+  transition:background-color .2s ease,border-left-color .2s ease,color .2s ease,padding .2s ease,gap .25s ease;
+}
+.leftmenu:hover .menu-links a,.leftmenu:focus-within .menu-links a{
+  justify-content:flex-start;
+  padding:12px 26px 12px 22px;
+  gap:16px;
+}
+.menu-links a .menu-text{
+  display:inline-block;
+  white-space:nowrap;
+  max-width:0;
+  overflow:hidden;
+  opacity:0;
+  transition:opacity .25s ease, max-width .25s ease;
+}
+.leftmenu:hover .menu-links a .menu-text,.leftmenu:focus-within .menu-links a .menu-text{
+  opacity:1;
+  max-width:250px;
+}
+.menu-links a:hover{
+  background:#256348;
+  border-left-color:#ffe59d;
+  color:#fff;
+}
+.menu-links a svg {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+}
+
+/* Notification Badge cho Tin nhắn */
+.menu-link-with-badge {
+  position: relative;
+}
+.notification-badge {
+  position: absolute;
+  top: 8px;
+  left: 36px;
+  background: linear-gradient(135deg, #ff4444 0%, #cc0000 100%);
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 10px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4);
+  animation: pulse-badge 2s ease-in-out infinite;
+  z-index: 10;
+}
+.menu-badge {
+  position: absolute;
+  top: 6px;
+  left: 34px;
+  background: linear-gradient(135deg, #ffb300 0%, #ff9500 100%);
+  color: #1f2a3c;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 999px;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(255, 149, 0, 0.3);
+}
+
+@keyframes pulse-badge {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 2px 8px rgba(255, 68, 68, 0.4);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow: 0 2px 12px rgba(255, 68, 68, 0.6);
+  }
+}
+.leftmenu:hover .notification-badge,
+.leftmenu:focus-within .notification-badge {
+  left: 28px;
+  transition: left 0.25s ease;
+}
+
+/* ====================================================== */
+/* ===== END: CSS CHO SIDEBAR CỐ ĐỊNH ===== */
+/* ====================================================== */
+
+.page-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.page-header h1{margin:0;font-weight:700;color:#2f7d5a; font-size: 1.8em; flex-grow: 1;}
+.user-menu { position: relative; margin-left: auto; }
+ .user-menu-trigger { display:flex; align-items:center; gap:12px; background-color:#fff; border:1px solid #dde7e2; border-radius:28px; padding:6px 18px; cursor:pointer; font-size:15px; font-weight:600; color:#1c5b45; transition:all 0.2s ease; min-width:180px; box-shadow:0 2px 6px rgba(28,91,69,0.08); }
+.user-menu-trigger:hover { background-color:#f5f9f7; box-shadow:0 6px 16px rgba(28,91,69,0.15); transform:translateY(-1px); }
+.user-menu-trigger .user-avatar { width:42px; height:42px; border-radius:50%; overflow:hidden; display:flex; align-items:center; justify-content:center; background:#eef5f2; border:2px solid rgba(47,125,90,0.25); }
+.user-menu-trigger .user-avatar img { width:100%; height:100%; object-fit:cover; border-radius:50%; }
+.user-menu-trigger .user-details { display:flex; flex-direction:column; align-items:flex-start; line-height:1.1; }
+.user-menu-trigger .user-name { font-weight:700; color:#1c5b45; }
+.user-menu-trigger .user-role { font-size:0.85em; color:#6b8a7a; text-transform:capitalize; }
+.dropdown-content { display: none; position: absolute; top: 110%; right: 0; background-color: #fff; min-width: 200px; box-shadow: 0 8px 16px rgba(0,0,0,0.1); border-radius: 8px; z-index: 10; overflow: hidden; }
+.dropdown-content a { color: #333; padding: 12px 16px; text-decoration: none; display: block; font-size: 15px; }
+.dropdown-content a:hover { background-color: #f1f1f1; }
+.user-menu.active .dropdown-content { display: block; }
+.alert{padding:12px;border-radius:6px;margin:16px 0}
+.alert.success{background:#e9f8ef;color:#0f5132; border-left: 5px solid #1e8155;}
+.alert.danger{background:#ffe1e1;color:#842029; border-left: 5px solid #d32f2f;}
+.mosaic{display:grid;grid-template-columns:repeat(6, 1fr);gap:16px}
+.tile{background:#2f7d5a;border-radius:8px;color:#fff;text-decoration:none;display:flex;flex-direction:column;justify-content:flex-end;min-height:140px;padding:14px;position:relative;box-shadow:0 6px 14px rgba(0,0,0,.08)}
+.tile .tile-icon{position:absolute;left:14px;top:14px;font-size:42px;opacity:.9}
+.tile .tile-title{font-weight:600;margin-top:auto}
+.tile.tall{grid-row:span 2;min-height:280px}
+.tile.wide{grid-column:span 2}
+.card{background:#fff;border-radius:10px;padding:20px;margin-bottom:20px;box-shadow:0 4px 12px rgba(0,0,0,.08); border: 1px solid #e8e8e8;}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+label{display:block;margin:10px 0 6px; font-weight: 600; color: #444;}
+input,select,button{width:100%;padding:12px;border:1px solid #ccc;border-radius:6px; font-size: 1em;}
+input:focus, select:focus { border-color: #2f7d5a; outline: none; box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.15); }
+button.primary{background:#2f7d5a;color:#fff;border:none; cursor: pointer; transition: background-color 0.2s ease; margin-top: 15px;}
+button.primary:hover { background-color: #256348; }
+table{width:100%;border-collapse:collapse}
+th,td{border-bottom:1px solid #eaeaea;padding:12px 8px;text-align:left; vertical-align: middle;}
+thead th { background-color: #f9fafb; font-weight: 600; }
+
+
+/* --- CSS for Disabled Menu --- */
+.menu-links a.disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+.menu-links a.disabled:hover {
+  background-color: transparent;
+  border-left-color: transparent;
+  color: #fff;
+}
+
+/* --- CSS for Room Map (Improved Version) --- */
+.filters {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 0 10px;
+}
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.filter-group .control {
+    width: 200px;
+    padding: 8px 12px;
+}
+.legend {
+  display: flex;
+  gap: 10px;
+  margin-left: auto;
+}
+.legend-item {
+  padding: 5px 12px;
+  border-radius: 14px;
+  color: white;
+  font-size: 0.9em;
+  border: 1px solid rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+.legend-item:hover {
+  opacity: 0.85;
+}
+.room-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+.room-card {
+  border: 1px solid rgba(0,0,0,0.1);
+  border-radius: 8px;
+  color: white;
+  display: grid;
+  grid-template-areas: "name icon" "type icon";
+  grid-template-columns: 1fr auto;
+  grid-template-rows: 1fr 1fr;
+  padding: 12px;
+  min-height: 80px;
+  position: relative;
+  z-index: 1;
+  overflow: visible;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.room-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+  z-index: 200;
+}
+.room-tooltip {
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 12px);
+  transform: translate(-50%, 8px);
+  background: #fff;
+  color: #1c5b45;
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-shadow: 0 14px 28px rgba(0,0,0,0.15);
+  min-width: 220px;
+  max-width: 260px;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 300;
+}
+.room-card:hover .room-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translate(-50%, 0);
+}
+.room-tooltip::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 16px;
+  height: 16px;
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(0,0,0,0.12);
+  transform: translateX(-50%) rotate(45deg);
+}
+.tooltip-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+.tooltip-title {
+  font-weight: 700;
+  font-size: 1em;
+  color: #1c5b45;
+}
+.tooltip-status {
+  font-size: 0.7em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: rgba(47, 125, 90, 0.12);
+  color: #1c5b45;
+  padding: 3px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+.tooltip-line {
+  font-size: 0.8em;
+  color: #2f2f2f;
+  margin: 2px 0;
+  line-height: 1.4;
+}
+
+.room-name {
+  grid-area: name;
+  font-weight: 700;
+  font-size: 1.5em;
+  align-self: end;
+}
+.room-type {
+  grid-area: type;
+  font-size: 0.8em;
+  opacity: 0.9;
+  align-self: start;
+  text-transform: uppercase;
+}
+.room-icon {
+    grid-area: icon;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* --- Status Colors --- */
+.status-trong { background-color: #2e7d32; } /* Xanh lá */
+.status-dang_o { background-color: #c62828; } /* Đỏ đậm */
+.status-da_dat { background-color: #ff8f00; } /* Vàng cam */
+/* File: style.css */
+/* Thêm vào cuối file */
+.status-qua_gio { 
+  background-color: #8e44ad; /* Tím đậm */
+}
+
+
+
+
+
+
+
+
+/* --- Online booking dashboard --- */
+.online-booking-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+.online-booking-header h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  color: #1c5b45;
+}
+.online-booking-header p {
+  margin: 0;
+  color: #4a6659;
+  font-size: 15px;
+}
+.online-booking-feedback {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.online-booking-feedback .alert {
+  margin: 0;
+}
+.online-booking-card {
+  padding: 0;
+  overflow: hidden;
+}
+.online-booking-table thead th {
+  background: #f1f5f4;
+  color: #255944;
+  text-transform: uppercase;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+}
+.online-booking-table tbody tr:nth-child(even) {
+  background: #fbfdfc;
+}
+.online-booking-table td small {
+  color: #5b7266;
+}
+.online-booking-table td.actions-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.online-booking-table td.actions-cell form {
+  margin: 0;
+}
+.online-booking-table td.actions-cell button {
+  width: 100%;
+}
+.online-booking-empty {
+  text-align: center;
+  padding: 32px 28px;
+  color: #4a6659;
+  font-size: 15px;
+}
+
+.countdown {
+  color: red !important;
+  font-weight: bold !important;
+  background-color: rgba(255, 0, 0, 0.1) !important;
+  padding: 2px 4px !important;
+  border-radius: 4px !important;
+}
+

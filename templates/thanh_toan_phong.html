@@ -1,0 +1,86 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='payments.css') }}">
+
+<div class="payment-shell">
+  <div class="payment-card">
+    <h1>Thanh toán trả phòng</h1>
+    <p class="muted-text">Xem chi tiết hóa đơn và chọn hình thức thanh toán cho khách.</p>
+
+    <div class="payment-meta">
+      <div class="meta-item">
+        <span class="meta-label">Khách hàng</span>
+        <span class="meta-value">{{ dp.khachhang.ho_ten }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Số điện thoại</span>
+        <span class="meta-value">{{ dp.khachhang.sdt or '—' }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Phòng</span>
+        <span class="meta-value">{{ dp.phong.ten }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Nhận phòng</span>
+        <span class="meta-value">{{ checkin.strftime('%d/%m/%Y %H:%M') }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Trả phòng</span>
+        <span class="meta-value">{{ checkout.strftime('%d/%m/%Y %H:%M') }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Thời gian lưu trú</span>
+        <span class="meta-value">{{ so_luong_tinh }} {{ don_vi_tinh }}</span>
+      </div>
+    </div>
+
+    <div class="payment-card">
+      <h2>Tổng kết hóa đơn</h2>
+      <div class="service-list">
+        <div class="service-item">
+          <span>Tiền phòng</span>
+          <span>{{ tien_phong | vnd }}</span>
+        </div>
+        <div class="service-item">
+          <span>Tiền dịch vụ</span>
+          <span>{{ tien_dv | vnd }}</span>
+        </div>
+        <div class="service-item">
+          <span>Tiền phạt</span>
+          <span>{{ tien_phat | vnd }}</span>
+        </div>
+        {% if tien_coc %}
+        <div class="service-item">
+          <span>Đã thu cọc</span>
+          <span>- {{ tien_coc | vnd }}</span>
+        </div>
+        {% endif %}
+        {% if tien_da_tra_truoc and tien_da_tra_truoc > 0 %}
+        <div class="service-item">
+          <span>Tiền dịch vụ đã thanh toán</span>
+          <span>- {{ tien_da_tra_truoc | vnd }}</span>
+        </div>
+        {% endif %}
+        <div class="service-item total-row">
+          <span>Số tiền còn phải thanh toán</span>
+          <span>{{ tien_con_lai | vnd }}</span>
+        </div>
+      </div>
+
+      <div class="payment-actions">
+        <form class="method-buttons" method="POST">
+          <button class="method-button" name="payment_method" value="cash">
+            <i class="fas fa-cash-register"></i>
+            <span>Thanh toán tiền mặt</span>
+          </button>
+          <button class="method-button" name="payment_method" value="qr">
+            <i class="fas fa-qrcode"></i>
+            <span>Thanh toán qua QR VietQR</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

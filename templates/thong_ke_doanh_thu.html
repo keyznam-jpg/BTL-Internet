@@ -1,0 +1,1113 @@
+{% extends "base.html" %}
+{% set view_label_map = {'month': 'theo tháng', 'quarter': 'theo quý', 'year': 'theo năm'} %}
+{% set view_label = view_label_map.get(view_type, 'theo tháng') %}
+{% if view_type == 'month' %}
+  {% set period_text = 'Tháng ' ~ "%02d"|format(current_month) ~ '/' ~ current_year %}
+{% elif view_type == 'quarter' %}
+  {% set period_text = 'Quý ' ~ current_quarter ~ '/' ~ current_year %}
+{% else %}
+  {% set period_text = 'Năm ' ~ current_year %}
+{% endif %}
+{% block content %}
+<div class="revenue-dashboard">
+  <div class="dashboard-header">
+    <div class="title-group">
+      <h2>Thống kê doanh thu</h2>
+      <p class="subtitle">
+        Hiển thị số liệu {{ view_label }} — {{ period_text }}.
+        <span class="subtitle-meta">Kỳ trước: <strong>{{ prev_total|vnd }}</strong></span>
+      </p>
+    </div>
+    <div class="header-actions">
+      <a href="{{ url_for('xuat_bao_cao_doanh_thu', nam=current_year) }}" class="btn-export">
+        <span aria-hidden="true"><i class="fas fa-download"></i></span>
+        Xuất Excel
+      </a>
+    </div>
+  </div>
+
+  <div class="filter-bar">
+    <form method="get" id="filter-form">
+      <div class="filter-group" data-filter="view">
+        <label for="view-select">Loại hiển thị</label>
+        <select name="view" id="view-select">
+          <option value="month" {% if view_type == 'month' %}selected{% endif %}>Theo tháng</option>
+          <option value="quarter" {% if view_type == 'quarter' %}selected{% endif %}>Theo quý</option>
+          <option value="year" {% if view_type == 'year' %}selected{% endif %}>Theo năm</option>
+        </select>
+      </div>
+
+      <div class="filter-group {% if view_type != 'month' %}is-hidden{% endif %}" data-filter="month">
+        <label for="month-select">Tháng</label>
+        <select name="thang" id="month-select">
+          {% for m in range(1, 13) %}
+          <option value="{{ m }}" {% if m == current_month %}selected{% endif %}>Tháng {{ m }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group {% if view_type != 'quarter' %}is-hidden{% endif %}" data-filter="quarter">
+        <label for="quarter-select">Quý</label>
+        <select name="quy" id="quarter-select">
+          {% for q in range(1, 5) %}
+          <option value="{{ q }}" {% if q == current_quarter %}selected{% endif %}>Quý {{ q }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="filter-group" data-filter="year">
+        <label for="year-select">Năm</label>
+        <select name="nam" id="year-select">
+          {% for y in range(2023, now().year + 2) %}
+          <option value="{{ y }}" {% if y == current_year %}selected{% endif %}>{{ y }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <button type="submit" class="btn-filter">
+        Lọc
+      </button>
+    </form>
+  </div>
+
+  <div class="kpi-grid">
+    {% set growth_direction = 'positive' if growth_rate >= 0 else 'negative' %}
+    {% set growth_icon = '<i class=\"fas fa-arrow-up\"></i>' if growth_rate >= 0 else '<i class=\"fas fa-arrow-down\"></i>' %}
+    {% set room_share = (tong_cong.phong / tong_cong.tong * 100) if tong_cong.tong > 0 else 0 %}
+    {% set service_share = (tong_cong.dv / tong_cong.tong * 100) if tong_cong.tong > 0 else 0 %}
+    <div class="kpi-card primary">
+      <div class="kpi-icon" aria-hidden="true"><i class="fas fa-chart-bar"></i></div>
+      <div class="kpi-content">
+        <p class="kpi-label">Tổng doanh thu</p>
+        <p class="kpi-value">{{ tong_cong.tong|vnd_short }}</p>
+        <p class="kpi-change {{ growth_direction }}">
+          <span class="change-icon">{{ growth_icon|safe }}</span>
+          {{ "%.1f"|format(growth_rate) }}% so với kỳ trước
+        </p>
+      </div>
+    </div>
+
+    <div class="kpi-card success">
+      <div class="kpi-icon" aria-hidden="true"><i class="fas fa-bed"></i></div>
+      <div class="kpi-content">
+        <p class="kpi-label">Tiền phòng</p>
+        <p class="kpi-value">{{ tong_cong.phong|vnd_short }}</p>
+        <p class="kpi-subtext">{{ "%.1f"|format(room_share) }}% tổng doanh thu</p>
+      </div>
+    </div>
+
+    <div class="kpi-card info">
+      <div class="kpi-icon" aria-hidden="true"><i class="fas fa-concierge-bell"></i></div>
+      <div class="kpi-content">
+        <p class="kpi-label">Tiền dịch vụ</p>
+        <p class="kpi-value">{{ tong_cong.dv|vnd_short }}</p>
+        <p class="kpi-subtext">{{ "%.1f"|format(service_share) }}% tổng doanh thu</p>
+      </div>
+    </div>
+
+    <div class="kpi-card warning">
+      <div class="kpi-icon" aria-hidden="true"><i class="fas fa-exclamation-triangle"></i></div>
+      <div class="kpi-content">
+        <p class="kpi-label">Phí phạt</p>
+        <p class="kpi-value">{{ tong_cong.phat|vnd_short }}</p>
+        <p class="kpi-subtext">{{ tong_cong.so_booking }} lượt đặt</p>
+      </div>
+    </div>
+
+    <div class="kpi-card secondary">
+      <div class="kpi-icon" aria-hidden="true"><i class="fas fa-chart-line"></i></div>
+      <div class="kpi-content">
+        <p class="kpi-label">TB/booking</p>
+        <p class="kpi-value">{{ avg_revenue_per_booking|vnd_short }}</p>
+        <p class="kpi-subtext">Trung bình mỗi đặt phòng</p>
+      </div>
+    </div>
+
+    <div class="kpi-card accent">
+      <div class="kpi-icon" aria-hidden="true"><i class="fas fa-wallet"></i></div>
+      <div class="kpi-content">
+        <p class="kpi-label">Tiền cọc</p>
+        <p class="kpi-value">{{ tong_cong.coc|vnd_short }}</p>
+        <p class="kpi-subtext">Đã ghi nhận</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card large">
+      <div class="chart-header">
+        <h3>Biểu đồ doanh thu theo thời gian</h3>
+        <div class="chart-tabs">
+          <button type="button" class="tab-btn active" data-chart-type="line">Đường</button>
+          <button type="button" class="tab-btn" data-chart-type="bar">Cột</button>
+          <button type="button" class="tab-btn" data-chart-type="area">Miền</button>
+        </div>
+      </div>
+      <div class="chart-container">
+        <canvas id="revenueChart"></canvas>
+      </div>
+    </div>
+
+    <div class="chart-card small">
+      <div class="chart-header">
+        <h3>Doanh thu theo loại phòng</h3>
+      </div>
+      <div class="chart-container">
+        <canvas id="pieChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <div class="charts-row">
+    <div class="chart-card medium">
+      <div class="chart-header">
+        <h3>Top 5 khách hàng</h3>
+      </div>
+      <div class="top-list">
+        {% for customer in top_customers %}
+        <div class="top-item">
+          <div class="top-rank">#{{ loop.index }}</div>
+          <div class="top-info">
+            <p class="top-name">{{ customer.name }}</p>
+            <p class="top-stats">{{ customer.count }} lần đặt</p>
+          </div>
+          <p class="top-value">{{ customer.total|vnd }}</p>
+        </div>
+        {% endfor %}
+        {% if not top_customers %}
+        <div class="empty-state">
+          <span>Chưa có dữ liệu trong giai đoạn này</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="chart-card medium">
+      <div class="chart-header">
+        <h3>Top 5 phòng</h3>
+      </div>
+      <div class="top-list">
+        {% for room in top_rooms %}
+        <div class="top-item">
+          <div class="top-rank">#{{ loop.index }}</div>
+          <div class="top-info">
+            <p class="top-name">{{ room.name }}</p>
+            <p class="top-stats">{{ room.type }} - {{ room.count }} lượt</p>
+          </div>
+          <p class="top-value">{{ room.total|vnd }}</p>
+        </div>
+        {% endfor %}
+        {% if not top_rooms %}
+        <div class="empty-state">
+          <span>Chưa có dữ liệu trong giai đoạn này</span>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-header">
+      <h3>Chi tiết hóa đơn ({{ ds_doanh_thu|length }} booking)</h3>
+      <div class="table-actions">
+        <input type="search" id="search-table" placeholder="Tìm kiếm nhanh...">
+      </div>
+    </div>
+    <div class="table-responsive">
+      <table id="revenue-table">
+        <thead>
+          <tr>
+            <th>STT</th>
+            <th>Ngày thanh toán</th>
+            <th>Khách hàng</th>
+            <th>Phòng</th>
+            <th class="text-right">Tiền phòng</th>
+            <th class="text-right">Tiền dịch vụ</th>
+            <th class="text-right">Phạt</th>
+            <th class="text-right">Tổng cộng</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in ds_doanh_thu %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ d.thuc_te_tra|fmt_dt }}</td>
+            <td>
+              <div class="customer-info">
+                <strong>{{ d.khachhang.ho_ten }}</strong>
+                <span class="sub">{{ d.khachhang.sdt }}</span>
+              </div>
+            </td>
+            <td>
+              <div class="room-info">
+                <strong>{{ d.phong.ten }}</strong>
+                <span class="badge">{{ d.phong.loai.ten }}</span>
+              </div>
+            </td>
+            <td class="text-right">{{ d.tien_phong|vnd }}</td>
+            <td class="text-right">{{ d.tien_dv|vnd }}</td>
+            <td class="text-right {% if d.tien_phat > 0 %}text-warning{% endif %}">{{ d.tien_phat|vnd }}</td>
+            <td class="text-right"><strong>{{ d.tong_thanh_toan|vnd }}</strong></td>
+          </tr>
+          {% endfor %}
+          {% if not ds_doanh_thu %}
+          <tr>
+            <td colspan="8">
+              <div class="empty-state">
+                <span>Không có hóa đơn nào khớp với bộ lọc hiện tại</span>
+              </div>
+            </td>
+          </tr>
+          {% endif %}
+        </tbody>
+        <tfoot>
+          <tr class="total-row">
+            <td colspan="4">Tổng cộng</td>
+            <td class="text-right"><strong>{{ tong_cong.phong|vnd }}</strong></td>
+            <td class="text-right"><strong>{{ tong_cong.dv|vnd }}</strong></td>
+            <td class="text-right"><strong>{{ tong_cong.phat|vnd }}</strong></td>
+            <td class="text-right"><strong class="highlight">{{ tong_cong.tong|vnd }}</strong></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const revenueData = {
+  labels: {{ chart_labels|tojson }},
+  total: {{ chart_data|tojson }},
+  room: {{ chart_room_data|tojson }},
+  service: {{ chart_service_data|tojson }}
+};
+
+const doughnutData = {
+  labels: {{ pie_labels|tojson }},
+  values: {{ pie_data|tojson }}
+};
+
+const chartColorTokens = {
+  total: { stroke: 'rgba(46, 125, 50, 1)', fill: 'rgba(46, 125, 50, 0.18)' },
+  room: { stroke: 'rgba(30, 136, 229, 1)', fill: 'rgba(30, 136, 229, 0.18)' },
+  service: { stroke: 'rgba(255, 143, 0, 1)', fill: 'rgba(255, 143, 0, 0.18)' }
+};
+
+const currencyFormatter = new Intl.NumberFormat('vi-VN', {
+  style: 'currency',
+  currency: 'VND',
+  maximumFractionDigits: 0
+});
+
+let revenueChart;
+let revenueCanvas;
+let revenueGradient;
+
+function createRevenueChart(type = 'line') {
+  if (!revenueCanvas) { return; }
+
+  const context = revenueCanvas.getContext('2d');
+  const chartType = type === 'area' ? 'line' : type;
+  const shouldFill = type !== 'bar';
+
+  if (!revenueGradient) {
+    revenueGradient = context.createLinearGradient(0, 0, 0, revenueCanvas.height || 320);
+    revenueGradient.addColorStop(0, 'rgba(46, 125, 50, 0.35)');
+    revenueGradient.addColorStop(1, 'rgba(46, 125, 50, 0.05)');
+  }
+
+  if (revenueChart) {
+    revenueChart.destroy();
+  }
+
+  const datasets = [
+    {
+      label: 'Tổng doanh thu',
+      data: revenueData.total,
+      borderColor: chartColorTokens.total.stroke,
+      backgroundColor: shouldFill ? revenueGradient : chartColorTokens.total.fill,
+      borderWidth: 3,
+      fill: shouldFill,
+      tension: 0.35,
+      pointRadius: type === 'bar' ? 0 : 4,
+      pointHoverRadius: type === 'bar' ? 0 : 6,
+      pointBackgroundColor: chartColorTokens.total.stroke,
+      pointBorderColor: '#ffffff',
+      pointBorderWidth: 2,
+      order: 1
+    },
+    {
+      label: 'Tiền phòng',
+      data: revenueData.room,
+      borderColor: chartColorTokens.room.stroke,
+      backgroundColor: type === 'bar' ? chartColorTokens.room.fill : 'rgba(30, 136, 229, 0.12)',
+      borderWidth: type === 'bar' ? 0 : 2,
+      fill: type === 'area',
+      tension: 0.35,
+      pointRadius: type === 'bar' ? 0 : 3,
+      pointHoverRadius: type === 'bar' ? 0 : 5,
+      order: 2
+    },
+    {
+      label: 'Tiền dịch vụ',
+      data: revenueData.service,
+      borderColor: chartColorTokens.service.stroke,
+      backgroundColor: type === 'bar' ? chartColorTokens.service.fill : 'rgba(255, 143, 0, 0.12)',
+      borderWidth: type === 'bar' ? 0 : 2,
+      fill: type === 'area',
+      tension: 0.35,
+      pointRadius: type === 'bar' ? 0 : 3,
+      pointHoverRadius: type === 'bar' ? 0 : 5,
+      order: 3
+    }
+  ];
+
+  if (chartType === 'bar') {
+    datasets.forEach(dataset => {
+      dataset.borderRadius = 6;
+    });
+  }
+
+  revenueChart = new Chart(context, {
+    type: chartType,
+    data: {
+      labels: revenueData.labels,
+      datasets
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: {
+        mode: 'index',
+        intersect: false
+      },
+      animation: {
+        duration: 900,
+        easing: 'easeOutQuart'
+      },
+      plugins: {
+        legend: {
+          display: true,
+          align: 'start',
+          labels: {
+            usePointStyle: true,
+            padding: 18,
+            font: { size: 13 }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(32, 45, 37, 0.92)',
+          padding: 12,
+          titleFont: { weight: '600', size: 14 },
+          bodyFont: { size: 13 },
+          callbacks: {
+            label: function(context) {
+              const label = context.dataset.label ? context.dataset.label + ': ' : '';
+              const rawValue = typeof context.parsed === 'object' ? context.parsed.y : context.parsed;
+              return label + currencyFormatter.format(rawValue || 0);
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          grid: {
+            drawOnChartArea: false,
+            drawBorder: false
+          },
+          ticks: {
+            font: { size: 12 },
+            maxRotation: 0,
+            autoSkip: true
+          }
+        },
+        y: {
+          grid: {
+            borderDash: [4, 4],
+            color: 'rgba(46, 125, 50, 0.14)'
+          },
+          ticks: {
+            font: { size: 12 },
+            padding: 10,
+            callback: function(value) {
+              return currencyFormatter.format(value);
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+function updateActiveTab(button) {
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn === button);
+  });
+}
+
+function updateFiltersVisibility() {
+  const viewSelect = document.getElementById('view-select');
+  if (!viewSelect) { return; }
+
+  const monthFilter = document.querySelector('[data-filter="month"]');
+  const quarterFilter = document.querySelector('[data-filter="quarter"]');
+
+  const view = viewSelect.value;
+  if (monthFilter) {
+    monthFilter.classList.toggle('is-hidden', view !== 'month');
+  }
+  if (quarterFilter) {
+    quarterFilter.classList.toggle('is-hidden', view !== 'quarter');
+  }
+}
+
+function filterTableRows(query) {
+  const table = document.getElementById('revenue-table');
+  if (!table) { return; }
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const rows = table.querySelectorAll('tbody tr');
+
+  rows.forEach(row => {
+    if (row.querySelector('.empty-state')) {
+      return;
+    }
+    const cells = Array.from(row.querySelectorAll('td'));
+    const visible = normalizedQuery === ''
+      ? true
+      : cells.some(cell => (cell.textContent || '').toLowerCase().includes(normalizedQuery));
+    row.style.display = visible ? '' : 'none';
+  });
+}
+
+function animateKpiCards() {
+  const cards = document.querySelectorAll('.kpi-card');
+  cards.forEach((card, index) => {
+    card.style.opacity = '0';
+    card.style.transform = 'translateY(16px)';
+    setTimeout(() => {
+      card.style.transition = 'all 0.5s ease';
+      card.style.opacity = '1';
+      card.style.transform = 'translateY(0)';
+    }, index * 80);
+  });
+}
+
+function buildDoughnutChart() {
+  const pieCanvas = document.getElementById('pieChart');
+  if (!pieCanvas) { return; }
+
+  const pieContext = pieCanvas.getContext('2d');
+  const colors = [
+    'rgba(46, 125, 50, 0.85)',
+    'rgba(25, 118, 210, 0.85)',
+    'rgba(255, 152, 0, 0.85)',
+    'rgba(156, 39, 176, 0.85)',
+    'rgba(244, 67, 54, 0.85)'
+  ];
+
+  new Chart(pieContext, {
+    type: 'doughnut',
+    data: {
+      labels: doughnutData.labels,
+      datasets: [{
+        data: doughnutData.values,
+        backgroundColor: colors,
+        borderColor: '#ffffff',
+        borderWidth: 3,
+        hoverOffset: 14
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          position: 'bottom',
+          labels: {
+            usePointStyle: true,
+            padding: 15,
+            font: { size: 12 }
+          }
+        },
+        tooltip: {
+          backgroundColor: 'rgba(32, 45, 37, 0.92)',
+          padding: 12,
+          callbacks: {
+            label: function(context) {
+              const total = context.dataset.data.reduce((acc, value) => acc + value, 0) || 1;
+              const value = context.parsed;
+              const percentage = ((value / total) * 100).toFixed(1);
+              return `${context.label}: ${currencyFormatter.format(value)} (${percentage}%)`;
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  revenueCanvas = document.getElementById('revenueChart');
+
+  createRevenueChart('line');
+  buildDoughnutChart();
+  updateFiltersVisibility();
+  animateKpiCards();
+
+  const chartButtons = document.querySelectorAll('.tab-btn');
+  chartButtons.forEach(button => {
+    button.addEventListener('click', () => {
+      const chartType = button.dataset.chartType || 'line';
+      updateActiveTab(button);
+      createRevenueChart(chartType);
+    });
+  });
+
+  const viewSelect = document.getElementById('view-select');
+  if (viewSelect) {
+    viewSelect.addEventListener('change', updateFiltersVisibility);
+  }
+
+  const searchInput = document.getElementById('search-table');
+  if (searchInput) {
+    searchInput.addEventListener('input', (event) => {
+      filterTableRows(event.target.value);
+    });
+  }
+});
+</script>
+
+<style>
+.revenue-dashboard {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: clamp(20px, 2.6vw, 32px);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(20px, 2.5vw, 28px);
+  box-shadow: 0 18px 48px -32px rgba(16, 63, 33, 0.35);
+}
+
+.dashboard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.title-group h2 {
+  margin: 0;
+  font-size: clamp(1.6rem, 2.1vw, 2.2rem);
+  color: #1b5e20;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  font-size: 0.95rem;
+  color: #4c5d4c;
+}
+
+.subtitle-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 6px;
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.btn-export {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #2e7d32, #43a047);
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 12px;
+  text-decoration: none;
+  font-weight: 600;
+  box-shadow: 0 12px 30px -20px rgba(46, 125, 50, 0.75);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-export:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 32px -18px rgba(46, 125, 50, 0.7);
+}
+
+.filter-bar {
+  background: #f5faf5;
+  border: 1px solid #e2efe2;
+  border-radius: 16px;
+  padding: clamp(16px, 2vw, 22px);
+}
+
+#filter-form {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-group label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: #285430;
+}
+
+.filter-group select {
+  appearance: none;
+  border: 1px solid #cfd9cf;
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  min-height: 42px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.filter-group select:focus {
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.18);
+  outline: none;
+}
+
+.btn-filter {
+  border: none;
+  border-radius: 12px;
+  background: #2e7d32;
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+  min-height: 42px;
+  box-shadow: 0 14px 32px -24px rgba(46, 125, 50, 0.8);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.btn-filter:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 18px 34px -22px rgba(46, 125, 50, 0.7);
+}
+
+.is-hidden {
+  display: none !important;
+}
+
+.kpi-grid {
+  display: grid;
+  gap: clamp(16px, 2vw, 20px);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.kpi-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e4efe4;
+  padding: 18px;
+  display: flex;
+  gap: 16px;
+  box-shadow: 0 18px 36px -30px rgba(16, 63, 33, 0.32);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.kpi-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 22px 40px -28px rgba(16, 63, 33, 0.35);
+}
+
+.kpi-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  background: #e8f5e9;
+  color: #2e7d32;
+}
+
+.kpi-card.success .kpi-icon {
+  background: #e3f2fd;
+  color: #1e88e5;
+}
+
+.kpi-card.info .kpi-icon {
+  background: #fff3e0;
+  color: #fb8c00;
+}
+
+.kpi-card.warning .kpi-icon {
+  background: #fff8e1;
+  color: #f57c00;
+}
+
+.kpi-card.secondary .kpi-icon {
+  background: #ede7f6;
+  color: #5e35b1;
+}
+
+.kpi-card.accent .kpi-icon {
+  background: #fce4ec;
+  color: #d81b60;
+}
+
+.kpi-label {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  color: #4b5b4c;
+}
+
+.kpi-value {
+  margin: 6px 0;
+  font-size: clamp(1.3rem, 1.9vw, 1.9rem);
+  font-weight: 700;
+  color: #1f3f29;
+}
+
+.kpi-change,
+.kpi-subtext {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #5e6d5e;
+}
+
+.kpi-change {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.kpi-change.positive {
+  color: #1b5e20;
+}
+
+.kpi-change.negative {
+  color: #c62828;
+}
+
+.chart-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e4efe4;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 18px 36px -30px rgba(16, 63, 33, 0.32);
+}
+
+.chart-card.large .chart-container {
+  min-height: clamp(280px, 45vh, 440px);
+}
+
+.chart-card.small .chart-container {
+  min-height: clamp(240px, 32vh, 320px);
+}
+
+.chart-card.medium .chart-container,
+.chart-card.medium .top-list {
+  min-height: clamp(260px, 34vh, 360px);
+}
+
+.chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.chart-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1f3f29;
+}
+
+.chart-tabs {
+  display: inline-flex;
+  background: #eff7ef;
+  border-radius: 999px;
+  padding: 4px;
+  gap: 6px;
+}
+
+.tab-btn {
+  border: none;
+  background: transparent;
+  padding: 6px 14px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #3f513f;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.tab-btn.active {
+  background: #2e7d32;
+  color: #ffffff;
+  box-shadow: 0 8px 22px -16px rgba(46, 125, 50, 0.8);
+}
+
+.charts-row {
+  display: grid;
+  gap: clamp(16px, 2.4vw, 24px);
+}
+
+.charts-row:first-of-type {
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, 1fr);
+}
+
+.charts-row:last-of-type {
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.top-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.top-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+  border: 1px solid #e4efe4;
+  border-radius: 14px;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.top-item:hover {
+  border-color: #2e7d32;
+  transform: translateY(-2px);
+}
+
+.top-rank {
+  font-weight: 700;
+  color: #2e7d32;
+  min-width: 38px;
+}
+
+.top-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.top-name {
+  margin: 0;
+  font-weight: 600;
+  color: #203625;
+}
+
+.top-stats {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6f7c74;
+}
+
+.top-value {
+  margin: 0;
+  font-weight: 700;
+  color: #1f3f29;
+}
+
+.table-card {
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px solid #e4efe4;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 18px 36px -30px rgba(16, 63, 33, 0.32);
+}
+
+.table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.table-header h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #1f3f29;
+}
+
+.table-actions input {
+  border: 1px solid #cfd9cf;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  min-width: 240px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.table-actions input:focus {
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.18);
+  outline: none;
+}
+
+.table-responsive {
+  position: relative;
+  max-height: clamp(320px, 58vh, 620px);
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid #e4efe4;
+}
+
+table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.95rem;
+}
+
+thead th {
+  position: sticky;
+  top: 0;
+  background: #f0f7f1;
+  color: #1f3f29;
+  font-weight: 700;
+  padding: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  border-bottom: 2px solid #2e7d32;
+  z-index: 2;
+}
+
+tbody td {
+  padding: 12px;
+  border-bottom: 1px solid #edf4ed;
+  color: #263b29;
+}
+
+tbody tr:hover {
+  background: rgba(231, 245, 233, 0.45);
+}
+
+tfoot td {
+  padding: 16px 12px;
+  background: #f5faf5;
+  font-weight: 700;
+  position: sticky;
+  bottom: 0;
+  border-top: 2px solid #2e7d32;
+}
+
+.text-right {
+  text-align: right;
+}
+
+.text-warning {
+  color: #f57c00;
+}
+
+.customer-info,
+.room-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.customer-info .sub {
+  font-size: 0.85rem;
+  color: #6f7c74;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.highlight {
+  color: #2e7d32;
+  font-size: 1.05rem;
+}
+
+.empty-state {
+  width: 100%;
+  padding: 40px 12px;
+  text-align: center;
+  color: #7b8a7b;
+  font-size: 0.95rem;
+}
+
+@media (max-width: 1200px) {
+  .charts-row:first-of-type {
+    grid-template-columns: 1fr;
+  }
+  .chart-card.large .chart-container {
+    min-height: clamp(260px, 38vh, 360px);
+  }
+}
+
+@media (max-width: 992px) {
+  .revenue-dashboard {
+    padding: 18px;
+  }
+  .table-actions input {
+    min-width: 200px;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-header {
+    align-items: flex-start;
+  }
+  #filter-form {
+    grid-template-columns: 1fr;
+  }
+  .charts-row:last-of-type {
+    grid-template-columns: 1fr;
+  }
+  .table-actions input {
+    width: 100%;
+  }
+  .table-responsive {
+    max-height: clamp(260px, 54vh, 520px);
+  }
+}
+</style>
+{% endblock %}

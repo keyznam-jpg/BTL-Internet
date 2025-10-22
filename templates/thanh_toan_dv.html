@@ -1,0 +1,64 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='payments.css') }}">
+
+<div class="payment-shell">
+  <div class="payment-card">
+    <h1>Thanh toán dịch vụ</h1>
+    <p class="muted-text">Xác nhận thông tin và chọn hình thức thanh toán phù hợp.</p>
+
+    <div class="payment-meta">
+      <div class="meta-item">
+        <span class="meta-label">Khách hàng</span>
+        <span class="meta-value">{{ dp.khachhang.ho_ten }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Số điện thoại</span>
+        <span class="meta-value">{{ dp.khachhang.sdt or '—' }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Phòng</span>
+        <span class="meta-value">{{ dp.phong.ten }}</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Mã đặt phòng</span>
+        <span class="meta-value">#{{ dp.id }}</span>
+      </div>
+    </div>
+
+    <div class="payment-card">
+      <h2>Dịch vụ cần thanh toán</h2>
+      <div class="service-list">
+        {% for item in items %}
+        <div class="service-item">
+          <span>{{ item.ten }} × {{ item.so_luong }}</span>
+          <span>{{ item.thanh_tien | vnd }}</span>
+        </div>
+        {% endfor %}
+      </div>
+
+      <div class="amount-highlight">
+        <div>
+          <small>Tổng tiền dịch vụ</small>
+          <strong>{{ tong | vnd }}</strong>
+        </div>
+        <div class="muted-text">Tổng đã bao gồm các dịch vụ được chọn ở trên.</div>
+      </div>
+
+      <div class="payment-actions">
+        <form class="method-buttons" method="POST">
+          <button class="method-button" name="payment_method" value="cash">
+            <i class="fas fa-money-bill-wave"></i>
+            <span>Thanh toán tiền mặt tại quầy</span>
+          </button>
+          <button class="method-button" name="payment_method" value="qr">
+            <i class="fas fa-qrcode"></i>
+            <span>Thanh toán bằng QR VietQR</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

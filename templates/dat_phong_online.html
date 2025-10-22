@@ -1,0 +1,1605 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đặt phòng trực tuyến - Khách sạn PTIT</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1e40af;
+      --primary-light: #3b82f6;
+      --secondary: #10b981;
+      --secondary-dark: #059669;
+      --accent: #f59e0b;
+      --danger: #ef4444;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --info: #3b82f6;
+      --gray-50: #f9fafb;
+      --gray-100: #f3f4f6;
+      --gray-200: #e5e7eb;
+      --gray-300: #d1d5db;
+      --gray-400: #9ca3af;
+      --gray-500: #6b7280;
+      --gray-600: #4b5563;
+      --gray-700: #374151;
+      --gray-800: #1f2937;
+      --gray-900: #111827;
+      --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+      --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+      --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+      color: var(--gray-900);
+      line-height: 1.6;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    /* Header */
+    .header {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: fadeInDown 0.6s ease-out;
+    }
+
+    .header-icon {
+      width: 80px;
+      height: 80px;
+      background: white;
+      border-radius: 20px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      box-shadow: var(--shadow-xl);
+      animation: bounce 2s infinite;
+    }
+
+    .header-icon i {
+      font-size: 40px;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .header h1 {
+      color: white;
+      font-size: 2.5rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .header p {
+      color: rgba(255, 255, 255, 0.9);
+      font-size: 1.1rem;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    /* Main Card */
+    .main-card {
+      background: white;
+      border-radius: 24px;
+      box-shadow: var(--shadow-2xl);
+      overflow: hidden;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    /* Tabs */
+    .tabs {
+      display: flex;
+      background: var(--gray-50);
+      border-bottom: 2px solid var(--gray-200);
+      overflow-x: auto;
+    }
+
+    .tab-button {
+      flex: 1;
+      padding: 20px 30px;
+      border: none;
+      background: transparent;
+      color: var(--gray-600);
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-width: 200px;
+    }
+
+    .tab-button i {
+      font-size: 1.2rem;
+    }
+
+    .tab-button:hover {
+      background: white;
+      color: var(--primary);
+    }
+
+    .tab-button.active {
+      background: white;
+      color: var(--primary);
+    }
+
+    .tab-button.active::after {
+      content: '';
+      position: absolute;
+      bottom: -2px;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: linear-gradient(90deg, var(--primary), var(--secondary));
+      animation: slideIn 0.3s ease-out;
+    }
+
+    /* Panel */
+    .panel {
+      display: none;
+      padding: 40px;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .panel.active {
+      display: block;
+    }
+
+    /* Alerts */
+    .alerts {
+      margin-bottom: 30px;
+    }
+
+    .alert {
+      padding: 16px 20px;
+      border-radius: 12px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.95rem;
+      animation: slideInRight 0.4s ease-out;
+    }
+
+    .alert i {
+      font-size: 1.2rem;
+    }
+
+    .alert.success {
+      background: #d1fae5;
+      color: #065f46;
+      border-left: 4px solid var(--success);
+    }
+
+    .alert.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border-left: 4px solid var(--info);
+    }
+
+    .alert.danger {
+      background: #fee2e2;
+      color: #991b1b;
+      border-left: 4px solid var(--danger);
+    }
+
+    .alert.warning {
+      background: #fef3c7;
+      color: #92400e;
+      border-left: 4px solid var(--warning);
+    }
+
+    /* Form */
+    .form-section {
+      margin-bottom: 35px;
+    }
+
+    .section-title {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: var(--gray-800);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .section-title i {
+      color: var(--primary);
+      font-size: 1.5rem;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .form-group.full-width {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      font-weight: 600;
+      color: var(--gray-700);
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    label i {
+      color: var(--primary);
+      font-size: 0.9rem;
+    }
+
+    input, select, textarea {
+      padding: 14px 16px;
+      border: 2px solid var(--gray-200);
+      border-radius: 12px;
+      font-family: inherit;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+      background: var(--gray-50);
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      background: white;
+      box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    /* Radio Buttons */
+    .radio-group {
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+    }
+
+    .radio-option {
+      flex: 1;
+      min-width: 150px;
+    }
+
+    .radio-option input[type="radio"] {
+      display: none;
+    }
+
+    .radio-label {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 20px;
+      border: 2px solid var(--gray-200);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: var(--gray-50);
+      font-weight: 600;
+    }
+
+    .radio-option input[type="radio"]:checked + .radio-label {
+      border-color: var(--primary);
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(16, 185, 129, 0.1));
+      color: var(--primary);
+    }
+
+    .radio-label:hover {
+      border-color: var(--primary-light);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Info Banner */
+    .info-banner {
+      padding: 20px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.1), rgba(16, 185, 129, 0.1));
+      border: 2px solid rgba(37, 99, 235, 0.2);
+      margin: 25px 0;
+      display: flex;
+      align-items: start;
+      gap: 15px;
+      animation: pulse 2s infinite;
+    }
+
+    .info-banner i {
+      color: var(--primary);
+      font-size: 1.5rem;
+      margin-top: 2px;
+    }
+
+    .info-banner-content {
+      flex: 1;
+    }
+
+    .info-banner strong {
+      color: var(--primary);
+    }
+
+    /* Availability Status */
+    .availability-status {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: var(--gray-600);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .availability-status i {
+      font-size: 0.9rem;
+    }
+
+    .availability-status.loading {
+      color: var(--warning);
+    }
+
+    .availability-status.success {
+      color: var(--success);
+    }
+
+    .availability-status.error {
+      color: var(--danger);
+    }
+
+    /* Buttons */
+    .actions {
+      display: flex;
+      gap: 15px;
+      justify-content: flex-end;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+      font-family: inherit;
+    }
+
+    .btn i {
+      font-size: 1.1rem;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: white;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    .btn-secondary {
+      background: var(--gray-100);
+      color: var(--gray-700);
+      border: 2px solid var(--gray-300);
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: var(--gray-200);
+      border-color: var(--gray-400);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--secondary), var(--secondary-dark));
+      color: white;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .btn-success:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-xl);
+    }
+
+    /* Payment Section */
+    .payment-overview {
+      display: grid;
+      gap: 30px;
+      margin-bottom: 30px;
+    }
+
+    @media (min-width: 900px) {
+      .payment-overview {
+        grid-template-columns: 1.5fr 1fr;
+      }
+    }
+
+    /* Summary Cards */
+    .summary-grid {
+      display: grid;
+      gap: 15px;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+
+    .summary-card {
+      background: linear-gradient(135deg, var(--gray-50), white);
+      border: 2px solid var(--gray-200);
+      border-radius: 16px;
+      padding: 20px;
+      transition: all 0.3s ease;
+    }
+
+    .summary-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--primary);
+    }
+
+    .summary-card .label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--gray-500);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .summary-card .label i {
+      color: var(--primary);
+    }
+
+    .summary-card .value {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--gray-900);
+      word-break: break-word;
+    }
+
+    /* QR Card */
+    .qr-card {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(16, 185, 129, 0.05));
+      border: 2px dashed var(--primary);
+      border-radius: 20px;
+      padding: 30px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+    }
+
+    .qr-card h3 {
+      color: var(--primary);
+      font-size: 1.2rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .qr-card img {
+      max-width: 250px;
+      width: 100%;
+      border: 3px solid white;
+      border-radius: 16px;
+      box-shadow: var(--shadow-xl);
+      background: white;
+      padding: 15px;
+    }
+
+    .qr-amount {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--primary);
+    }
+
+    .qr-note {
+      background: white;
+      padding: 15px 20px;
+      border-radius: 12px;
+      border: 2px solid var(--gray-200);
+      width: 100%;
+    }
+
+    .qr-note code {
+      background: var(--gray-100);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      color: var(--primary);
+      font-weight: 600;
+    }
+
+    /* Status Banner */
+    .status-banner {
+      padding: 20px 25px;
+      border-radius: 16px;
+      margin-bottom: 25px;
+      display: flex;
+      align-items: start;
+      gap: 15px;
+      border-left: 5px solid;
+      animation: slideInLeft 0.5s ease-out;
+    }
+
+    .status-banner i {
+      font-size: 1.8rem;
+      margin-top: 2px;
+    }
+
+    .status-banner.success {
+      background: #d1fae5;
+      border-color: var(--success);
+      color: #065f46;
+    }
+
+    .status-banner.success i {
+      color: var(--success);
+    }
+
+    .status-banner.info {
+      background: #dbeafe;
+      border-color: var(--info);
+      color: #1e40af;
+    }
+
+    .status-banner.info i {
+      color: var(--info);
+    }
+
+    .status-banner.danger {
+      background: #fee2e2;
+      border-color: var(--danger);
+      color: #991b1b;
+    }
+
+    .status-banner.danger i {
+      color: var(--danger);
+    }
+
+    /* Voucher Status */
+    .voucher-status {
+      padding: 12px 16px;
+      border-radius: 8px;
+      margin-top: 8px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.9rem;
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .voucher-status.loading {
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #f59e0b;
+    }
+
+    .voucher-status.success {
+      background: #d1fae5;
+      color: #065f46;
+      border: 1px solid var(--success);
+    }
+
+    .voucher-status.error {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid var(--danger);
+    }
+
+    .voucher-status i {
+      font-size: 1rem;
+    }
+
+    .status-banner.warning {
+      background: #fef3c7;
+      border-color: var(--warning);
+      color: #92400e;
+    }
+
+    .status-banner.warning i {
+      color: var(--warning);
+    }
+
+    .status-content h3 {
+      font-size: 1.2rem;
+      margin-bottom: 8px;
+    }
+
+    .status-content p {
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    /* Payment Note */
+    .payment-note {
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.05), rgba(16, 185, 129, 0.05));
+      border: 2px solid rgba(37, 99, 235, 0.2);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: start;
+      gap: 15px;
+    }
+
+    .payment-note i {
+      color: var(--primary);
+      font-size: 1.5rem;
+      margin-top: 2px;
+    }
+
+    /* Empty State */
+    .empty-state {
+      text-align: center;
+      padding: 60px 30px;
+      background: var(--gray-50);
+      border-radius: 20px;
+      border: 2px dashed var(--gray-300);
+    }
+
+    .empty-state i {
+      font-size: 4rem;
+      color: var(--gray-400);
+      margin-bottom: 20px;
+    }
+
+    .empty-state h3 {
+      color: var(--gray-700);
+      margin-bottom: 10px;
+    }
+
+    .empty-state p {
+      color: var(--gray-500);
+    }
+
+    /* Message Box */
+    .message {
+      padding: 16px 20px;
+      border-radius: 12px;
+      margin: 15px 0;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: slideInRight 0.4s ease-out;
+    }
+
+    .message i {
+      font-size: 1.2rem;
+    }
+
+    .message.info {
+      background: #dbeafe;
+      color: #1e40af;
+      border-left: 4px solid var(--info);
+    }
+
+    .message.warning {
+      background: #fef3c7;
+      color: #92400e;
+      border-left: 4px solid var(--warning);
+    }
+
+    /* Animations */
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes fadeInDown {
+      from {
+        opacity: 0;
+        transform: translateY(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: scaleX(0);
+      }
+      to {
+        transform: scaleX(1);
+      }
+    }
+
+    @keyframes slideInRight {
+      from {
+        opacity: 0;
+        transform: translateX(30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes slideInLeft {
+      from {
+        opacity: 0;
+        transform: translateX(-30px);
+      }
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.8;
+      }
+    }
+
+    @keyframes bounce {
+      0%, 100% {
+        transform: translateY(0);
+      }
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      body {
+        padding: 10px;
+      }
+
+      .header h1 {
+        font-size: 1.8rem;
+      }
+
+      .header p {
+        font-size: 0.95rem;
+      }
+
+      .panel {
+        padding: 25px 20px;
+      }
+
+      .tab-button {
+        padding: 15px 20px;
+        font-size: 0.9rem;
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .actions {
+        flex-direction: column;
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .summary-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Loading Spinner */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <div class="header-icon">
+        <i class="fas fa-hotel"></i>
+      </div>
+      <h1>Đặt phòng trực tuyến</h1>
+      <p>Hoàn tất biểu mẫu để giữ phòng. Tiền cọc {{ deposit_percent }}% sẽ được thanh toán qua VietQR.</p>
+    </div>
+
+    <!-- Main Card -->
+    <div class="main-card">
+      <!-- Tabs -->
+      <nav class="tabs">
+        <button type="button" class="tab-button{% if active_tab != 'payment' %} active{% endif %}" data-target="tab-booking">
+          <i class="fas fa-edit"></i>
+          <span>Thông tin đặt phòng</span>
+        </button>
+        <button type="button" class="tab-button{% if active_tab == 'payment' %} active{% endif %}" data-target="tab-payment">
+          <i class="fas fa-credit-card"></i>
+          <span>Thanh toán & xác nhận</span>
+        </button>
+      </nav>
+
+      <!-- Booking Panel -->
+      <section id="tab-booking" class="panel{% if active_tab != 'payment' %} active{% endif %}">
+        {% set flashes = get_flashed_messages(with_categories=true) %}
+        {% if flashes and active_tab != 'payment' %}
+        <div class="alerts" style="display:none;">
+          {% for cat, msg in flashes %}
+          <div class="alert {{ cat }}" data-category="{{cat}}" data-message="{{msg}}">
+            <i class="fas fa-{% if cat == 'success' %}check-circle{% elif cat == 'danger' %}exclamation-circle{% elif cat == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+            <span>{{ msg }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        <form method="post" id="bookingForm">
+          <!-- Customer Information -->
+          <div class="form-section">
+            <h2 class="section-title">
+              <i class="fas fa-user"></i>
+              Thông tin khách hàng
+            </h2>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="hoTen">
+                  <i class="fas fa-user-circle"></i>
+                  Họ và tên *
+                </label>
+                <input type="text" id="hoTen" name="ho_ten" required placeholder="Nguyễn Văn A">
+              </div>
+              <div class="form-group">
+                <label for="cmnd">
+                  <i class="fas fa-id-card"></i>
+                  CMND/CCCD *
+                </label>
+                <input type="text" id="cmnd" name="cmnd" required placeholder="012345678901">
+              </div>
+              <div class="form-group">
+                <label for="soDienThoai">
+                  <i class="fas fa-phone"></i>
+                  Số điện thoại
+                </label>
+                <input type="tel" id="soDienThoai" name="sdt" placeholder="09xx xxx xxx">
+              </div>
+              <div class="form-group">
+                <label for="email">
+                  <i class="fas fa-envelope"></i>
+                  Email (để nhận xác nhận)
+                </label>
+                <input type="email" id="email" name="email" placeholder="khach@example.com">
+              </div>
+              <div class="form-group full-width">
+                <label for="diaChi">
+                  <i class="fas fa-map-marker-alt"></i>
+                  Địa chỉ
+                </label>
+                <textarea id="diaChi" name="dia_chi" placeholder="Nhập địa chỉ liên hệ"></textarea>
+              </div>
+            </div>
+          </div>
+
+          <!-- Voucher Section -->
+          <div class="form-section">
+            <h2 class="section-title">
+              <i class="fas fa-ticket-alt"></i>
+              Mã giảm giá (tùy chọn)
+            </h2>
+            <div class="form-group">
+              <label for="voucherCode">
+                <i class="fas fa-tags"></i>
+                Mã voucher
+              </label>
+              <input type="text" id="voucherCode" name="voucher_code" placeholder="Nhập mã voucher" style="text-transform: uppercase;">
+              <small style="color: var(--gray-500); font-size: 0.85rem; margin-top: 4px; display: block;">
+                <i class="fas fa-info-circle"></i>
+                Mã voucher sẽ được áp dụng để giảm giá tiền phòng trước khi tính tiền cọc.
+              </small>
+            </div>
+            <div id="voucherStatus" class="voucher-status" style="display: none;">
+              <i class="fas fa-spinner fa-spin" id="voucherSpinner"></i>
+              <span id="voucherMessage">Đang kiểm tra mã voucher...</span>
+            </div>
+          </div>
+
+          <!-- Booking Details -->
+          <div class="form-section">
+            <h2 class="section-title">
+              <i class="fas fa-calendar-check"></i>
+              Chi tiết đặt phòng
+            </h2>
+            
+            <div class="form-group">
+              <label>
+                <i class="fas fa-clock"></i>
+                Hình thức đặt phòng *
+              </label>
+              <div class="radio-group">
+                <div class="radio-option">
+                  <input type="radio" id="rentDay" name="hinh_thuc" value="ngay" checked>
+                  <label for="rentDay" class="radio-label">
+                    <i class="fas fa-moon"></i>
+                    Đặt theo ngày
+                  </label>
+                </div>
+                <div class="radio-option">
+                  <input type="radio" id="rentHour" name="hinh_thuc" value="gio">
+                  <label for="rentHour" class="radio-label">
+                    <i class="fas fa-hourglass-half"></i>
+                    Đặt theo giờ
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="ngayNhan">
+                  <i class="fas fa-sign-in-alt"></i>
+                  Thời gian nhận phòng *
+                </label>
+                <input type="datetime-local" id="ngayNhan" name="ngay_nhan" required>
+              </div>
+              <div class="form-group">
+                <label for="ngayTra">
+                  <i class="fas fa-sign-out-alt"></i>
+                  Thời gian trả phòng *
+                </label>
+                <input type="datetime-local" id="ngayTra" name="ngay_tra" required>
+              </div>
+              <div class="form-group">
+                <label for="roomType">
+                  <i class="fas fa-bed"></i>
+                  Loại phòng *
+                </label>
+                <select id="roomType" name="loai_id" required>
+                  <option value="" disabled selected>Chọn loại phòng</option>
+                  {% for loai in loais %}
+                  <option value="{{ loai.id }}" data-price="{{ loai.gia }}">{{ loai.ten }} ({{ vnd(loai.gia) }}/đêm)</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="roomSelect">
+                  <i class="fas fa-door-open"></i>
+                  Phòng trống *
+                </label>
+                <select id="roomSelect" name="phong_id" required>
+                  <option value="" disabled selected>Chọn loại phòng trước</option>
+                </select>
+                <div id="availabilityNote" class="availability-status">
+                  <i class="fas fa-info-circle"></i>
+                  <span>Chọn loại phòng và thời gian để xem phòng trống</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Deposit Info -->
+          <div class="info-banner">
+            <i class="fas fa-info-circle"></i>
+            <div class="info-banner-content" id="depositInfo">
+              Vui lòng chọn loại phòng, hình thức và thời gian để xem tiền cọc dự kiến.
+            </div>
+          </div>
+
+          <!-- Actions -->
+          <div class="actions">
+            <button type="button" class="btn btn-secondary" id="refreshAvailability">
+              <i class="fas fa-sync-alt"></i>
+              Kiểm tra phòng trống
+            </button>
+            <button type="submit" class="btn btn-primary" id="submitBooking" disabled>
+              <i class="fas fa-arrow-right"></i>
+              Đặt phòng và chuyển tới cọc
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Payment Panel -->
+      <section id="tab-payment" class="panel{% if active_tab == 'payment' %} active{% endif %}">
+        {% if flashes and active_tab == 'payment' %}
+        <div class="alerts">
+          {% for cat, msg in flashes %}
+          <div class="alert {{ cat }}">
+            <i class="fas fa-{% if cat == 'success' %}check-circle{% elif cat == 'danger' %}exclamation-circle{% elif cat == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+            <span>{{ msg }}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+
+        {% if dp %}
+        <!-- Status Banner -->
+        {% if status_info %}
+        {% set show_status_banner = (dp.trang_thai != 'cho_xac_nhan') or has_pending_deposit_request %}
+        <div id="statusBanner" class="status-banner {{ status_info.level }}" style="display: {% if show_status_banner %}flex{% else %}none{% endif %};">
+          <i class="fas fa-{% if status_info.level == 'success' %}check-circle{% elif status_info.level == 'danger' %}times-circle{% elif status_info.level == 'warning' %}exclamation-triangle{% else %}info-circle{% endif %}"></i>
+          <div class="status-content">
+            <h3 id="statusBannerTitle">{{ status_info.title }}</h3>
+            <p id="statusBannerMessage">{{ status_info.message }}</p>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Payment Overview -->
+        <div class="payment-overview">
+          <!-- Summary Cards -->
+          <div class="summary-grid">
+            <div class="summary-card">
+              <div class="label">
+                <i class="fas fa-hashtag"></i>
+                Mã đặt phòng
+              </div>
+              <div class="value">#{{ dp.id }}</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">
+                <i class="fas fa-user"></i>
+                Khách hàng
+              </div>
+              <div class="value">{{ dp.khachhang.ho_ten }}</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">
+                <i class="fas fa-door-open"></i>
+                Phòng
+              </div>
+              <div class="value">{{ dp.phong.ten }}{% if dp.phong.loai %} ({{ dp.phong.loai.ten }}){% endif %}</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">
+                <i class="fas fa-calendar"></i>
+                Thời gian
+              </div>
+              <div class="value" style="font-size: 0.9rem;">{{ dp.ngay_nhan|fmt_dt }} → {{ dp.ngay_tra|fmt_dt }}</div>
+            </div>
+            <div class="summary-card">
+              <div class="label">
+                <i class="fas fa-money-bill-wave"></i>
+                Tiền cọc
+              </div>
+              <div class="value" style="color: var(--primary);">{{ vnd(dp.tien_coc or qr_amount) }}</div>
+            </div>
+            {% if duration_text %}
+            <div class="summary-card">
+              <div class="label">
+                <i class="fas fa-clock"></i>
+                Thời lượng
+              </div>
+              <div class="value">{{ duration_text }}</div>
+            </div>
+            {% endif %}
+          </div>
+
+          <!-- QR Code -->
+          <div class="qr-card">
+            <h3>
+              <i class="fas fa-qrcode"></i>
+              Quét mã VietQR
+            </h3>
+            <img src="{{ qr_code_url }}" alt="Mã QR thanh toán">
+            <div class="qr-amount">{{ vnd(qr_amount) }}</div>
+            <div class="qr-note">
+              <strong>Nội dung chuyển khoản:</strong><br>
+              <code>Coc HD{{ dp.id }} {{ dp.khachhang.ho_ten }}</code>
+            </div>
+          </div>
+        </div>
+
+        <!-- Request Message -->
+        {% if can_request %}
+        <div id="requestMessage" class="message{% if has_pending_deposit_request %} info{% endif %}" style="display: {% if has_pending_deposit_request %}flex{% else %}none{% endif %};">
+          <i class="fas fa-info-circle"></i>
+          <span>{% if has_pending_deposit_request %}{{ pending_deposit_message }}{% endif %}</span>
+        </div>
+        {% endif %}
+
+        <!-- Payment Note -->
+        <div class="payment-note">
+          <i class="fas fa-lightbulb"></i>
+          <div id="paymentNoteText">
+            {% if dp.trang_thai == 'cho_xac_nhan' %}
+            {% if has_pending_deposit_request %}
+            {{ pending_deposit_message }}
+            {% else %}
+            Sau khi chuyển khoản, hãy bấm <strong>"Tôi đã thanh toán cọc"</strong> để thông báo cho nhân viên kiểm tra và xác nhận. Bạn cũng có thể tải lại trang để cập nhật trạng thái mới nhất.
+            {% endif %}
+            {% elif dp.trang_thai == 'dat' %}
+            Khoản cọc của bạn đã được xác nhận. Bạn có thể yên tâm vì phòng đã được giữ đến thời gian nhận phòng.
+            {% elif dp.trang_thai == 'nhan' %}
+            Bạn đã hoàn tất thủ tục nhận phòng. Nếu cần hỗ trợ thêm, vui lòng liên hệ lễ tân.
+            {% elif dp.trang_thai == 'da_thanh_toan' %}
+            Đơn đặt phòng đã được thanh toán đầy đủ. Cảm ơn bạn đã đồng hành cùng khách sạn.
+            {% elif dp.trang_thai == 'huy' %}
+            Đơn đặt phòng này đã bị từ chối. Nếu bạn cần hỗ trợ thêm, vui lòng liên hệ lễ tân để được giải đáp.
+            {% else %}
+            Trạng thái đơn đặt phòng hiện tại: {{ status_info.title if status_info else (dp.trang_thai or 'Không xác định') }}.
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="actions">
+          <button type="button" class="btn btn-secondary" id="refreshStatusBtn">
+            <i class="fas fa-sync-alt"></i>
+            Tải lại trạng thái
+          </button>
+          {% if can_request %}
+          <button type="button" class="btn btn-success" id="requestConfirmBtn"{% if has_pending_deposit_request %} style="display:none;"{% endif %}>
+            <i class="fas fa-check-circle"></i>
+            Tôi đã thanh toán cọc
+          </button>
+          {% endif %}
+          <button type="button" class="btn btn-secondary" id="exitPaymentBtn">
+            <i class="fas fa-times"></i>
+            Xác nhận thoát
+          </button>
+        </div>
+        {% else %}
+        <!-- Empty State -->
+        <div class="empty-state">
+          <i class="fas fa-inbox"></i>
+          <h3>Chưa có thông tin thanh toán</h3>
+          <p>Vui lòng hoàn tất bước đặt phòng để xem mã VietQR và tình trạng xác nhận.</p>
+        </div>
+        {% endif %}
+      </section>
+    </div>
+  </div>
+
+  <script>
+    // Tab switching
+    const tabButtons = document.querySelectorAll('.tab-button');
+    const tabPanels = document.querySelectorAll('.panel');
+    tabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const target = button.dataset.target;
+        tabButtons.forEach(btn => btn.classList.toggle('active', btn === button));
+        tabPanels.forEach(panel => panel.classList.toggle('active', panel.id === target));
+      });
+    });
+
+    // Form variables
+    const depositPercent = {{ deposit_percent }};
+    const apiUrl = "{{ url_for('api_public_phong_trong') }}";
+    const roomTypeSelect = document.getElementById('roomType');
+    const roomSelect = document.getElementById('roomSelect');
+    const ngayNhanInput = document.getElementById('ngayNhan');
+    const ngayTraInput = document.getElementById('ngayTra');
+    const depositInfo = document.getElementById('depositInfo');
+    const availabilityNote = document.getElementById('availabilityNote');
+    const submitBtn = document.getElementById('submitBooking');
+    const refreshBtn = document.getElementById('refreshAvailability');
+    const voucherInput = document.getElementById('voucherCode');
+    const voucherStatus = document.getElementById('voucherStatus');
+    const voucherSpinner = document.getElementById('voucherSpinner');
+    const voucherMessage = document.getElementById('voucherMessage');
+
+    // Voucher state
+    let currentVoucher = null;
+
+    async function validateVoucher(code) {
+      if (!code || !code.trim()) {
+        currentVoucher = null;
+        voucherStatus.style.display = 'none';
+        return;
+      }
+
+      voucherStatus.style.display = 'flex';
+      voucherStatus.className = 'voucher-status loading';
+      voucherSpinner.style.display = 'inline-block';
+      voucherMessage.textContent = 'Đang kiểm tra mã voucher...';
+
+      try {
+        const response = await fetch("{{ url_for('api_public_validate_voucher') }}", {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ code: code.trim().toUpperCase() })
+        });
+        const data = await response.json();
+
+        if (data.valid) {
+          currentVoucher = data.voucher;
+          voucherStatus.className = 'voucher-status success';
+          voucherSpinner.style.display = 'none';
+          voucherMessage.innerHTML = `<i class="fas fa-check-circle"></i> ${data.message}`;
+        } else {
+          currentVoucher = null;
+          voucherStatus.className = 'voucher-status error';
+          voucherSpinner.style.display = 'none';
+          voucherMessage.innerHTML = `<i class="fas fa-times-circle"></i> ${data.message}`;
+        }
+      } catch (error) {
+        currentVoucher = null;
+        voucherStatus.className = 'voucher-status error';
+        voucherSpinner.style.display = 'none';
+        voucherMessage.innerHTML = '<i class="fas fa-exclamation-circle"></i> Không thể kiểm tra mã voucher. Vui lòng thử lại.';
+      }
+
+      updateDepositPreview();
+    }
+
+    function getRentMode() {
+      const checked = document.querySelector('input[name="hinh_thuc"]:checked');
+      return checked ? checked.value : 'ngay';
+    }
+
+    function resetRooms(message) {
+      roomSelect.innerHTML = '';
+      const option = document.createElement('option');
+      option.value = '';
+      option.disabled = true;
+      option.selected = true;
+      option.textContent = message;
+      roomSelect.appendChild(option);
+      submitBtn.disabled = true;
+    }
+
+    function formatCurrency(value) {
+      return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(value);
+    }
+
+    function computeDuration() {
+      const start = new Date(ngayNhanInput.value);
+      const end = new Date(ngayTraInput.value);
+      if (isNaN(start.getTime()) || isNaN(end.getTime())) { return null; }
+      const diffMs = end.getTime() - start.getTime();
+      if (diffMs <= 0) { return null; }
+      return {
+        hours: Math.max(1, Math.ceil(diffMs / (60 * 60 * 1000))),
+        nights: Math.max(1, Math.ceil(diffMs / (24 * 60 * 60 * 1000)))
+      };
+    }
+
+    function updateDepositPreview() {
+      const duration = computeDuration();
+      const mode = getRentMode();
+      const selectedType = roomTypeSelect.options[roomTypeSelect.selectedIndex];
+      if (!duration || !selectedType || !selectedType.dataset.price) {
+        depositInfo.innerHTML = 'Vui lòng chọn loại phòng, hình thức và thời gian để xem tiền cọc dự kiến.';
+        submitBtn.disabled = true;
+        return;
+      }
+      const basePrice = parseInt(selectedType.dataset.price, 10) || 0;
+      let estimated = 0;
+      if (mode === 'ngay') {
+        estimated = basePrice * duration.nights;
+      } else {
+        const pricePerHour = Math.round(basePrice * 0.2);
+        estimated = pricePerHour * duration.hours;
+      }
+
+      // Apply voucher discount
+      let discountedAmount = 0;
+      let finalAmount = estimated;
+      if (currentVoucher) {
+        discountedAmount = Math.round(estimated * currentVoucher.discount_percent / 100);
+        finalAmount = estimated - discountedAmount;
+      }
+
+      const depositAmount = Math.max(50000, Math.round(finalAmount * depositPercent / 100));
+
+      let infoHtml = '';
+      if (mode === 'ngay') {
+        infoHtml = `Tiền phòng dự kiến: <strong>${formatCurrency(estimated)}</strong> cho <strong>${duration.nights}</strong> đêm.`;
+      } else {
+        const pricePerHour = Math.round(basePrice * 0.2);
+        infoHtml = `Tiền phòng theo giờ dự kiến: <strong>${formatCurrency(estimated)}</strong> cho <strong>${duration.hours}</strong> giờ.`;
+      }
+
+      if (currentVoucher) {
+        infoHtml += `<br>Giảm giá voucher: <strong style="color: var(--success);">- ${formatCurrency(discountedAmount)}</strong> (${currentVoucher.discount_percent}%).`;
+        infoHtml += `<br>Tiền phòng sau giảm: <strong>${formatCurrency(finalAmount)}</strong>.`;
+      }
+
+      infoHtml += `<br>Tiền cọc cần thanh toán: <strong style="color: var(--primary); font-size: 1.1em;">${formatCurrency(depositAmount)}</strong> (${depositPercent}%).`;
+
+      depositInfo.innerHTML = infoHtml;
+    }
+
+    async function updateAvailability() {
+      const noteEl = availabilityNote.querySelector('span');
+      const iconEl = availabilityNote.querySelector('i');
+      
+      availabilityNote.className = 'availability-status loading';
+      iconEl.className = 'fas fa-spinner fa-spin';
+      noteEl.textContent = 'Đang kiểm tra phòng trống...';
+      
+      const loaiId = roomTypeSelect.value;
+      const ngayNhan = ngayNhanInput.value;
+      const ngayTra = ngayTraInput.value;
+      
+      if (!loaiId || !ngayNhan || !ngayTra) {
+        availabilityNote.className = 'availability-status';
+        iconEl.className = 'fas fa-info-circle';
+        noteEl.textContent = 'Vui lòng chọn loại phòng và thời gian.';
+        resetRooms('Chưa có dữ liệu phòng');
+        return;
+      }
+      
+      try {
+        const response = await fetch(apiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            loai_id: loaiId,
+            ngay_nhan: ngayNhan,
+            ngay_tra: ngayTra
+          })
+        });
+        const data = await response.json();
+        roomSelect.innerHTML = '';
+        const availableRooms = data.filter(room => room.available);
+        
+        if (!availableRooms.length) {
+          resetRooms('Không còn phòng trống trong khoảng thời gian này');
+          availabilityNote.className = 'availability-status error';
+          iconEl.className = 'fas fa-times-circle';
+          noteEl.textContent = 'Hiện chưa có phòng nào trống cho khoảng thời gian đã chọn.';
+          return;
+        }
+        
+        availableRooms.forEach(room => {
+          const opt = document.createElement('option');
+          opt.value = room.id;
+          opt.textContent = room.ten;
+          roomSelect.appendChild(opt);
+        });
+        
+        submitBtn.disabled = false;
+        availabilityNote.className = 'availability-status success';
+        iconEl.className = 'fas fa-check-circle';
+        noteEl.textContent = `Có ${availableRooms.length} phòng trống. Vui lòng chọn phòng bạn muốn giữ.`;
+      } catch (error) {
+        console.error(error);
+        availabilityNote.className = 'availability-status error';
+        iconEl.className = 'fas fa-exclamation-circle';
+        noteEl.textContent = 'Không thể kiểm tra phòng trống. Vui lòng thử lại sau.';
+        resetRooms('Lỗi tải dữ liệu');
+      }
+    }
+
+    function onCriteriaChange() {
+      updateDepositPreview();
+      updateAvailability();
+    }
+
+    // Voucher input handler with debounce
+    let voucherTimeout;
+    voucherInput.addEventListener('input', () => {
+      clearTimeout(voucherTimeout);
+      voucherTimeout = setTimeout(() => {
+        validateVoucher(voucherInput.value);
+      }, 500); // Wait 500ms after user stops typing
+    });
+
+    roomTypeSelect.addEventListener('change', onCriteriaChange);
+    ngayNhanInput.addEventListener('change', onCriteriaChange);
+    ngayTraInput.addEventListener('change', onCriteriaChange);
+    document.querySelectorAll('input[name="hinh_thuc"]').forEach(radio => {
+      radio.addEventListener('change', onCriteriaChange);
+    });
+    refreshBtn.addEventListener('click', updateAvailability);
+
+    document.getElementById('bookingForm').addEventListener('submit', (event) => {
+      if (!roomSelect.value) {
+        event.preventDefault();
+        alert('Vui lòng chọn phòng cụ thể trước khi tiếp tục.');
+      }
+    });
+
+    // Payment page scripts
+    const paymentRefreshBtn = document.getElementById('refreshStatusBtn');
+    if (paymentRefreshBtn) {
+      paymentRefreshBtn.addEventListener('click', () => {
+        paymentRefreshBtn.innerHTML = '<span class="spinner"></span> Đang tải...';
+        paymentRefreshBtn.disabled = true;
+        window.location.reload();
+      });
+    }
+
+    {% if dp %}
+    const requestBtn = document.getElementById('requestConfirmBtn');
+    const messageBox = document.getElementById('requestMessage');
+    const paymentNoteContainer = document.getElementById('paymentNoteText');
+    const pendingMessageText = {{ pending_deposit_message_full|tojson }};
+    const statusBanner = document.getElementById('statusBanner');
+    const statusBannerTitle = document.getElementById('statusBannerTitle');
+    const statusBannerMessage = document.getElementById('statusBannerMessage');
+    const waitingStatusTitle = "{{ status_info.title if status_info else '' }}";
+    if (requestBtn && messageBox) {
+      const originalLabel = requestBtn.innerHTML;
+      requestBtn.addEventListener('click', async () => {
+        requestBtn.disabled = true;
+        requestBtn.innerHTML = '<span class="spinner"></span> Đang gửi yêu cầu...';
+        try {
+          const response = await fetch("{{ url_for('dat_phong_online_request_confirmation', token=dp.chat_token) }}", {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify({ confirm: true })
+          });
+          const data = await response.json();
+          messageBox.style.display = 'flex';
+          messageBox.classList.remove('info', 'warning');
+          const status = data.status || (response.ok ? 'info' : 'warning');
+          const feedback = data.message || 'Không thể gửi yêu cầu. Vui lòng thử lại.';
+          if (response.ok && status === 'success') {
+            messageBox.classList.add('info');
+            const successMessage = data.message || pendingMessageText || 'Đã gửi yêu cầu xác nhận.';
+            messageBox.querySelector('span').textContent = successMessage;
+            if (paymentNoteContainer) {
+              paymentNoteContainer.innerHTML = successMessage;
+            }
+            if (statusBanner && statusBannerTitle && statusBannerMessage) {
+              statusBanner.style.display = 'flex';
+              if (waitingStatusTitle) {
+                statusBannerTitle.textContent = waitingStatusTitle;
+              }
+              statusBannerMessage.textContent = successMessage;
+              statusBanner.classList.remove('warning', 'success', 'danger');
+              statusBanner.classList.add('info');
+            }
+            requestBtn.style.display = 'none';
+          } else {
+            messageBox.classList.add(status === 'warning' ? 'warning' : 'info');
+            messageBox.querySelector('span').textContent = feedback;
+            requestBtn.disabled = false;
+            requestBtn.innerHTML = originalLabel;
+          }
+        } catch (error) {
+          messageBox.style.display = 'flex';
+          messageBox.classList.remove('info', 'warning');
+          messageBox.classList.add('warning');
+          messageBox.querySelector('span').textContent = 'Không thể gửi yêu cầu. Vui lòng thử lại sau ít phút.';
+          requestBtn.disabled = false;
+          requestBtn.innerHTML = originalLabel;
+        }
+      });
+    }
+    
+    const exitBtn = document.getElementById('exitPaymentBtn');
+    if (exitBtn) {
+      exitBtn.addEventListener('click', () => {
+        if (confirm('Bạn muốn kết thúc và đặt phòng mới?')) {
+          window.location.href = "{{ url_for('dat_phong_online') }}";
+        }
+      });
+    }
+    {% endif %}
+
+    // Toast for flash messages
+    const toastContainer = document.createElement('div');
+    toastContainer.id = 'toast-container';
+    toastContainer.className = 'toast-notification';
+    toastContainer.innerHTML = `
+      <div class="toast-icon" id="toast-icon"></div>
+      <div class="toast-body">
+        <h4 id="toast-title"></h4>
+        <p id="toast-message"></p>
+      </div>
+    `;
+    document.body.appendChild(toastContainer);
+
+    const toastIcon = document.getElementById('toast-icon');
+    const toastTitle = document.getElementById('toast-title');
+    const toastMessage = document.getElementById('toast-message');
+    let toastTimeout;
+
+    function showToast(icon, title, message) {
+      if (!toastContainer) { return; }
+      toastIcon.innerHTML = icon || '<i class="fas fa-bell"></i>';
+      toastTitle.textContent = title || '';
+      toastMessage.textContent = message || '';
+      toastContainer.classList.add('show');
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => toastContainer.classList.remove('show'), 5000);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      const alerts = document.querySelectorAll('.alert');
+      alerts.forEach(function(alert) {
+        const category = alert.getAttribute('data-category');
+        const message = alert.getAttribute('data-message');
+        let icon = '<i class="fas fa-bell"></i>';
+        let title = 'Thông báo';
+        if (category === 'success') {
+          icon = '<i class="fas fa-check"></i>';
+          title = 'Thành công';
+        } else if (category === 'danger') {
+          icon = '<i class="fas fa-times"></i>';
+          title = 'Lỗi';
+        } else if (category === 'warning') {
+          icon = '<i class="fas fa-exclamation-triangle"></i>';
+          title = 'Cảnh báo';
+        } else if (category === 'info') {
+          icon = 'ℹ️';
+          title = 'Thông tin';
+        }
+        showToast(icon, title, message);
+      });
+    });
+
+  </script>
+</body>
+</html>

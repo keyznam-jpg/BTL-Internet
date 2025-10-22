@@ -1,0 +1,2066 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+    :root {
+        --green-500: #2f7d5a;
+        --green-400: #3fa271;
+        --gray-50: #f8fafc;
+        --gray-100: #edf2f7;
+        --gray-200: #e2e8f0;
+        --gray-600: #475569;
+        --gray-700: #334155;
+    }
+
+    /* Smooth scrolling for all scrollable elements */
+    * {
+        scrollbar-width: thin;
+    }
+
+    .chat-hub {
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr) minmax(340px, auto);
+        gap: 22px;
+        min-height: 72vh;
+    }
+
+    .chat-sidebar {
+        background: white;
+        border-radius: 22px;
+        box-shadow: 0 16px 32px -28px rgba(15, 23, 42, 0.4);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+
+
+
+    .conversation-list {
+        flex: 1;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 8px;
+        background: var(--gray-50);
+        max-height: calc(100vh - 200px);
+    }
+
+    /* Custom scrollbar cho conversation-list */
+    .conversation-list::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .conversation-list::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 10px;
+    }
+
+    .conversation-list::-webkit-scrollbar-thumb {
+        background: var(--green-400);
+        border-radius: 10px;
+    }
+
+    .conversation-list::-webkit-scrollbar-thumb:hover {
+        background: var(--green-500);
+    }
+
+    .conversation-item {
+        background: white;
+        padding: 14px 16px;
+        border-radius: 16px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        cursor: pointer;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border: 1px solid transparent;
+    }
+
+    .conversation-item:hover { transform: translateY(-2px); box-shadow: 0 18px 32px -32px rgba(15, 23, 42, 0.6); }
+    .conversation-item.active { border-color: rgba(47, 125, 90, 0.35); box-shadow: 0 18px 32px -28px rgba(47,125,90,0.35); }
+
+    .conversation-details { display: grid; gap: 4px; }
+    .conversation-details strong { font-weight: 600; color: var(--gray-700); }
+    .conversation-details span { font-size: 0.85rem; color: var(--gray-600); }
+
+    .conversation-actions { display: flex; align-items: center; gap: 8px; }
+
+    .unread-badge {
+        min-width: 24px;
+        height: 24px;
+        padding: 0 6px;
+        background: #ef4444;
+        color: white;
+        font-size: 0.75rem;
+        border-radius: 999px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+
+    .delete-btn {
+        background: none;
+        border: none;
+        color: #c0392b;
+        width: 30px;
+        height: 30px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.2s ease, background 0.2s ease;
+    }
+
+    .conversation-item:hover .delete-btn { opacity: 1; }
+    .delete-btn:hover { background: rgba(239, 68, 68, 0.15); }
+
+    .chat-main {
+        display: flex;
+        flex-direction: column;
+        background: white;
+        border-radius: 24px;
+        box-shadow: 0 22px 45px -36px rgba(15, 23, 42, 0.45);
+        overflow: hidden;
+    }
+
+    .orders-panel {
+        display: flex;
+        flex-direction: column;
+        background: white;
+        border-radius: 24px;
+        box-shadow: 0 22px 45px -36px rgba(15, 23, 42, 0.45);
+        overflow: hidden;
+        resize: horizontal;
+        min-width: 340px;
+        max-width: 720px;
+    }
+
+    .orders-header {
+        padding: 22px 24px 14px;
+        border-bottom: 1px solid var(--gray-100);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+    }
+
+    .orders-header h3 {
+        margin: 0;
+        font-size: 1.1rem;
+    }
+
+    .orders-count {
+        background: rgba(47, 125, 90, 0.12);
+        color: var(--green-500);
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+
+    .chat-header {
+        padding: 22px 26px 16px;
+        border-bottom: 1px solid var(--gray-100);
+        display: grid;
+        gap: 12px;
+    }
+
+    .chat-room-info { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+    .chat-room-info h3 { margin: 0; font-size: 1.25rem; }
+    .chat-room-info .sub { color: var(--gray-600); font-size: 0.9rem; }
+
+    .chat-tabs { display: flex; gap: 10px; }
+    .chat-tabs button {
+        flex: 1;
+        border: none;
+        border-radius: 14px;
+        padding: 10px 14px;
+        background: var(--gray-100);
+        color: var(--gray-600);
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .chat-tabs button.active {
+        background: linear-gradient(135deg, var(--green-500), var(--green-400));
+        color: white;
+        box-shadow: 0 18px 32px -28px rgba(47,125,90,0.5);
+    }
+
+    .chat-body {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .chat-pane { flex: 1; display: none; }
+    .chat-pane.active { display: flex; flex-direction: column; }
+
+    .chat-messages {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        background: linear-gradient(180deg, #f9fafc 0%, #ffffff 100%);
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        max-height: calc(100vh - 400px);
+        min-height: 400px;
+    }
+
+    .chat-messages::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .chat-messages::-webkit-scrollbar-track {
+        background: var(--gray-100);
+        border-radius: 10px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb {
+        background: var(--green-400);
+        border-radius: 10px;
+    }
+
+    .chat-messages::-webkit-scrollbar-thumb:hover {
+        background: var(--green-500);
+    }
+
+    /* Smooth scroll behavior */
+    .chat-messages {
+        scroll-behavior: auto;
+    }
+
+    .message {
+        max-width: 70%;
+        display: flex;
+        gap: 10px;
+        align-items: flex-end;
+    }
+
+    .message.staff { 
+        align-self: flex-end; 
+        flex-direction: row-reverse;
+    }
+    
+    .message.guest { 
+        align-self: flex-start; 
+        flex-direction: row;
+    }
+
+    .message.system { 
+        align-self: center;
+        max-width: 80%;
+    }
+
+    .message-avatar {
+        width: 38px;
+        height: 38px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+        box-shadow: 0 4px 12px -6px rgba(15, 23, 42, 0.3);
+    }
+
+    .guest .message-avatar {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .staff .message-avatar {
+        background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .system .message-avatar {
+        background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+    }
+
+    .message-content {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        flex: 1;
+    }
+
+    .bubble {
+        padding: 14px 18px;
+        border-radius: 18px;
+        font-size: 0.97rem;
+        line-height: 1.5;
+        box-shadow: 0 12px 28px -24px rgba(15, 23, 42, 0.34);
+        word-break: break-word;
+        position: relative;
+    }
+
+    .guest .bubble {
+        background: white;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        color: var(--gray-700);
+        border-bottom-left-radius: 4px;
+    }
+
+    .staff .bubble {
+        background: linear-gradient(135deg, var(--green-500), var(--green-400));
+        color: white;
+        border-bottom-right-radius: 4px;
+    }
+
+    .system .bubble {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        color: white;
+        text-align: center;
+        border-radius: 16px;
+        box-shadow: 0 8px 24px -12px rgba(102, 126, 234, 0.5);
+    }
+
+    .bubble.voucher-bubble {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        color: white;
+        padding: 20px;
+        border-radius: 20px;
+        box-shadow: 0 12px 32px -16px rgba(17, 153, 142, 0.6);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .voucher-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+        font-size: 1.1rem;
+        font-weight: 700;
+    }
+
+    .voucher-code {
+        background: rgba(255, 255, 255, 0.25);
+        padding: 8px 16px;
+        border-radius: 12px;
+        font-family: 'Courier New', monospace;
+        font-size: 1.15rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        margin: 8px 0;
+        border: 2px dashed rgba(255, 255, 255, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+    }
+
+    .voucher-copy-btn {
+        background: rgba(255, 255, 255, 0.3);
+        border: none;
+        color: white;
+        padding: 6px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .voucher-copy-btn:hover {
+        background: rgba(255, 255, 255, 0.4);
+        transform: scale(1.05);
+    }
+
+    .voucher-info {
+        font-size: 0.9rem;
+        opacity: 0.95;
+        line-height: 1.6;
+    }
+
+    .bubble a { color: inherit; text-decoration: underline; }
+
+    .meta { 
+        font-size: 0.78rem; 
+        color: var(--gray-600);
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    
+    .staff .meta { 
+        justify-content: flex-end;
+    }
+
+    .message-status {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.75rem;
+        color: var(--gray-500);
+    }
+
+    .staff .message-status {
+        color: var(--green-400);
+    }
+
+    .chat-composer {
+        padding: 18px 24px;
+        border-top: 1px solid var(--gray-100);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        background: white;
+    }
+
+    .composer-actions {
+        display: flex;
+        gap: 6px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--gray-100);
+        overflow-x: auto;
+        overflow-y: hidden;
+    }
+
+    .composer-actions::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    .composer-actions::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .composer-actions::-webkit-scrollbar-thumb {
+        background: var(--gray-300);
+        border-radius: 10px;
+    }
+
+    .quick-action-btn {
+        padding: 6px 12px;
+        border-radius: 10px;
+        background: var(--gray-100);
+        color: var(--gray-700);
+        font-size: 0.8rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .quick-action-btn:hover {
+        background: var(--gray-200);
+        transform: translateY(-1px);
+    }
+
+    .composer-main {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+        flex-wrap: nowrap;
+    }
+
+    .chat-composer button, .chat-composer input, .chat-composer textarea { 
+        border: none; 
+        outline: none; 
+    }
+
+    .attach-btn, .emoji-btn {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        background: var(--gray-100);
+        color: var(--green-500);
+        font-size: 1.3rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        border: none;
+        flex-shrink: 0;
+        flex-grow: 0;
+    }
+
+    .attach-btn:hover, .emoji-btn:hover { 
+        background: var(--gray-200); 
+        transform: scale(1.05);
+    }
+
+    .message-input {
+        flex: 1 1 auto !important;
+        width: 100%;
+        min-width: 200px;
+        border-radius: 16px;
+        background: var(--gray-50);
+        padding: 12px 18px;
+        font-size: 1rem;
+        min-height: 46px;
+        max-height: 120px;
+        height: 46px;
+        transition: border 0.2s ease, background 0.2s ease, height 0.1s ease;
+        border: 1px solid transparent;
+        resize: none;
+        overflow-y: hidden;
+        line-height: 1.5;
+        font-family: inherit;
+        display: block;
+        box-sizing: border-box;
+    }
+
+    .message-input::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .message-input::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .message-input::-webkit-scrollbar-thumb {
+        background: var(--gray-300);
+        border-radius: 10px;
+    }
+
+    .message-input:focus { 
+        border-color: rgba(47, 125, 90, 0.4); 
+        background: white;
+        outline: none;
+    }
+
+    .send-btn {
+        padding: 0 18px;
+        border-radius: 16px;
+        background: linear-gradient(135deg, var(--green-500), var(--green-400));
+        color: white;
+        font-weight: 600;
+        cursor: pointer;
+        box-shadow: 0 18px 32px -28px rgba(47,125,90,0.55);
+        height: 46px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 80px;
+        max-width: 120px;
+        flex-shrink: 0;
+        flex-grow: 0;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .send-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 20px 36px -28px rgba(47,125,90,0.7);
+    }
+
+    .send-btn:active {
+        transform: translateY(0);
+    }
+
+    .send-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
+    .orders-pane {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+        overflow-x: hidden;
+        display: grid;
+        gap: 16px;
+        background: linear-gradient(180deg, #f9fafc 0%, #ffffff 100%);
+        max-height: calc(100vh - 400px);
+        min-height: 400px;
+    }
+
+    /* Custom scrollbar cho orders-pane */
+    .orders-pane::-webkit-scrollbar {
+        width: 8px;
+    }
+
+    .orders-pane::-webkit-scrollbar-track {
+        background: var(--gray-100);
+        border-radius: 10px;
+    }
+
+    .orders-pane::-webkit-scrollbar-thumb {
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        border-radius: 10px;
+    }
+
+    .orders-pane::-webkit-scrollbar-thumb:hover {
+        background: linear-gradient(135deg, #5568d3, #653a8e);
+    }
+
+    /* Smooth scroll behavior cho orders */
+    .orders-pane {
+        scroll-behavior: smooth;
+        resize: vertical;
+        min-height: 260px;
+        max-height: 75vh;
+        overflow: auto;
+        padding-bottom: 16px;
+    }
+
+    .order-card {
+        background: white;
+        border-radius: 20px;
+        padding: 20px 22px;
+        border: 2px solid rgba(15, 23, 42, 0.06);
+        display: grid;
+        gap: 14px;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 16px -8px rgba(15, 23, 42, 0.1);
+    }
+
+    .order-card:hover {
+        box-shadow: 0 12px 32px -16px rgba(47, 125, 90, 0.35);
+        border-color: rgba(47, 125, 90, 0.2);
+    }
+
+    .order-card .header-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .order-card .title-line {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: #1f2933;
+        flex: 1;
+    }
+
+    .order-card .info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .order-card .info-item {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .order-card .info-label {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    .order-card .info-value {
+        font-weight: 600;
+        color: #1f2933;
+    }
+
+    .order-card .price-box {
+        background: linear-gradient(135deg, #e9f6ef, rgba(63, 162, 113, 0.15));
+        padding: 10px 14px;
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .order-card .price-label {
+        font-size: 0.75rem;
+        color: var(--gray-600);
+        margin-bottom: 2px;
+    }
+
+    .order-card .price-value {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: #1f2933;
+    }
+
+    .order-card .meta-line { 
+        display: flex; 
+        justify-content: space-between; 
+        align-items: center;
+        color: var(--gray-600); 
+        font-size: 0.88rem; 
+        padding-top: 8px;
+    }
+
+    .order-actions-row {
+        padding-top: 8px;
+        border-top: 1px dashed rgba(15, 23, 42, 0.1);
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
+    }
+
+    /* === SUMMARY CARD - Tổng hợp === */
+    .summary-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        border-radius: 20px;
+        padding: 20px 22px;
+        color: white;
+        display: grid;
+        gap: 12px;
+        box-shadow: 0 12px 32px -16px rgba(102, 126, 234, 0.5);
+        border: 2px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .summary-card .summary-title {
+        font-size: 1rem;
+        font-weight: 600;
+        opacity: 0.95;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .summary-card .summary-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 12px 0;
+    }
+
+    .summary-card .summary-items {
+        font-size: 0.9rem;
+        opacity: 0.9;
+    }
+
+    .summary-card .summary-total {
+        font-size: 1.8rem;
+        font-weight: 700;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    }
+
+    .summary-card .summary-actions {
+        display: flex;
+        gap: 10px;
+        padding-top: 8px;
+        border-top: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .summary-card .btn-select-all,
+    .summary-card .btn-pay-selected {
+        flex: 1;
+        padding: 12px 16px;
+        border-radius: 12px;
+        border: none;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        white-space: normal;
+        text-align: center;
+        line-height: 1.3;
+        min-height: 48px;
+        word-break: keep-all;
+    }
+
+    .summary-card .btn-select-all span,
+    .summary-card .btn-pay-selected span {
+        display: inline-block;
+    }
+
+    /* Responsive text for buttons */
+    @media (max-width: 400px) {
+        .summary-card .btn-select-all,
+        .summary-card .btn-pay-selected {
+            font-size: 0.75rem;
+            padding: 10px 12px;
+            gap: 4px;
+        }
+        
+        .summary-card .btn-select-all svg,
+        .summary-card .btn-pay-selected svg {
+            width: 14px;
+            height: 14px;
+        }
+    }
+
+    .summary-card .btn-select-all {
+        background: rgba(255, 255, 255, 0.25);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .summary-card .btn-select-all:hover {
+        background: rgba(255, 255, 255, 0.35);
+        transform: translateY(-1px);
+    }
+
+    .summary-card .btn-pay-selected {
+        background: white;
+        color: #667eea;
+    }
+
+    .summary-card .btn-pay-selected:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px -8px rgba(0, 0, 0, 0.3);
+    }
+
+    .summary-card .btn-pay-selected:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    /* === CHECKBOX STYLING === */
+    .service-checkbox {
+        position: absolute;
+        top: 20px;
+        left: 20px;
+        width: 24px;
+        height: 24px;
+        cursor: pointer;
+        z-index: 2;
+    }
+
+    .service-checkbox input[type="checkbox"] {
+        width: 100%;
+        height: 100%;
+        cursor: pointer;
+        accent-color: #667eea;
+        transform: scale(1.3);
+    }
+
+    .order-card {
+        position: relative;
+        padding-left: 56px;
+    }
+
+    .order-card.selected {
+        border-color: #667eea;
+        box-shadow: 0 12px 32px -16px rgba(102, 126, 234, 0.5);
+        background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(118, 75, 162, 0.05));
+    }
+
+    /* === LOADING ANIMATION === */
+    .loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.95);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        border-radius: 20px;
+        z-index: 10;
+    }
+
+    .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(102, 126, 234, 0.2);
+        border-top-color: #667eea;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+        color: #667eea;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
+    /* === SUCCESS ANIMATION === */
+    @keyframes successPulse {
+        0%, 100% { transform: scale(1); }
+        50% { transform: scale(1.05); }
+    }
+
+    .order-card.success-flash {
+        animation: successPulse 0.5s ease;
+        border-color: #2ecc71;
+        background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(46, 204, 113, 0.05));
+    }
+
+    /* === GROUPED MESSAGES - Gộp tin nhắn === */
+    .message.grouped {
+        margin-top: -12px;
+    }
+
+    .message.grouped .message-avatar {
+        opacity: 0;
+        pointer-events: none;
+    }
+
+    .message.grouped .meta {
+        display: none;
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 1400px) {
+        .chat-hub {
+            grid-template-columns: 280px minmax(0, 1fr) minmax(320px, auto);
+            gap: 16px;
+        }
+    }
+
+    @media (max-width: 1200px) {
+        .chat-hub {
+            grid-template-columns: 1fr;
+            gap: 16px;
+        }
+
+        .chat-sidebar {
+            max-height: 300px;
+        }
+
+        .orders-panel {
+            order: 3;
+        }
+    }
+
+    @media (max-width: 768px) {
+        .chat-messages {
+            padding: 16px;
+            max-height: calc(100vh - 450px);
+        }
+
+        .message {
+            max-width: 85%;
+        }
+
+        .composer-main {
+            flex-wrap: wrap;
+        }
+
+        .message-input {
+            min-width: 100%;
+            order: 1;
+        }
+
+        .attach-btn, .emoji-btn {
+            order: 2;
+        }
+
+        .send-btn {
+            order: 3;
+            flex: 1;
+            max-width: none;
+        }
+
+        .order-card {
+            padding-left: 48px;
+        }
+
+        .service-checkbox {
+            left: 16px;
+        }
+    }
+
+    .status-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 6px 14px;
+        border-radius: 999px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    .status-pill.pending { 
+        background: linear-gradient(135deg, rgba(248, 196, 113, 0.25), rgba(248, 196, 113, 0.15)); 
+        color: #c77716;
+        border: 1px solid rgba(199, 119, 22, 0.2);
+    }
+
+    .status-pill.waiting-payment { 
+        background: linear-gradient(135deg, rgba(52, 152, 219, 0.25), rgba(52, 152, 219, 0.15)); 
+        color: #2874a6;
+        border: 1px solid rgba(40, 116, 166, 0.2);
+    }
+
+    .status-pill.done { 
+        background: linear-gradient(135deg, rgba(46, 204, 113, 0.25), rgba(46, 204, 113, 0.15)); 
+        color: #1e8546;
+        border: 1px solid rgba(30, 133, 70, 0.2);
+    }
+
+    .btn-confirm {
+        padding: 8px 16px;
+        border-radius: 10px;
+        border: none;
+        background: linear-gradient(135deg, var(--green-500), var(--green-400));
+        color: white;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 6px 16px -8px rgba(47, 125, 90, 0.5);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .btn-confirm:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px -12px rgba(47, 125, 90, 0.65);
+    }
+
+    .btn-confirm:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
+    }
+
+    .btn-view-payment {
+        padding: 8px 16px;
+        border-radius: 10px;
+        border: 1px solid rgba(52, 152, 219, 0.3);
+        background: linear-gradient(135deg, rgba(52, 152, 219, 0.1), rgba(52, 152, 219, 0.05));
+        color: #2874a6;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+
+    .btn-view-payment:hover {
+        transform: translateY(-2px);
+        background: linear-gradient(135deg, rgba(52, 152, 219, 0.2), rgba(52, 152, 219, 0.1));
+        box-shadow: 0 8px 20px -10px rgba(52, 152, 219, 0.4);
+    }
+
+    .btn-cancel {
+        padding: 8px 16px;
+        border-radius: 10px;
+        border: none;
+        background: linear-gradient(135deg, #f86f6f, #e74c3c);
+        color: #ffffff;
+        font-weight: 600;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        box-shadow: 0 6px 16px -10px rgba(231, 76, 60, 0.55);
+    }
+
+    .btn-cancel:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 12px 24px -12px rgba(231, 76, 60, 0.65);
+    }
+
+    .btn-cancel:active {
+        transform: translateY(-1px);
+    }
+
+    .payment-info-box {
+        background: linear-gradient(135deg, #e3f2fd, #f5f9ff);
+        border: 1px solid rgba(52, 152, 219, 0.2);
+        border-radius: 12px;
+        padding: 12px 14px;
+        margin-top: 10px;
+        display: none;
+    }
+
+    .payment-info-box.show {
+        display: block;
+    }
+
+    .payment-info-box .qr-code {
+        text-align: center;
+        margin: 10px 0;
+    }
+
+    .payment-info-box .qr-code img {
+        max-width: 200px;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px -6px rgba(0, 0, 0, 0.2);
+    }
+
+    .payment-info-box .payment-details {
+        font-size: 0.85rem;
+        color: #2874a6;
+        line-height: 1.6;
+    }
+
+    .payment-info-box .payment-details strong {
+        color: #1a5276;
+    }
+
+
+
+    .file-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(255,255,255,0.9);
+        color: #1f2933;
+        border-radius: 999px;
+        padding: 6px 12px;
+        font-size: 0.85rem;
+    }
+
+    .file-chip span { font-weight: 600; }
+
+    .toast {
+        position: fixed;
+        bottom: 32px;
+        right: 32px;
+        background: #1f2933;
+        color: white;
+        padding: 14px 20px;
+        border-radius: 14px;
+        box-shadow: 0 20px 40px -24px rgba(15, 23, 42, 0.6);
+        opacity: 0;
+        transform: translateY(20px);
+        transition: all 0.3s ease;
+        z-index: 15;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+</style>
+
+<h2 style="margin-bottom: 18px;">Hộp thư khách lưu trú</h2>
+
+<div class="chat-hub">
+    <aside class="chat-sidebar">
+
+        <div class="conversation-list">
+            {% for dp, unread_count in conversations %}
+                <div class="conversation-item" data-id="{{ dp.id }}" data-token="{{ dp.chat_token }}" data-room="{{ dp.phong.ten }}" data-guest="{{ dp.khachhang.ho_ten }}">
+                    <div class="conversation-details">
+                        <strong>{{ dp.phong.ten }}</strong>
+                        <span>{{ dp.khachhang.ho_ten }}</span>
+                    </div>
+                    <div class="conversation-actions">
+                        {% if unread_count > 0 %}
+                            <span class="unread-badge">{{ unread_count }}</span>
+                        {% endif %}
+                        {% if current_user.loai == 'admin' %}
+                        <form method="POST" action="{{ url_for('xoa_hoi_thoai', datphong_id=dp.id) }}" onsubmit="return confirm('Bạn chắc chắn muốn xóa toàn bộ hội thoại với phòng {{ dp.phong.ten }}?');">
+                            <button type="submit" class="delete-btn" title="Xóa hội thoại">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                            </button>
+                        </form>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <div style="text-align:center; color:var(--gray-600); padding:18px;">Hiện chưa có hội thoại nào.</div>
+            {% endfor %}
+        </div>
+    </aside>
+
+    <section class="chat-main">
+        <header class="chat-header">
+            <div class="chat-room-info" id="room-info">
+                <div>
+                    <h3>Chưa chọn phòng</h3>
+                    <div class="sub">Hãy chọn phòng bên trái để xem tin nhắn</div>
+                </div>
+            </div>
+        </header>
+        <div class="chat-body">
+            <div class="chat-pane active" id="pane-messages">
+                <div class="chat-messages" id="chat-messages">
+                    <div style="margin:auto; text-align:center; color:var(--gray-600);">Vui lòng chọn hội thoại</div>
+                </div>
+            </div>
+        </div>
+        <div class="chat-composer" id="composer" style="display:none;">
+            <div class="composer-actions">
+                <button class="quick-action-btn" onclick="insertQuickMessage('Xin chào! Tôi có thể giúp gì cho quý khách?')">
+                    <i class="fas fa-hand-paper"></i> Chào hỏi
+                </button>
+                <button class="quick-action-btn" onclick="insertQuickMessage('Dạ, chúng tôi sẽ xử lý ngay ạ!')">
+                    <i class="fas fa-check"></i> Xác nhận
+                </button>
+                <button class="quick-action-btn" onclick="insertQuickMessage('Cảm ơn quý khách đã sử dụng dịch vụ!')">
+                    <i class="fas fa-praying-hands"></i> Cảm ơn
+                </button>
+            </div>
+            <div class="composer-main">
+                <button class="attach-btn" id="btn-attach" title="Đính kèm tệp"><i class="fas fa-paperclip"></i></button>
+                <button class="emoji-btn" id="btn-emoji" title="Chèn emoji"><i class="fas fa-smile"></i></button>
+                <textarea id="message-text" class="message-input" placeholder="Nhập phản hồi cho khách..." rows="1"></textarea>
+                <button class="send-btn" id="send-btn">Gửi</button>
+                <input type="file" id="file-input" hidden accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain,video/mp4,audio/*">
+            </div>
+        </div>
+    </section>
+
+    <aside class="orders-panel" id="orders-panel">
+        <div class="orders-header">
+            <div>
+                <h3>Đơn dịch vụ</h3>
+                <div style="color: var(--gray-600); font-size:0.9rem;">Các yêu cầu cần phê duyệt</div>
+            </div>
+            <span class="orders-count" id="orders-count">0</span>
+        </div>
+        <div class="orders-pane" id="orders-pane">
+            <div style="text-align:center; color:var(--gray-600); margin-top:20%;" id="orders-empty">Chọn phòng để xem yêu cầu.</div>
+            <div id="orders-summary"></div>
+            <div id="orders-list" style="display:grid; gap:16px;"></div>
+        </div>
+    </aside>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script>
+    // Thông tin ngân hàng cho QR code thanh toán
+    const BANK_ID = "970423"; // TPBank
+    const BANK_ACCOUNT_NO = "99992162001";
+    
+    document.addEventListener('DOMContentLoaded', () => {
+        const toast = document.getElementById('toast');
+        const composer = document.getElementById('composer');
+        const messageInput = document.getElementById('message-text');
+        const sendBtn = document.getElementById('send-btn');
+        const attachBtn = document.getElementById('btn-attach');
+        const fileInput = document.getElementById('file-input');
+        const roomInfo = document.getElementById('room-info');
+        const chatMessages = document.getElementById('chat-messages');
+        const SCROLL_STICKY_THRESHOLD = 96;
+        const ordersList = document.getElementById('orders-list');
+        const ordersEmpty = document.getElementById('orders-empty');
+        const ordersCount = document.getElementById('orders-count');
+        const ordersSummary = document.getElementById('orders-summary');
+
+        const state = {
+            activeId: null,
+            activeToken: null,
+            intervalId: null,
+            socket: io(),
+            selectedServices: new Set(),
+            lastMessageSender: null,
+            lastMessageTime: null,
+            loadingOrders: false,
+            ordersLoadTimeout: null,
+            autoScroll: true
+        };
+
+        chatMessages.addEventListener('scroll', () => {
+            const distanceFromBottom = chatMessages.scrollHeight - (chatMessages.scrollTop + chatMessages.clientHeight);
+            state.autoScroll = distanceFromBottom <= SCROLL_STICKY_THRESHOLD;
+        });
+
+        ordersCount.textContent = '—';
+
+        state.socket.on('new_message_from_guest', payload => {
+            if (payload.datphong_id && String(payload.datphong_id) === String(state.activeId)) {
+                addMessage(payload);
+                updateSidebarBadge();
+                scrollToBottom();
+                // Chỉ reload orders khi có tin nhắn liên quan đến dịch vụ
+                const text = payload.text || payload.noi_dung || '';
+                if (text.includes('đặt dịch vụ') || text.includes('thanh toán')) {
+                    // Debounce: Chỉ reload sau 1 giây không có tin nhắn mới
+                    if (state.ordersLoadTimeout) clearTimeout(state.ordersLoadTimeout);
+                    state.ordersLoadTimeout = setTimeout(() => {
+                        loadOrders(state.activeId);
+                    }, 1000);
+                }
+            }
+        });
+
+        state.socket.on('connect', () => state.socket.emit('join_chat_room', { token: 'staff-dashboard' }));
+
+        // Lắng nghe event khách hủy đơn
+        state.socket.on('order_cancelled', (data) => {
+            console.log('Order cancelled:', data);
+            // Reload orders nếu đang xem đúng booking bị hủy
+            if (state.activeId && state.activeId == data.datphong_id) {
+                loadOrders(state.activeId);
+                showToast('<i class="fas fa-ban"></i> Khách đã hủy đơn hàng', 'info');
+            }
+        });
+
+        function showToast(text, type = 'info') {
+            toast.textContent = text;
+            toast.style.background = type === 'error' ? '#c0392b' : (type === 'success' ? '#2f7d5a' : '#1f2933');
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 2500);
+        }
+
+        const conversations = document.querySelectorAll('.conversation-item');
+        conversations.forEach(item => item.addEventListener('click', (event) => {
+            if (event.target.closest('form')) return;
+            conversations.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            const id = item.dataset.id;
+            const token = item.dataset.token;
+            state.activeId = id;
+            state.activeToken = token;
+            state.autoScroll = true;
+            roomInfo.innerHTML = `<div><h3>${item.dataset.room}</h3><div class="sub">Khách: ${item.dataset.guest}</div></div>`;
+            composer.style.display = 'flex';
+            ordersList.innerHTML = '';
+            ordersEmpty.style.display = 'block';
+            ordersEmpty.textContent = 'Đang tải yêu cầu...';
+            ordersCount.textContent = '…';
+            loadMessages(id);
+            loadOrders(id);
+            // Tắt interval vì đã có Socket.IO realtime
+            if (state.intervalId) {
+                clearInterval(state.intervalId);
+                state.intervalId = null;
+            }
+            const badge = item.querySelector('.unread-badge');
+            if (badge) badge.style.display = 'none';
+        }));
+
+        async function updateSidebarBadge() {
+            try {
+                const res = await fetch('/api/tin-nhan/dem-chua-doc');
+                const data = await res.json();
+                const badge = document.querySelector('.notification-badge');
+                if (data.count > 0) {
+                    if (badge) {
+                        badge.textContent = data.count < 100 ? data.count : '99+';
+                    } else {
+                        const link = document.querySelector('a[href="{{ url_for("tin_nhan") }}"]');
+                        if (link) {
+                            link.classList.add('menu-link-with-badge');
+                            const b = document.createElement('span');
+                            b.className = 'notification-badge';
+                            b.textContent = data.count < 100 ? data.count : '99+';
+                            link.appendChild(b);
+                        }
+                    }
+                } else if (badge) {
+                    badge.remove();
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function loadMessages(id, silent = false) {
+            if (!id) return;
+            try {
+                const res = await fetch(`/api/tin-nhan/${id}`);
+                const messages = await res.json();
+                chatMessages.innerHTML = '';
+                state.lastMessageSender = null;
+                state.lastMessageTime = null;
+                messages.forEach(addMessage);
+                scrollToBottom(!silent);
+                updateSidebarBadge();
+            } catch (err) {
+                if (!silent) showToast('Không thể tải tin nhắn', 'error');
+            }
+        }
+
+        function normalizeMessage(msg) {
+            if (!msg) return null;
+            const payload = { ...msg };
+            if (payload.type === 'file' && payload.url && !payload.url.startsWith('http')) {
+                payload.url = `${window.location.origin}${payload.url.startsWith('/') ? '' : '/'}${payload.url}`;
+            }
+            return payload;
+        }
+
+        function addMessage(raw) {
+            const msg = normalizeMessage(raw);
+            if (!msg) return;
+            const sender = (msg.nguoi_gui || '').toLowerCase();
+            const isStaffSender = ['nhanvien', 'staff', 'he_thong', 'system'].includes(sender);
+            const isSystem = ['he_thong', 'system'].includes(sender);
+            
+            // Kiểm tra xem có phải tin nhắn voucher không
+            const text = msg.text || msg.noi_dung || '';
+            const isVoucher = text.includes('voucher') || text.includes('Voucher') || text.includes('giảm giá');
+            
+            // Kiểm tra tin nhắn có cần gộp không (cùng người gửi trong vòng 2 phút)
+            const currentTime = new Date(msg.thoi_gian || Date.now()).getTime();
+            const shouldGroup = state.lastMessageSender === sender && 
+                               state.lastMessageTime && 
+                               (currentTime - state.lastMessageTime < 120000) && // 2 phút
+                               !isSystem && !isVoucher;
+            
+            state.lastMessageSender = sender;
+            state.lastMessageTime = currentTime;
+            
+            const wrap = document.createElement('div');
+            wrap.className = `message ${isSystem ? 'system' : (isStaffSender ? 'staff' : 'guest')}${shouldGroup ? ' grouped' : ''}`;
+
+            // Tạo avatar
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            if (isSystem) {
+                avatar.innerHTML = '<i class="fas fa-gift"></i>';
+            } else if (isStaffSender) {
+                avatar.innerHTML = '<i class="fas fa-user-tie"></i>';
+            } else {
+                avatar.innerHTML = '<i class="fas fa-user"></i>';
+            }
+
+            // Tạo message content wrapper
+            const contentWrap = document.createElement('div');
+            contentWrap.className = 'message-content';
+
+            const bubble = document.createElement('div');
+            bubble.className = isVoucher && isSystem ? 'bubble voucher-bubble' : 'bubble';
+            
+            if (msg.type === 'file' && msg.url) {
+                if (msg.mime && msg.mime.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = msg.url;
+                    img.alt = msg.name || 'Tệp đính kèm';
+                    img.loading = 'lazy';
+                    img.style.maxWidth = '240px';
+                    img.style.borderRadius = '18px';
+                    bubble.appendChild(img);
+                } else {
+                    const link = document.createElement('a');
+                    link.href = msg.url;
+                    link.target = '_blank';
+                    link.rel = 'noopener';
+                    link.className = 'file-chip';
+                    link.innerHTML = `<i class="fas fa-paperclip"></i> <span>${msg.name || 'Tệp đính kèm'}</span>`;
+                    bubble.appendChild(link);
+                }
+            } else if (isVoucher && isSystem) {
+                // Format đặc biệt cho voucher
+                const voucherMatch = text.match(/voucher giảm giá (\d+)%.*Mã: ([A-Z0-9]+).*HSD: ([\d\/]+)/i);
+                if (voucherMatch) {
+                    const [, percent, code, expiry] = voucherMatch;
+                    bubble.innerHTML = `
+                        <div class="voucher-header">
+                            <span><i class="fas fa-birthday-cake"></i></span>
+                            <span>Chúc mừng! Bạn nhận được voucher</span>
+                        </div>
+                        <div class="voucher-code">
+                            <span>${code}</span>
+                            <button class="voucher-copy-btn" onclick="copyVoucherCode('${code}')">
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                        </div>
+                        <div class="voucher-info">
+                            <i class="fas fa-tags"></i> Giảm giá: <strong>${percent}%</strong> cho lần đặt tiếp theo<br>
+                            <i class="fas fa-calendar-alt"></i> Hạn sử dụng: <strong>${expiry}</strong>
+                        </div>
+                    `;
+                } else {
+                    bubble.textContent = text;
+                }
+            } else {
+                // Thêm icon cho tin nhắn đặt dịch vụ - KHÔNG hiển thị nội dung chi tiết
+                if (text.includes('đặt dịch vụ')) {
+                    // Chỉ hiển thị thông báo ngắn gọn
+                    const serviceMatch = text.match(/Khách đã đặt dịch vụ:(.+?)\. Tổng/);
+                    if (serviceMatch) {
+                        const services = serviceMatch[1].trim();
+                        bubble.innerHTML = `<strong><i class="fas fa-utensils"></i> Đơn dịch vụ mới</strong><br><span style="font-size:0.9rem; opacity:0.9;">${services}</span>`;
+                    } else {
+                        bubble.innerHTML = `<strong><i class="fas fa-utensils"></i> Khách đã đặt dịch vụ</strong><br><span style="font-size:0.9rem; opacity:0.9;">Vui lòng xem chi tiết bên phải</span>`;
+                    }
+                } else {
+                    bubble.textContent = text;
+                }
+            }
+
+            const meta = document.createElement('div');
+            meta.className = 'meta';
+            let senderLabel = '';
+            if (isStaffSender) {
+                if (msg.ten_nhan_vien) {
+                    senderLabel = msg.ten_nhan_vien;
+                } else if (isSystem) {
+                    senderLabel = 'Hệ thống';
+                }
+            }
+            
+            // Thêm trạng thái tin nhắn cho staff
+            const statusIcon = isStaffSender ? '<span class="message-status"><i class="fas fa-check-double"></i></span>' : '';
+            meta.innerHTML = `${senderLabel ? '<strong>' + senderLabel + '</strong> · ' : ''}${msg.thoi_gian || ''} ${statusIcon}`;
+
+            contentWrap.appendChild(bubble);
+            if (!shouldGroup) {
+                contentWrap.appendChild(meta);
+            }
+            
+            if (isSystem) {
+                wrap.appendChild(avatar);
+                wrap.appendChild(contentWrap);
+            } else {
+                wrap.appendChild(avatar);
+                wrap.appendChild(contentWrap);
+            }
+            
+            chatMessages.appendChild(wrap);
+            scrollToBottom();
+        }
+
+        async function sendMessage() {
+            if (!state.activeId) return showToast('Chọn phòng trước khi gửi', 'error');
+            const text = messageInput.value.trim();
+            if (!text) return;
+            sendBtn.disabled = true;
+            try {
+                await fetch('/api/tin-nhan/gui', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ datphong_id: state.activeId, noi_dung: text })
+                });
+                messageInput.value = '';
+                resetTextarea();
+                loadMessages(state.activeId);
+            } catch (err) {
+                showToast('Gửi tin nhắn thất bại', 'error');
+            } finally {
+                sendBtn.disabled = false;
+            }
+        }
+
+        async function uploadFile(file) {
+            if (!state.activeId) return showToast('Chưa chọn phòng', 'error');
+            const formData = new FormData();
+            formData.append('datphong_id', state.activeId);
+            formData.append('file', file);
+            showToast(`Đang tải lên ${file.name}...`);
+            try {
+                const res = await fetch('/api/tin-nhan/gui-file', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (!res.ok || data.status !== 'success') throw new Error(data.message || 'Lỗi tải tệp');
+                addMessage(data.message);
+                showToast('Đã gửi tệp đính kèm', 'success');
+            } catch (err) {
+                showToast(err.message, 'error');
+            }
+        }
+
+        fileInput.addEventListener('change', () => {
+            const file = fileInput.files[0];
+            if (file) uploadFile(file);
+            fileInput.value = '';
+        });
+
+        attachBtn.addEventListener('click', () => fileInput.click());
+        sendBtn.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+
+        messageInput.addEventListener('paste', event => {
+            const items = event.clipboardData?.items || [];
+            for (const item of items) {
+                if (item.type.startsWith('image/')) {
+                    const file = item.getAsFile();
+                    if (file) {
+                        uploadFile(file);
+                        event.preventDefault();
+                        break;
+                    }
+                }
+            }
+        });
+
+        function formatCurrency(amount) {
+            return (amount || 0).toLocaleString('vi-VN') + ' đ';
+        }
+
+        async function loadOrders(id) {
+            if (!id) {
+                ordersList.innerHTML = '';
+                ordersSummary.innerHTML = '';
+                ordersEmpty.style.display = 'block';
+                ordersEmpty.textContent = 'Chọn phòng để xem yêu cầu.';
+                ordersCount.textContent = '0';
+                state.selectedServices.clear();
+                return;
+            }
+
+            // Tránh gọi API nhiều lần đồng thời
+            if (state.loadingOrders) {
+                console.log('Đang tải orders, bỏ qua request mới');
+                return;
+            }
+            
+            state.loadingOrders = true;
+
+            try {
+                const res = await fetch(`/api/dat-phong/${id}/dich-vu`);
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                const data = await res.json();
+                
+                if (!Array.isArray(data)) {
+                    console.error('Invalid data format:', data);
+                    throw new Error('Dữ liệu trả về không hợp lệ');
+                }
+                
+                const pending = data.filter(item => item && item.trang_thai !== 'da_thanh_toan');
+                
+                ordersCount.textContent = pending.length;
+                state.selectedServices.clear();
+                
+                if (!pending.length) {
+                    ordersEmpty.style.display = 'block';
+                    ordersEmpty.innerHTML = `
+                        <div style="text-align:center; padding:40px 20px;">
+                            <div style="font-size:3rem; margin-bottom:12px;"><i class="fas fa-check-circle"></i></div>
+                            <div style="font-size:1.1rem; font-weight:600; color:#1f2933; margin-bottom:8px;">Tất cả đã thanh toán</div>
+                            <div style="font-size:0.9rem; color:var(--gray-600);">Không có yêu cầu nào cần phê duyệt</div>
+                        </div>
+                    `;
+                    ordersList.innerHTML = '';
+                    ordersSummary.innerHTML = '';
+                    return;
+                }
+
+                ordersEmpty.style.display = 'none';
+                
+                // Tạo summary card
+                const totalAmount = pending.reduce((sum, item) => sum + item.tong, 0);
+                ordersSummary.innerHTML = `
+                    <div class="summary-card" style="margin-bottom:16px;">
+                        <div class="summary-title">
+                            <i class="fas fa-chart-pie"></i> Tổng quan đơn dịch vụ
+                        </div>
+                        <div class="summary-content">
+                            <div class="summary-items">
+                                <div style="font-size:2rem; font-weight:700; margin-bottom:4px;">${pending.length}</div>
+                                <div style="opacity:0.9;">món cần thanh toán</div>
+                            </div>
+                            <div style="text-align:right;">
+                                <div style="font-size:0.8rem; opacity:0.9; margin-bottom:4px;">TỔNG TIỀN</div>
+                                <div class="summary-total">${formatCurrency(totalAmount)}</div>
+                            </div>
+                        </div>
+                        <div class="summary-actions">
+                            <button class="btn-select-all" onclick="toggleSelectAll()">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+                                </svg>
+                                <span id="select-all-text">Chọn tất cả</span>
+                            </button>
+                            <button class="btn-pay-selected" id="btn-pay-selected" onclick="confirmBatchPayment()" disabled>
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+                                </svg>
+                                <span>Thanh toán (<span id="selected-count">0</span>)</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                ordersList.innerHTML = '';
+                pending.forEach(item => {
+                    const card = document.createElement('div');
+                    card.className = 'order-card';
+                    card.dataset.serviceId = item.id;
+                    
+                    // Chỉ hiển thị đơn chờ xác nhận (khách đã gửi yêu cầu)
+                    const isChoXacNhan = item.trang_thai === 'cho_xac_nhan';
+                    
+                    // Nếu chưa yêu cầu xác nhận, không hiển thị (khách phải tự thanh toán trước)
+                    if (!isChoXacNhan) {
+                        return;
+                    }
+                    
+                    const statusClass = 'waiting';
+                    const statusText = '⏱ Chờ xác nhận thanh toán';
+                    
+                    // Tạo QR code URL
+                    const description = encodeURIComponent(`DV${item.id} ${state.activeToken || ''}`);
+                    const qrCodeUrl = `https://img.vietqr.io/image/${BANK_ID}-${BANK_ACCOUNT_NO}-compact2.png?amount=${item.tong}&addInfo=${description}`;
+                    
+                    card.innerHTML = `
+                        <div class="service-checkbox">
+                            <input type="checkbox" id="service-${item.id}" onchange="toggleServiceSelection(${item.id})">
+                        </div>
+                        <div class="header-row">
+                            <div class="title-line">${item.ten}</div>
+                            <span class="status-pill ${statusClass}">${statusText}</span>
+                        </div>
+                        <div class="info-grid">
+                            <div class="info-item">
+                                <div class="info-label">Số lượng</div>
+                                <div class="info-value">${item.so_luong} phần</div>
+                            </div>
+                            <div class="info-item">
+                                <div class="info-label">Đơn giá</div>
+                                <div class="info-value">${formatCurrency(item.gia)}</div>
+                            </div>
+                        </div>
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding-top:8px; gap:12px;">
+                            <div style="font-size:0.85rem; color:var(--gray-600);">
+                                <svg width="14" height="14" style="vertical-align:middle; margin-right:4px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                ${item.thoi_gian}
+                            </div>
+                            <div class="price-box">
+                                <div class="price-label">Tổng cộng</div>
+                                <div class="price-value">${formatCurrency(item.tong)}</div>
+                            </div>
+                        </div>
+                        <div class="payment-info-box" id="payment-info-${item.id}">
+                            <div style="font-weight:600; color:#1a5276; margin-bottom:8px; display:flex; align-items:center; gap:6px;">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                                </svg>
+                                Thông tin thanh toán
+                            </div>
+                            <div class="qr-code">
+                                <img src="${qrCodeUrl}" alt="QR thanh toán" loading="lazy">
+                            </div>
+                            <div class="payment-details">
+                                <strong><i class="fas fa-university"></i> Ngân hàng:</strong> TPBank<br>
+                                <strong><i class="fas fa-mobile-alt"></i> STK:</strong> ${BANK_ACCOUNT_NO}<br>
+                                <strong><i class="fas fa-money-bill-wave"></i> Số tiền:</strong> ${formatCurrency(item.tong)}<br>
+                                <strong><i class="fas fa-edit"></i> Nội dung:</strong> DV${item.id}
+                            </div>
+                        </div>
+                        <div class="order-actions-row">
+                            <button class="btn-view-payment" onclick="togglePaymentInfo(${item.id})" style="flex:1;">
+                                <svg width="14" height="14" style="vertical-align:middle; margin-right:4px;" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                </svg>
+                                Xem QR
+                            </button>
+                            <button class="btn-confirm" onclick="confirmPayment(${item.id})" style="flex:1;">Xác nhận</button>
+                            <button class="btn-cancel" onclick="cancelPayment(${item.id})" style="flex:0.75;" title="Huỷ bỏ yêu cầu nếu chưa nhận tiền">Huỷ</button>
+                        </div>
+                    `;
+                    ordersList.appendChild(card);
+                });
+                
+                updateSelectionUI();
+            } catch (err) {
+                console.error('Lỗi tải đơn dịch vụ:', err);
+                ordersCount.textContent = '0';
+                ordersEmpty.style.display = 'block';
+                ordersEmpty.innerHTML = `
+                    <div style="text-align:center; padding:40px 20px;">
+                        <div style="font-size:3rem; margin-bottom:12px;"><i class="fas fa-exclamation-triangle"></i></div>
+                        <div style="font-size:1.1rem; font-weight:600; color:#1f2933; margin-bottom:8px;">Không thể tải dữ liệu</div>
+                        <div style="font-size:0.9rem; color:var(--gray-600); margin-bottom:12px;">${err.message || 'Vui lòng thử lại sau'}</div>
+                        <button onclick="loadOrders(${id})" style="padding:8px 16px; background:var(--green-500); color:white; border:none; border-radius:8px; cursor:pointer; font-weight:600;">
+                            <i class="fas fa-redo"></i> Thử lại
+                        </button>
+                    </div>
+                `;
+                ordersList.innerHTML = '';
+                ordersSummary.innerHTML = '';
+            } finally {
+                state.loadingOrders = false;
+            }
+        }
+
+        async function confirmPayment(serviceId) {
+            if (!state.activeId) return;
+            if (!confirm('Xác nhận khách hàng đã thanh toán dịch vụ này?')) return;
+            
+            const card = document.querySelector(`.order-card[data-service-id="${serviceId}"]`);
+            if (card) {
+                // Thêm loading overlay
+                const overlay = document.createElement('div');
+                overlay.className = 'loading-overlay';
+                overlay.innerHTML = `
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Đang xử lý...</div>
+                `;
+                card.style.position = 'relative';
+                card.appendChild(overlay);
+            }
+            
+            try {
+                const res = await fetch(`/api/dich-vu/${serviceId}/xac-nhan-thanh-toan`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                if (!res.ok || data.status !== 'success') {
+                    throw new Error(data.message || 'Không thể xác nhận thanh toán');
+                }
+                
+                // Animation thành công
+                if (card) {
+                    card.classList.add('success-flash');
+                    setTimeout(() => {
+                        showToast('<i class="fas fa-check"></i> Đã xác nhận thanh toán thành công', 'success');
+                        loadOrders(state.activeId);
+                    }, 500);
+                } else {
+                    showToast('<i class="fas fa-check"></i> Đã xác nhận thanh toán thành công', 'success');
+                    loadOrders(state.activeId);
+                }
+            } catch (err) {
+                if (card) {
+                    const overlay = card.querySelector('.loading-overlay');
+                    if (overlay) overlay.remove();
+                }
+                showToast('<i class="fas fa-times"></i> ' + err.message, 'error');
+            }
+        }
+
+        // === CHỨC NĂNG MỚI: CHỌN NHIỀU VÀ THANH TOÁN HÀNG LOẠT ===
+        
+        window.toggleServiceSelection = function(serviceId) {
+            const checkbox = document.getElementById(`service-${serviceId}`);
+            const card = document.querySelector(`.order-card[data-service-id="${serviceId}"]`);
+            
+            if (checkbox && checkbox.checked) {
+                state.selectedServices.add(serviceId);
+                if (card) card.classList.add('selected');
+            } else {
+                state.selectedServices.delete(serviceId);
+                if (card) card.classList.remove('selected');
+            }
+            
+            updateSelectionUI();
+        };
+
+        window.toggleSelectAll = function() {
+            const checkboxes = ordersList.querySelectorAll('input[type="checkbox"]');
+            const allChecked = state.selectedServices.size === checkboxes.length;
+            
+            checkboxes.forEach(checkbox => {
+                const serviceId = parseInt(checkbox.id.replace('service-', ''));
+                const card = document.querySelector(`.order-card[data-service-id="${serviceId}"]`);
+                
+                if (allChecked) {
+                    checkbox.checked = false;
+                    state.selectedServices.delete(serviceId);
+                    if (card) card.classList.remove('selected');
+                } else {
+                    checkbox.checked = true;
+                    state.selectedServices.add(serviceId);
+                    if (card) card.classList.add('selected');
+                }
+            });
+            
+            updateSelectionUI();
+        };
+
+        function updateSelectionUI() {
+            const selectedCount = state.selectedServices.size;
+            const countSpan = document.getElementById('selected-count');
+            const payBtn = document.getElementById('btn-pay-selected');
+            const selectAllText = document.getElementById('select-all-text');
+            const totalCheckboxes = ordersList.querySelectorAll('input[type="checkbox"]').length;
+            
+            if (countSpan) countSpan.textContent = selectedCount;
+            if (payBtn) payBtn.disabled = selectedCount === 0;
+            
+            if (selectAllText) {
+                if (selectedCount === totalCheckboxes && totalCheckboxes > 0) {
+                    selectAllText.textContent = 'Bỏ chọn tất cả';
+                } else {
+                    selectAllText.textContent = 'Chọn tất cả';
+                }
+            }
+        }
+
+        window.confirmBatchPayment = async function() {
+            if (state.selectedServices.size === 0) return;
+            
+            const count = state.selectedServices.size;
+            if (!confirm(`Xác nhận khách hàng đã thanh toán ${count} dịch vụ đã chọn?`)) return;
+            
+            // Hiển thị loading trên tất cả card được chọn
+            state.selectedServices.forEach(serviceId => {
+                const card = document.querySelector(`.order-card[data-service-id="${serviceId}"]`);
+                if (card) {
+                    const overlay = document.createElement('div');
+                    overlay.className = 'loading-overlay';
+                    overlay.innerHTML = `
+                        <div class="loading-spinner"></div>
+                        <div class="loading-text">Đang xử lý...</div>
+                    `;
+                    card.style.position = 'relative';
+                    card.appendChild(overlay);
+                }
+            });
+            
+            // Xử lý tuần tự từng dịch vụ
+            let successCount = 0;
+            let failCount = 0;
+            
+            for (const serviceId of state.selectedServices) {
+                try {
+                    const res = await fetch(`/api/dich-vu/${serviceId}/xac-nhan-thanh-toan`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' }
+                    });
+                    const data = await res.json();
+                    
+                    if (res.ok && data.status === 'success') {
+                        successCount++;
+                        const card = document.querySelector(`.order-card[data-service-id="${serviceId}"]`);
+                        if (card) card.classList.add('success-flash');
+                    } else {
+                        failCount++;
+                    }
+                } catch (err) {
+                    failCount++;
+                    console.error(`Lỗi xác nhận dịch vụ ${serviceId}:`, err);
+                }
+            }
+            
+            // Hiển thị kết quả
+            setTimeout(() => {
+                if (failCount === 0) {
+                    showToast(`<i class="fas fa-check"></i> Đã xác nhận thanh toán ${successCount} dịch vụ thành công!`, 'success');
+                } else {
+                    showToast(`<i class="fas fa-exclamation-triangle"></i> Thành công: ${successCount}, Thất bại: ${failCount}`, 'error');
+                }
+                state.selectedServices.clear();
+                loadOrders(state.activeId);
+            }, 500);
+        };
+
+        window.confirmPayment = confirmPayment;
+
+        // === CHỨC NĂNG TOGGLE PAYMENT INFO ===
+        window.togglePaymentInfo = function(serviceId) {
+            const paymentBox = document.getElementById(`payment-info-${serviceId}`);
+            if (paymentBox) {
+                paymentBox.classList.toggle('show');
+            }
+        };
+
+        // === CHỨC NĂNG ĐÁNH DẤU KHÁCH ĐÃ THANH TOÁN ===
+        window.markAsWaitingConfirm = async function(serviceId) {
+            // Hàm này không còn sử dụng nữa - khách tự gửi yêu cầu
+            showToast('<i class="fas fa-exclamation-triangle"></i> Chức năng này đã được chuyển sang khách hàng tự gửi yêu cầu', 'error');
+        };
+
+        window.cancelPayment = async function(serviceId) {
+            if (!state.activeId) return;
+            if (!confirm('Hủy bỏ yêu cầu xác nhận thanh toán này?\n(Sử dụng khi khách chưa thanh toán thực sự)')) return;
+            
+            const card = document.querySelector(`.order-card[data-service-id="${serviceId}"]`);
+            if (card) {
+                const overlay = document.createElement('div');
+                overlay.className = 'loading-overlay';
+                overlay.innerHTML = `
+                    <div class="loading-spinner"></div>
+                    <div class="loading-text">Đang hủy...</div>
+                `;
+                card.style.position = 'relative';
+                card.appendChild(overlay);
+            }
+            
+            try {
+                const res = await fetch(`/api/dich-vu/${serviceId}/huy-yeu-cau`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                const data = await res.json();
+                
+                if (!res.ok || data.status !== 'success') {
+                    throw new Error(data.message || 'Không thể hủy yêu cầu');
+                }
+                
+                showToast('<i class="fas fa-check"></i> Đã hủy yêu cầu xác nhận', 'success');
+                loadOrders(state.activeId);
+            } catch (err) {
+                if (card) {
+                    const overlay = card.querySelector('.loading-overlay');
+                    if (overlay) overlay.remove();
+                }
+                showToast('<i class="fas fa-times"></i> ' + err.message, 'error');
+            }
+        };
+
+        updateSidebarBadge();
+        setInterval(updateSidebarBadge, 10000);
+
+        // === QUICK MESSAGES & EMOJI ===
+        window.insertQuickMessage = function(text) {
+            messageInput.value = text;
+            messageInput.focus();
+        };
+
+        window.copyVoucherCode = function(code) {
+            navigator.clipboard.writeText(code).then(() => {
+                showToast('Đã sao chép mã voucher: ' + code, 'success');
+            }).catch(() => {
+                showToast('Không thể sao chép. Vui lòng copy thủ công.', 'error');
+            });
+        };
+
+        const emojiBtn = document.getElementById('btn-emoji');
+        const emojis = ['😊', '👍', '❤️', '🎉', '🙏', '✅', '⭐', '💯', '🔥', '👌', '😀', '😃', '😄', '😁'];
+        
+        // Auto-resize textarea - chỉ mở rộng khi thực sự cần
+        messageInput.addEventListener('input', function() {
+            // Reset về chiều cao ban đầu
+            this.style.height = '46px';
+            
+            // Nếu nội dung vượt quá, tính toán chiều cao mới
+            if (this.scrollHeight > 46) {
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            }
+            
+            // Hiển thị scrollbar nếu vượt quá max-height
+            if (this.scrollHeight > 120) {
+                this.style.overflowY = 'auto';
+            } else {
+                this.style.overflowY = 'hidden';
+            }
+        });
+
+        // Reset textarea height after sending
+        function resetTextarea() {
+            messageInput.style.height = '46px';
+            messageInput.style.overflowY = 'hidden';
+        }
+
+        emojiBtn.addEventListener('click', () => {
+            const emoji = emojis[Math.floor(Math.random() * emojis.length)];
+            const cursorPos = messageInput.selectionStart;
+            const textBefore = messageInput.value.substring(0, cursorPos);
+            const textAfter = messageInput.value.substring(cursorPos);
+            messageInput.value = textBefore + emoji + textAfter;
+            messageInput.selectionStart = messageInput.selectionEnd = cursorPos + emoji.length;
+            messageInput.focus();
+            messageInput.dispatchEvent(new Event('input'));
+        });
+
+        // Scroll to bottom when new message arrives
+        function scrollToBottom(force = false) {
+            if (force || state.autoScroll) {
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        }
+    });
+</script>
+{% endblock %}
+
+
+
+
+

@@ -1,0 +1,915 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='booking.css') }}">
+<div class="booking-container">
+  <div class="booking-header">
+    <h2><i class="fas fa-hotel"></i> Đặt Phòng Khách Sạn</h2>
+    <div class="booking-steps">
+      <div class="step active" data-step="1">
+        <div class="step-number">1</div>
+        <div class="step-label">Chọn phòng</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" data-step="2">
+        <div class="step-number">2</div>
+        <div class="step-label">Thông tin</div>
+      </div>
+      <div class="step-line"></div>
+      <div class="step" data-step="3">
+        <div class="step-number">3</div>
+        <div class="step-label">Xác nhận</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="promo-banner">
+    <div class="promo-icon"><i class="fas fa-gift"></i></div>
+    <div class="promo-content">
+      <strong>Ưu đãi đặc biệt!</strong>
+      Đặt phòng <span class="highlight">Cao cấp</span> hoặc <span class="highlight">Tổng thống</span> nhận ngay voucher giảm {{ voucher_discount }}% cho lần đặt tiếp theo!
+    </div>
+  </div>
+
+  <form method="post" class="booking-form" id="booking-form">
+    <!-- STEP 1: CHỌN PHÒNG -->
+    <div class="booking-step-content" id="step-1">
+      <div class="booking-grid">
+        <div class="booking-section">
+          <h3><i class="fas fa-calendar-alt"></i> Thời gian lưu trú</h3>
+          <div class="date-selection">
+            <div class="form-group">
+              <label>Hình thức thuê</label>
+              <div class="radio-group">
+                <label class="radio-card">
+                  <input type="radio" name="hinh_thuc_thue" value="ngay" checked onchange="loadPhong(); updatePrice();">
+                  <div class="radio-content">
+                    <span class="radio-icon"><i class="fas fa-moon"></i></span>
+                    <span class="radio-label">Theo ngày</span>
+                  </div>
+                </label>
+                <label class="radio-card">
+                  <input type="radio" name="hinh_thuc_thue" value="gio" onchange="loadPhong(); updatePrice();">
+                  <div class="radio-content">
+                    <span class="radio-icon"><i class="fas fa-clock"></i></span>
+                    <span class="radio-label">Theo giờ</span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Ngày giờ nhận (dự kiến)</label>
+              <input type="datetime-local" step="1" name="ngay_gio_nhan" id="ngay_gio_nhan" required onchange="loadPhong(); updatePrice();">
+            </div>
+
+            <div class="form-group">
+              <label>Ngày giờ trả (dự kiến)</label>
+              <input type="datetime-local" step="1" name="ngay_gio_tra" id="ngay_gio_tra" required onchange="loadPhong(); updatePrice();">
+            </div>
+
+            <div class="duration-display" id="duration-display">
+              <div class="duration-icon"><i class="fas fa-stopwatch"></i></div>
+              <div class="duration-text">Chọn thời gian để xem thời lượng</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="booking-section">
+          <h3><i class="fas fa-home"></i> Loại phòng</h3>
+          <div class="room-type-grid">
+            {% for l in loais %}
+            <label class="room-type-card">
+              <input type="radio" name="loai_id" value="{{ l.id }}" data-gia="{{ l.gia }}" 
+                     {% if loop.first %}checked{% endif %} onchange="loadPhong(); updatePrice();">
+              <div class="room-type-content">
+                <div class="room-type-icon">
+                  {% if 'Tiêu chuẩn' in l.ten %}<i class="fas fa-bed"></i>
+                  {% elif 'Cao cấp' in l.ten %}<i class="fas fa-star"></i>
+                  {% elif 'Tổng thống' in l.ten %}<i class="fas fa-crown"></i>
+                  {% else %}<i class="fas fa-hotel"></i>{% endif %}
+                </div>
+                <div class="room-type-name">{{ l.ten }}</div>
+                <div class="room-type-price">{{ l.gia|vnd }}/đêm</div>
+                {% if 'Cao cấp' in l.ten or 'Tổng thống' in l.ten %}
+                <div class="room-type-badge"><i class="fas fa-gift"></i> Có voucher</div>
+                {% endif %}
+              </div>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+
+      <div class="booking-section">
+        <h3><i class="fas fa-door-open"></i> Danh sách phòng trống</h3>
+        <div class="rooms-loading" id="rooms-loading">
+          <div class="spinner"></div>
+          <p>Đang tải danh sách phòng...</p>
+        </div>
+        <div class="room-cards-grid" id="room-cards-container" style="display:none;">
+          <!-- Rooms will be loaded here dynamically -->
+        </div>
+        <input type="hidden" name="phong_id" id="phong_id" required>
+      </div>
+
+      <div class="booking-actions">
+        <button type="button" class="btn-next" onclick="nextStep(2)">
+          Tiếp theo <span>→</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 2: THÔNG TIN KHÁCH HÀNG -->
+    <div class="booking-step-content" id="step-2" style="display:none;">
+      <div class="booking-grid">
+        <div class="booking-section">
+          <h3><i class="fas fa-user"></i> Thông tin khách hàng</h3>
+          <div class="form-group">
+            <label>Họ tên <span class="required">*</span></label>
+            <input type="text" name="ho_ten" id="ho_ten" required placeholder="Nguyễn Văn A">
+          </div>
+
+          <div class="form-group">
+            <label>CMND/CCCD <span class="required">*</span></label>
+            <input type="text" name="cmnd" id="cmnd" required placeholder="001234567890">
+          </div>
+
+          <div class="form-group">
+            <label>Số điện thoại</label>
+            <input type="tel" name="sdt" id="sdt" placeholder="0912345678">
+          </div>
+
+          <div class="form-group">
+            <label>Email (không bắt buộc)</label>
+            <input type="email" name="email" id="email" placeholder="guest@example.com">
+            <small class="field-hint">Nếu cung cấp, hệ thống sẽ gửi xác nhận đặt phòng và thông tin check-in qua email này.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Địa chỉ</label>
+            <input type="text" name="dia_chi" id="dia_chi" placeholder="123 Đường ABC, Quận XYZ">
+          </div>
+        </div>
+
+        <div class="booking-section voucher-section">
+          <h3><i class="fas fa-ticket-alt"></i> Mã giảm giá</h3>
+          <div class="form-group">
+            <label style="font-size: 15px; font-weight: 600;">Mã voucher (nếu có)</label>
+            <div class="voucher-input-group">
+              <input type="text" name="voucher_code" id="voucher_code" placeholder="VOUCHER123" 
+                     style="text-transform: uppercase;" oninput="this.value = this.value.toUpperCase()">
+              <button type="button" class="btn-apply-voucher" onclick="applyVoucher()">
+                Áp dụng
+              </button>
+              <button type="button" class="btn-clear-voucher" onclick="clearVoucher()" style="display:none;" id="btn-clear-voucher">
+                <i class="fas fa-times"></i>
+              </button>
+            </div>
+            <div class="voucher-message" id="voucher-message"></div>
+          </div>
+
+          <div class="info-box">
+            <div class="info-icon"><i class="fas fa-lightbulb"></i></div>
+            <div class="info-content">
+              <strong>Lưu ý:</strong> Mã voucher sẽ được gửi qua tin nhắn sau khi nhận phòng cao cấp hoặc tổng thống.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="booking-actions">
+        <button type="button" class="btn-back" onclick="prevStep(1)">
+          <span>←</span> Quay lại
+        </button>
+        <button type="button" class="btn-next" onclick="nextStep(3)">
+          Tiếp theo <span>→</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- STEP 3: XÁC NHẬN -->
+    <div class="booking-step-content" id="step-3" style="display:none;">
+      <div class="confirmation-container">
+        <div class="booking-section">
+          <h3><i class="fas fa-check"></i> Xác nhận thông tin đặt phòng</h3>
+          
+          <div class="confirmation-card">
+            <div class="confirm-section">
+              <h4><i class="fas fa-hotel"></i> Thông tin phòng</h4>
+              <div class="confirm-row">
+                <span class="confirm-label">Loại phòng:</span>
+                <span class="confirm-value" id="confirm-loai"></span>
+              </div>
+              <div class="confirm-row">
+                <span class="confirm-label">Số phòng:</span>
+                <span class="confirm-value" id="confirm-phong"></span>
+              </div>
+              <div class="confirm-row">
+                <span class="confirm-label">Hình thức:</span>
+                <span class="confirm-value" id="confirm-hinhthuc"></span>
+              </div>
+            </div>
+
+            <div class="confirm-section">
+              <h4><i class="fas fa-calendar-alt"></i> Thời gian</h4>
+              <div class="confirm-row">
+                <span class="confirm-label">Check-in:</span>
+                <span class="confirm-value" id="confirm-checkin"></span>
+              </div>
+              <div class="confirm-row">
+                <span class="confirm-label">Check-out:</span>
+                <span class="confirm-value" id="confirm-checkout"></span>
+              </div>
+              <div class="confirm-row">
+                <span class="confirm-label">Thời lượng:</span>
+                <span class="confirm-value" id="confirm-duration"></span>
+              </div>
+            </div>
+
+            <div class="confirm-section">
+              <h4><i class="fas fa-user"></i> Khách hàng</h4>
+              <div class="confirm-row">
+                <span class="confirm-label">Họ tên:</span>
+                <span class="confirm-value" id="confirm-hoten"></span>
+              </div>
+              <div class="confirm-row">
+                <span class="confirm-label">CMND:</span>
+                <span class="confirm-value" id="confirm-cmnd"></span>
+              </div>
+              <div class="confirm-row">
+                <span class="confirm-label">SĐT:</span>
+                <span class="confirm-value" id="confirm-sdt"></span>
+              </div>
+              <div class="confirm-row">
+                <span class="confirm-label">Email:</span>
+                <span class="confirm-value" id="confirm-email"></span>
+              </div>
+            </div>
+
+            <div class="confirm-section pricing-section">
+              <h4><i class="fas fa-dollar-sign"></i> Chi phí</h4>
+              <div class="confirm-row">
+                <span class="confirm-label">Đơn giá:</span>
+                <span class="confirm-value" id="confirm-dongia"></span>
+              </div>
+              <div class="confirm-row">
+                <span class="confirm-label">Số lượng:</span>
+                <span class="confirm-value" id="confirm-soluong"></span>
+              </div>
+              <div class="confirm-row">
+                <span class="confirm-label">Tổng tiền phòng:</span>
+                <span class="confirm-value" id="confirm-tienphong"></span>
+              </div>
+              <div class="confirm-row discount" id="confirm-discount-row" style="display:none;">
+                <span class="confirm-label">Giảm giá (Voucher):</span>
+                <span class="confirm-value" id="confirm-discount"></span>
+              </div>
+              <div class="confirm-row total">
+                <span class="confirm-label">Thành tiền:</span>
+                <span class="confirm-value" id="confirm-total"></span>
+              </div>
+              <div class="confirm-row deposit">
+                <span class="confirm-label">Tiền cọc (30%):</span>
+                <span class="confirm-value" id="confirm-deposit"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="booking-actions">
+        <button type="button" class="btn-back" onclick="prevStep(2)">
+          <span>←</span> Quay lại
+        </button>
+        <button type="submit" class="btn-submit" id="btn_dat_phong">
+          <span><i class="fas fa-check"></i></span> Xác nhận đặt phòng
+        </button>
+      </div>
+    </div>
+  </form>
+
+  <!-- SIDEBAR: Price Calculator (Sticky) -->
+  <div class="price-sidebar">
+    <div class="price-card">
+      <h3><i class="fas fa-credit-card"></i> Chi tiết giá</h3>
+      
+      <div class="price-row">
+        <span>Đơn giá:</span>
+        <span id="sidebar-dongia">-</span>
+      </div>
+      
+      <div class="price-row">
+        <span>Thời lượng:</span>
+        <span id="sidebar-duration">-</span>
+      </div>
+      
+      <div class="price-divider"></div>
+      
+      <div class="price-row">
+        <span>Tiền phòng:</span>
+        <span id="sidebar-subtotal">-</span>
+      </div>
+      
+      <div class="price-row discount" id="sidebar-discount-row" style="display:none;">
+        <span>Giảm giá:</span>
+        <span id="sidebar-discount">-</span>
+      </div>
+      
+      <div class="price-divider"></div>
+      
+      <div class="price-row total">
+        <span>Tổng cộng:</span>
+        <span id="sidebar-total">-</span>
+      </div>
+      
+      <div class="price-row deposit">
+        <span>Tiền cọc (30%):</span>
+        <span id="sidebar-deposit">-</span>
+      </div>
+      
+      <div class="price-note">
+        <div class="note-icon">ℹ️</div>
+        <div class="note-text">
+          Vui lòng thanh toán 30% tiền cọc để hoàn tất đặt phòng
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DANH SÁCH ĐẶT PHÒNG HÔM NAY -->
+<div class="bookings-today-section">
+  <h3><i class="fas fa-list"></i> Danh sách đặt phòng hôm nay ({{ ds_dat|length }} booking)</h3>
+  <div class="table-card">
+    <div class="scrollable-table">
+      <table class="bookings-table">
+      <thead>
+        <tr>
+          <th>STT</th>
+          <th>Khách hàng</th>
+          <th>CMND</th>
+          <th>Phòng</th>
+          <th>Loại phòng</th>
+          <th>Check-in</th>
+          <th>Check-out</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for d in ds_dat %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>
+            <div class="customer-cell">
+              <strong>{{ d.khachhang.ho_ten }}</strong>
+              <span class="sub-text">{{ d.khachhang.sdt or 'N/A' }}</span>
+            </div>
+          </td>
+          <td>{{ d.khachhang.cmnd }}</td>
+          <td><span class="room-badge">{{ d.phong.ten }}</span></td>
+          <td>{{ d.phong.loai.ten }}</td>
+          <td>{{ d.ngay_nhan|fmt_dt }}</td>
+          <td>{{ d.ngay_tra|fmt_dt }}</td>
+        </tr>
+        {% endfor %}
+        {% if not ds_dat %}
+        <tr>
+          <td colspan="7" class="empty-row">
+            <div class="empty-state">
+              <div class="empty-icon"><i class="fas fa-inbox"></i></div>
+              <div>Chưa có booking nào trong ngày hôm nay</div>
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='voucher_check.js') }}"></script>
+<script>
+// ============ GLOBAL VARIABLES ============
+let selectedRoomData = null;
+let voucherDiscount = 0;
+let voucherApplied = false;
+
+// ============ UTILITY FUNCTIONS ============
+function vnd(n) { 
+  return (n || 0).toLocaleString('vi-VN') + ' đ'; 
+}
+
+function formatDateTime(dateStr) {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  return d.toLocaleString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+}
+
+function calculateDuration(start, end) {
+  if (!start || !end) return null;
+
+  const startDate = new Date(start);
+  const endDate = new Date(end);
+  const diffMs = endDate - startDate;
+
+  if (diffMs <= 0) return null;
+
+  const totalMinutes = Math.ceil(diffMs / (1000 * 60));
+  const totalHours = Math.ceil(diffMs / (1000 * 60 * 60));
+  const totalDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+
+  const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  const remainingMs = diffMs % (1000 * 60 * 60 * 24);
+  const remainingHours = Math.ceil(remainingMs / (1000 * 60 * 60));
+
+  return {
+    totalHours,
+    totalDays,
+    days,
+    remainingHours,
+    diffMs
+  };
+}
+
+// ============ STEP NAVIGATION ============
+function nextStep(step) {
+  // Validate current step
+  if (step === 2) {
+    if (!selectedRoomData) {
+      alert('Vui lòng chọn phòng!');
+      return;
+    }
+    const ngayNhan = document.getElementById('ngay_gio_nhan').value;
+    const ngayTra = document.getElementById('ngay_gio_tra').value;
+    if (!ngayNhan || !ngayTra) {
+      alert('Vui lòng chọn ngày nhận và trả phòng!');
+      return;
+    }
+    const duration = calculateDuration(ngayNhan, ngayTra);
+    if (!duration) {
+      alert('Ngày trả phải sau ngày nhận!');
+      return;
+    }
+  }
+  
+  if (step === 3) {
+    const hoTen = document.getElementById('ho_ten').value;
+    const cmnd = document.getElementById('cmnd').value;
+    if (!hoTen || !cmnd) {
+      alert('Vui lòng điền đầy đủ họ tên và CMND!');
+      return;
+    }
+    updateConfirmation();
+  }
+  
+  // Hide all steps
+  document.querySelectorAll('.booking-step-content').forEach(el => {
+    el.style.display = 'none';
+  });
+  
+  // Show target step
+  document.getElementById('step-' + step).style.display = 'block';
+  
+  // Update step indicators
+  document.querySelectorAll('.step').forEach(el => {
+    const stepNum = parseInt(el.dataset.step);
+    if (stepNum < step) {
+      el.classList.add('completed');
+      el.classList.remove('active');
+    } else if (stepNum === step) {
+      el.classList.add('active');
+      el.classList.remove('completed');
+    } else {
+      el.classList.remove('active', 'completed');
+    }
+  });
+  
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function prevStep(step) {
+  nextStep(step);
+}
+
+// ============ ROOM LOADING ============
+async function loadPhong() {
+  const loaiInputs = document.querySelectorAll('input[name="loai_id"]');
+  const hinhThucInputs = document.querySelectorAll('input[name="hinh_thuc_thue"]');
+  const ngayNhan = document.getElementById('ngay_gio_nhan').value;
+  const ngayTra = document.getElementById('ngay_gio_tra').value;
+  
+  let loaiId = null;
+  loaiInputs.forEach(input => {
+    if (input.checked) loaiId = input.value;
+  });
+  
+  let hinhThuc = 'ngay';
+  hinhThucInputs.forEach(input => {
+    if (input.checked) hinhThuc = input.value;
+  });
+  
+  if (!loaiId) return;
+  
+  const container = document.getElementById('room-cards-container');
+  const loading = document.getElementById('rooms-loading');
+  
+  loading.style.display = 'flex';
+  container.style.display = 'none';
+  
+  try {
+    let rooms = [];
+    
+    if (!ngayNhan || !ngayTra) {
+      // Load by type only
+      const res = await fetch('/api/phong-theo-loai/' + loaiId);
+      rooms = await res.json();
+      rooms = rooms.map(r => ({
+        id: r.id,
+        ten: r.ten,
+        available: r.trang_thai === 'trong',
+        reason: r.trang_thai !== 'trong' ? 'Phòng đang ' + r.trang_thai : null
+      }));
+    } else {
+      // Check availability by date range
+      const res = await fetch('/api/phong-trong-theo-ngay', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          loai_id: parseInt(loaiId),
+          ngay_nhan: ngayNhan,
+          ngay_tra: ngayTra
+        })
+      });
+      
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Lỗi server');
+      }
+      
+      rooms = await res.json();
+    }
+    
+    // Render room cards
+    container.innerHTML = '';
+    
+    if (rooms.length === 0) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon"><i class="fas fa-hotel"></i></div>
+          <div style="font-size: 16px; color: #666; margin-top: 8px;">Không có phòng nào thuộc loại này</div>
+        </div>
+      `;
+    } else {
+      rooms.forEach(room => {
+        const card = document.createElement('label');
+        card.className = 'room-card' + (room.available ? '' : ' disabled');
+        
+        let icon, status, statusClass;
+        if (room.available) {
+          icon = '<i class="fas fa-check"></i>';
+          status = 'Trống';
+          statusClass = 'available';
+        } else if (room.trang_thai === 'cho_thanh_toan') {
+          icon = '⏳';
+          status = 'Chờ thanh toán';
+          statusClass = 'pending';
+        } else {
+          icon = '<i class="fas fa-ban"></i>';
+          status = 'Đã đặt';
+          statusClass = 'unavailable';
+        }
+        
+        // Format reason if exists
+        let reasonHtml = '';
+        if (room.reason) {
+          reasonHtml = `<div class="room-reason">${room.reason}</div>`;
+        }
+        
+        card.innerHTML = `
+          <input type="radio" name="room_select" value="${room.id}" 
+                 ${room.available ? '' : 'disabled'} 
+                 onchange="selectRoom(${room.id}, '${room.ten}', ${room.available})">
+          <div class="room-card-content">
+            <div class="room-card-header">
+              <div class="room-number">${room.ten}</div>
+              <div class="room-status ${statusClass}" data-status="${room.trang_thai}">${icon} ${status}</div>
+            </div>
+            ${reasonHtml}
+          </div>
+        `;
+        
+        container.appendChild(card);
+      });
+    }
+    
+    loading.style.display = 'none';
+    container.style.display = 'grid';
+    
+  } catch (error) {
+    console.error('Lỗi khi tải phòng:', error);
+    container.innerHTML = `
+      <div class="empty-state error">
+        <div class="empty-icon"><i class="fas fa-exclamation-triangle"></i></div>
+        <div style="font-size: 16px; color: #d32f2f; margin-top: 8px; font-weight: 600;">Lỗi: ${error.message}</div>
+      </div>
+    `;
+    loading.style.display = 'none';
+    container.style.display = 'grid';
+  }
+}
+
+// Update countdown for pending payment rooms
+function updateCountdown() {
+  const pendingStatuses = document.querySelectorAll('.room-status[data-status="cho_thanh_toan"]');
+  pendingStatuses.forEach(statusEl => {
+    const reasonEl = statusEl.parentElement.parentElement.querySelector('.room-reason');
+    if (reasonEl) {
+      const match = reasonEl.textContent.match(/\((\d+):(\d{2}) còn lại\)/);
+      if (match) {
+        let minutes = parseInt(match[1]);
+        let seconds = parseInt(match[2]);
+        
+        if (minutes > 0 || seconds > 0) {
+          seconds--;
+          if (seconds < 0) {
+            seconds = 59;
+            minutes--;
+          }
+          
+          if (minutes >= 0) {
+            const newTime = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            reasonEl.textContent = reasonEl.textContent.replace(/\((\d+):(\d{2}) còn lại\)/, `(${newTime} còn lại)`);
+          } else {
+            // Time expired, reload rooms
+            loadPhong();
+          }
+        }
+      }
+    }
+  });
+}
+
+// Start countdown update every second
+setInterval(updateCountdown, 1000);
+
+function selectRoom(id, ten, available) {
+  if (!available) return;
+  
+  selectedRoomData = { id, ten };
+  document.getElementById('phong_id').value = id;
+  updatePrice();
+}
+
+// ============ PRICE CALCULATION ============
+function updatePrice() {
+  const loaiInputs = document.querySelectorAll('input[name="loai_id"]');
+  const hinhThucInputs = document.querySelectorAll('input[name="hinh_thuc_thue"]');
+  const ngayNhan = document.getElementById('ngay_gio_nhan').value;
+  const ngayTra = document.getElementById('ngay_gio_tra').value;
+  
+  let selectedLoai = null;
+  loaiInputs.forEach(input => {
+    if (input.checked) {
+      selectedLoai = {
+        id: input.value,
+        gia: parseInt(input.dataset.gia),
+        ten: input.parentElement.querySelector('.room-type-name').textContent
+      };
+    }
+  });
+  
+  let hinhThuc = 'ngay';
+  hinhThucInputs.forEach(input => {
+    if (input.checked) hinhThuc = input.value;
+  });
+  
+  if (!selectedLoai) return;
+  
+  const duration = calculateDuration(ngayNhan, ngayTra);
+  
+  // Update duration display
+  const durationDisplay = document.getElementById('duration-display');
+  if (duration) {
+    let durationText = '';
+    if (hinhThuc === 'ngay') {
+      durationText = `${duration.days} ngày ${duration.remainingHours} giờ`;
+    } else {
+      durationText = `${duration.totalHours} giờ`;
+    }
+    durationDisplay.innerHTML = `
+      <div class="duration-icon"><i class="fas fa-stopwatch"></i></div>
+      <div class="duration-text"><strong>${durationText}</strong></div>
+    `;
+  } else {
+    durationDisplay.innerHTML = `
+      <div class="duration-icon"><i class="fas fa-stopwatch"></i></div>
+      <div class="duration-text">Chọn thời gian để xem thời lượng</div>
+    `;
+  }
+  
+  // Calculate price
+  let donGia = 0;
+  let soLuong = 0;
+  let tienPhong = 0;
+  
+  if (hinhThuc === 'ngay') {
+    donGia = selectedLoai.gia;
+    soLuong = duration ? duration.totalDays : 0;
+    tienPhong = donGia * soLuong;
+  } else { // gio
+    donGia = Math.floor(selectedLoai.gia * 0.2); // Giá theo giờ bằng 20% giá ngày
+    soLuong = duration ? duration.totalHours : 0;
+    tienPhong = donGia * soLuong;
+  }
+  
+  const discount = voucherApplied ? Math.floor(tienPhong * voucherDiscount / 100) : 0;
+  const total = tienPhong - discount;
+  const deposit = Math.floor(total * 0.3);
+  
+  // Update sidebar
+  document.getElementById('sidebar-dongia').textContent = vnd(donGia) + (hinhThuc === 'ngay' ? '/đêm' : '/giờ');
+  document.getElementById('sidebar-duration').textContent = soLuong + (hinhThuc === 'ngay' ? ' đêm' : ' giờ');
+  document.getElementById('sidebar-subtotal').textContent = vnd(tienPhong);
+  document.getElementById('sidebar-total').textContent = vnd(total);
+  document.getElementById('sidebar-deposit').textContent = vnd(deposit);
+  
+  if (discount > 0) {
+    document.getElementById('sidebar-discount').textContent = '- ' + vnd(discount);
+    document.getElementById('sidebar-discount-row').style.display = 'flex';
+  } else {
+    document.getElementById('sidebar-discount-row').style.display = 'none';
+  }
+}
+
+// ============ VOUCHER ============
+async function applyVoucher() {
+  const code = document.getElementById('voucher_code').value.trim().toUpperCase();
+  const message = document.getElementById('voucher-message');
+  const clearBtn = document.getElementById('btn-clear-voucher');
+  
+  if (!code) {
+    message.innerHTML = '<span class="error">Vui lòng nhập mã voucher!</span>';
+    return;
+  }
+  
+  // Gọi API kiểm tra voucher
+  message.innerHTML = '<span class="info">Đang kiểm tra...</span>';
+  
+  try {
+    const response = await fetch('/api/validate-voucher', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ code: code })
+    });
+    
+    const data = await response.json();
+    
+    if (data.valid) {
+      voucherApplied = true;
+      voucherDiscount = data.discount_percent;
+      message.innerHTML = '<span class="success"><i class="fas fa-check"></i> ' + data.message + '</span>';
+      clearBtn.style.display = 'block';
+      
+    // Khóa chỉnh sửa nhưng vẫn gửi được về server
+    document.getElementById('voucher_code').readOnly = true;
+      
+      // Cập nhật lại giá
+      updatePrice();
+    } else {
+      voucherApplied = false;
+      voucherDiscount = 0;
+      message.innerHTML = '<span class="error"><i class="fas fa-times"></i> ' + data.message + '</span>';
+      clearBtn.style.display = 'none';
+      document.getElementById('voucher_code').readOnly = false;
+      
+      // Cập nhật lại giá (xóa discount)
+      updatePrice();
+    }
+  } catch (error) {
+    console.error('Lỗi khi kiểm tra voucher:', error);
+    message.innerHTML = '<span class="error"><i class="fas fa-times"></i> Không thể kiểm tra mã voucher. Vui lòng thử lại!</span>';
+    document.getElementById('voucher_code').readOnly = false;
+  }
+}
+
+function clearVoucher() {
+  voucherApplied = false;
+  voucherDiscount = 0;
+  
+  document.getElementById('voucher_code').value = '';
+  document.getElementById('voucher_code').readOnly = false;
+  document.getElementById('voucher-message').innerHTML = '';
+  document.getElementById('btn-clear-voucher').style.display = 'none';
+  
+  // Cập nhật lại giá
+  updatePrice();
+}
+
+// ============ CONFIRMATION ============
+function updateConfirmation() {
+  const loaiInputs = document.querySelectorAll('input[name="loai_id"]');
+  const hinhThucInputs = document.querySelectorAll('input[name="hinh_thuc_thue"]');
+  
+  let selectedLoai = null;
+  loaiInputs.forEach(input => {
+    if (input.checked) {
+      selectedLoai = {
+        id: input.value,
+        gia: parseInt(input.dataset.gia),
+        ten: input.parentElement.querySelector('.room-type-name').textContent
+      };
+    }
+  });
+  
+  let hinhThuc = 'ngay';
+  hinhThucInputs.forEach(input => {
+    if (input.checked) hinhThuc = input.value;
+  });
+  
+  const ngayNhan = document.getElementById('ngay_gio_nhan').value;
+  const ngayTra = document.getElementById('ngay_gio_tra').value;
+  const hoTen = document.getElementById('ho_ten').value;
+  const cmnd = document.getElementById('cmnd').value;
+  const sdt = document.getElementById('sdt').value || 'N/A';
+  const email = document.getElementById('email').value || 'Không cung cấp';
+  
+  const duration = calculateDuration(ngayNhan, ngayTra);
+  
+  // Calculate price
+  let donGia = 0;
+  let soLuong = 0;
+  let tienPhong = 0;
+  
+  if (hinhThuc === 'ngay') {
+    donGia = selectedLoai.gia;
+    soLuong = duration ? duration.totalDays : 0;
+    tienPhong = donGia * soLuong;
+  } else {
+    donGia = Math.floor(selectedLoai.gia * 0.2); // Giá theo giờ bằng 20% giá ngày
+    soLuong = duration ? duration.totalHours : 0;
+    tienPhong = donGia * soLuong;
+  }
+  
+  const discount = voucherApplied ? Math.floor(tienPhong * voucherDiscount / 100) : 0;
+  const total = tienPhong - discount;
+  const deposit = Math.floor(total * 0.3);
+  
+  // Update confirmation display
+  document.getElementById('confirm-loai').textContent = selectedLoai.ten;
+  document.getElementById('confirm-phong').textContent = selectedRoomData ? selectedRoomData.ten : '-';
+  document.getElementById('confirm-hinhthuc').textContent = hinhThuc === 'ngay' ? 'Theo ngày' : 'Theo giờ';
+  document.getElementById('confirm-checkin').textContent = formatDateTime(ngayNhan);
+  document.getElementById('confirm-checkout').textContent = formatDateTime(ngayTra);
+  document.getElementById('confirm-duration').textContent = soLuong + (hinhThuc === 'ngay' ? ' đêm' : ' giờ');
+  document.getElementById('confirm-hoten').textContent = hoTen;
+  document.getElementById('confirm-cmnd').textContent = cmnd;
+  document.getElementById('confirm-sdt').textContent = sdt;
+  document.getElementById('confirm-email').textContent = email;
+  document.getElementById('confirm-dongia').textContent = vnd(donGia) + (hinhThuc === 'ngay' ? '/đêm' : '/giờ');
+  document.getElementById('confirm-soluong').textContent = soLuong + (hinhThuc === 'ngay' ? ' đêm' : ' giờ');
+  document.getElementById('confirm-tienphong').textContent = vnd(tienPhong);
+  document.getElementById('confirm-total').textContent = vnd(total);
+  document.getElementById('confirm-deposit').textContent = vnd(deposit);
+  
+  if (discount > 0) {
+    document.getElementById('confirm-discount').textContent = '- ' + vnd(discount);
+    document.getElementById('confirm-discount-row').style.display = 'flex';
+  } else {
+    document.getElementById('confirm-discount-row').style.display = 'none';
+  }
+}
+
+// ============ INITIALIZATION ============
+function setNowDefaults() {
+  const now = new Date();
+  const offset = now.getTimezoneOffset() * 60000;
+  const localDate = new Date(now - offset);
+  const fmt = d => d.toISOString().slice(0, 19);
+
+  const nhan = document.getElementById('ngay_gio_nhan');
+  const tra = document.getElementById('ngay_gio_tra');
+
+  if (nhan) nhan.value = fmt(localDate);
+  if (tra) {
+    const tmr = new Date(localDate.getTime() + 24 * 3600 * 1000);
+    tra.value = fmt(tmr);
+  }
+}
+
+window.onload = function() {
+  setNowDefaults();
+  updatePrice();
+  loadPhong();
+};
+
+</script>
+{% endblock %}

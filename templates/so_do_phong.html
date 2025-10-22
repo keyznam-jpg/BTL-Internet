@@ -1,0 +1,358 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='room_map.css') }}">
+
+<div class="room-map-management">
+  <!-- PAGE HEADER -->
+  <div class="room-map-header">
+    <div class="header-top">
+      <div class="header-title-section">
+        <h2>Sơ Đồ Phòng</h2>
+      </div>
+    </div>
+
+    <!-- STATISTICS ROW -->
+    <div class="stats-row">
+      <div class="stat-card available" data-filter="trong">
+        <div class="stat-card-header">
+          <span class="stat-icon">🟢</span>
+          <div>
+            <div class="stat-count">{{ stats.trong }}</div>
+            <div class="stat-label">Phòng trống</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card occupied" data-filter="dang_o">
+        <div class="stat-card-header">
+          <span class="stat-icon"><i class="fas fa-circle" style="color: #dc3545;"></i></span>
+          <div>
+            <div class="stat-count">{{ stats.dang_o }}</div>
+            <div class="stat-label">Đang có khách</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card booked" data-filter="da_dat">
+        <div class="stat-card-header">
+          <span class="stat-icon">🟡</span>
+          <div>
+            <div class="stat-count">{{ stats.da_dat }}</div>
+            <div class="stat-label">Đã đặt trước</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card pending" data-filter="cho_thanh_toan">
+        <div class="stat-card-header">
+          <span class="stat-icon">⏳</span>
+          <div>
+            <div class="stat-count">{{ stats.cho_thanh_toan }}</div>
+            <div class="stat-label">Chờ thanh toán</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-card overdue" data-filter="qua_gio">
+        <div class="stat-card-header">
+          <span class="stat-icon">🟣</span>
+          <div>
+            <div class="stat-count">{{ stats.qua_gio }}</div>
+            <div class="stat-label">Quá giờ</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FILTERS & CONTROLS -->
+  <div class="controls-section">
+    <div class="controls-grid">
+      <!-- Room Type Filter -->
+      <div class="filter-group">
+        <label class="filter-label"><i class="fas fa-tag"></i> Loại phòng</label>
+        <select id="filter-loai" class="filter-select">
+          <option value="all"><i class="fas fa-list"></i> Tất cả loại phòng</option>
+          {% for lp in loai_phongs %}
+          <option value="{{ lp.id }}">{{ lp.ten }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <!-- Status Filter -->
+      <div class="filter-group">
+        <label class="filter-label"><i class="fas fa-chart-bar"></i> Trạng thái</label>
+        <select id="filter-trang-thai" class="filter-select">
+          <option value="all"><i class="fas fa-list"></i> Tất cả trạng thái</option>
+          <option value="trong">🟢 Phòng trống</option>
+          <option value="dang_o"><i class="fas fa-circle" style="color: #dc3545;"></i> Đang có khách</option>
+          <option value="da_dat">🟡 Đã đặt trước</option>
+          <option value="cho_thanh_toan">⏳ Chờ thanh toán</option>
+          <option value="qua_gio">🟣 Quá giờ</option>
+        </select>
+      </div>
+
+      <!-- Search -->
+      <div class="search-group">
+        <label class="filter-label"><i class="fas fa-search"></i> Tìm kiếm</label>
+        <input 
+          type="text" 
+          id="search-room" 
+          class="search-input" 
+          placeholder="Tìm theo tên phòng hoặc khách hàng...">
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="legend-section">
+      <span class="legend-label">Chú thích:</span>
+      <div class="legend-item status-trong" data-status="trong">
+        <span class="legend-dot"></span>
+        <span>Trống</span>
+      </div>
+      <div class="legend-item status-dang_o" data-status="dang_o">
+        <span class="legend-dot"></span>
+        <span>Đang ở</span>
+      </div>
+      <div class="legend-item status-da_dat" data-status="da_dat">
+        <span class="legend-dot"></span>
+        <span>Đã đặt</span>
+      </div>
+      <div class="legend-item status-cho_thanh_toan" data-status="cho_thanh_toan">
+        <span class="legend-dot"></span>
+        <span>Chờ thanh toán</span>
+      </div>
+      <div class="legend-item status-qua_gio" data-status="qua_gio">
+        <span class="legend-dot"></span>
+        <span>Quá giờ</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ROOMS GRID -->
+  <div class="rooms-container">
+    <div class="rooms-grid">
+      {% set status_labels = {
+        'trong': 'Phòng trống',
+        'dang_o': 'Đang ở',
+        'da_dat': 'Đã đặt',
+        'cho_thanh_toan': 'Chờ thanh toán',
+        'qua_gio': 'Quá giờ'
+      } %}
+      
+      {% for p in phongs %}
+      {% set current = p.current_booking %}
+      {% set upcoming = p.upcoming_booking %}
+      
+      <div class="room-card status-{{ p.calculated_status }}" 
+           data-loai-id="{{ p.loai_id }}" 
+           data-trang-thai="{{ p.calculated_status }}"
+           data-room-name="{{ p.ten }}"
+           data-customer-name="{{ current.khachhang.ho_ten if current else (upcoming.khachhang.ho_ten if upcoming else '') }}">
+        
+        <!-- Room Card Header -->
+        <div class="room-card-header">
+          <div class="room-number">{{ p.ten }}</div>
+          <div class="room-status-icon">
+            {% if p.calculated_status == 'trong' %}
+              <i class="fas fa-check"></i>
+            {% elif p.calculated_status == 'dang_o' %}
+              <i class="fas fa-user"></i>
+            {% elif p.calculated_status == 'da_dat' %}
+              <i class="fas fa-bookmark"></i>
+            {% elif p.calculated_status == 'cho_thanh_toan' %}
+              ⏳
+            {% elif p.calculated_status == 'qua_gio' %}
+              <i class="fas fa-exclamation-triangle"></i>
+            {% endif %}
+          </div>
+        </div>
+
+        <!-- Room Type -->
+        <div class="room-type-name"><i class="fas fa-map-pin"></i> {{ p.loai.ten }}</div>
+
+        <!-- Status Badge -->
+        <div class="room-status-badge">
+          {{ status_labels.get(p.calculated_status, p.calculated_status|capitalize) }}
+        </div>
+
+        <!-- Room Info (if occupied or booked) -->
+        {% if current or upcoming %}
+        <div class="room-info">
+          {% if current %}
+            <div class="room-info-line">
+              <strong><i class="fas fa-user"></i></strong> {{ current.khachhang.ho_ten[:20] }}{{ '...' if current.khachhang.ho_ten|length > 20 else '' }}
+            </div>
+            <div class="room-info-line">
+              <strong><i class="fas fa-calendar-check"></i></strong> {{ current.ngay_nhan.strftime('%d/%m %H:%M') if current.ngay_nhan else 'N/A' }}
+            </div>
+          {% elif upcoming %}
+            <div class="room-info-line">
+              <strong><i class="fas fa-user"></i></strong> {{ upcoming.khachhang.ho_ten[:20] }}{{ '...' if upcoming.khachhang.ho_ten|length > 20 else '' }}
+            </div>
+            <div class="room-info-line">
+              <strong><i class="fas fa-calendar-check"></i></strong> {{ upcoming.ngay_nhan.strftime('%d/%m %H:%M') if upcoming.ngay_nhan else 'N/A' }}
+            </div>
+          {% endif %}
+        </div>
+        {% endif %}
+
+        <!-- Tooltip -->
+        <div class="room-tooltip">
+          <div class="tooltip-header">
+            <span class="tooltip-title"><i class="fas fa-door-open"></i> {{ p.ten }}</span>
+            <span class="tooltip-status">{{ status_labels.get(p.calculated_status, p.calculated_status) }}</span>
+          </div>
+          
+          {% if current %}
+            <div class="tooltip-line">
+              <strong><i class="fas fa-user"></i> Khách:</strong>
+              <span>{{ current.khachhang.ho_ten }}</span>
+            </div>
+            {% if current.khachhang.sdt %}
+            <div class="tooltip-line">
+              <strong><i class="fas fa-phone"></i> SĐT:</strong>
+              <span>{{ current.khachhang.sdt }}</span>
+            </div>
+            {% endif %}
+            <div class="tooltip-line">
+              <strong><i class="fas fa-sign-in-alt"></i> Nhận:</strong>
+              <span>{{ current.ngay_nhan.strftime('%d/%m/%Y %H:%M') if current.ngay_nhan else 'N/A' }}</span>
+            </div>
+            <div class="tooltip-line">
+              <strong><i class="fas fa-sign-out-alt"></i> Trả:</strong>
+              <span>{{ current.ngay_tra.strftime('%d/%m/%Y %H:%M') if current.ngay_tra else 'N/A' }}</span>
+            </div>
+            <div class="tooltip-line">
+              <strong><i class="fas fa-clock"></i> Hình thức:</strong>
+              <span>{{ 'Theo giờ' if current.hinh_thuc_thue == 'gio' else 'Theo ngày' }}</span>
+            </div>
+          {% elif upcoming %}
+            <div class="tooltip-line">
+              <strong><i class="fas fa-user"></i> Đặt bởi:</strong>
+              <span>{{ upcoming.khachhang.ho_ten }}</span>
+            </div>
+            {% if upcoming.khachhang.sdt %}
+            <div class="tooltip-line">
+              <strong><i class="fas fa-phone"></i> SĐT:</strong>
+              <span>{{ upcoming.khachhang.sdt }}</span>
+            </div>
+            {% endif %}
+            <div class="tooltip-line">
+              <strong><i class="fas fa-sign-in-alt"></i> Nhận:</strong>
+              <span>{{ upcoming.ngay_nhan.strftime('%d/%m/%Y %H:%M') if upcoming.ngay_nhan else 'N/A' }}</span>
+            </div>
+            <div class="tooltip-line">
+              <strong><i class="fas fa-sign-out-alt"></i> Trả:</strong>
+              <span>{{ upcoming.ngay_tra.strftime('%d/%m/%Y %H:%M') if upcoming.ngay_tra else 'N/A' }}</span>
+            </div>
+            <div class="tooltip-line">
+              <strong><i class="fas fa-clock"></i> Hình thức:</strong>
+              <span>{{ 'Theo giờ' if upcoming.hinh_thuc_thue == 'gio' else 'Theo ngày' }}</span>
+            </div>
+          {% else %}
+            <div class="tooltip-line">
+              <span><i class="fas fa-star"></i> Phòng đang trống và sẵn sàng cho thuê</span>
+            </div>
+          {% endif %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const filterLoai = document.getElementById('filter-loai');
+  const filterTrangThai = document.getElementById('filter-trang-thai');
+  const searchInput = document.getElementById('search-room');
+  const roomCards = document.querySelectorAll('.room-card');
+  const legendItems = document.querySelectorAll('.legend-item');
+  const statCards = document.querySelectorAll('.stat-card');
+
+  // Filter function
+  function filterRooms() {
+    const selectedLoai = filterLoai.value;
+    const selectedTrangThai = filterTrangThai.value;
+    const searchText = searchInput.value.toLowerCase().trim();
+
+    let visibleCount = 0;
+
+    roomCards.forEach(card => {
+      const cardLoai = card.dataset.loaiId;
+      const cardTrangThai = card.dataset.trangThai;
+      const roomName = card.dataset.roomName.toLowerCase();
+      const customerName = card.dataset.customerName.toLowerCase();
+
+      const loaiMatch = (selectedLoai === 'all' || selectedLoai === cardLoai);
+      const trangThaiMatch = (selectedTrangThai === 'all' || selectedTrangThai === cardTrangThai);
+      const searchMatch = !searchText || roomName.includes(searchText) || customerName.includes(searchText);
+
+      if (loaiMatch && trangThaiMatch && searchMatch) {
+        card.style.display = 'flex';
+        visibleCount++;
+      } else {
+        card.style.display = 'none';
+      }
+    });
+
+    // Show/hide empty message
+    const roomsGrid = document.querySelector('.rooms-grid');
+    let noResultMsg = roomsGrid.querySelector('.no-rooms-message');
+    
+    if (visibleCount === 0) {
+      if (!noResultMsg) {
+        noResultMsg = document.createElement('div');
+        noResultMsg.className = 'no-rooms-message';
+        noResultMsg.textContent = 'Không tìm thấy phòng phù hợp với bộ lọc';
+        roomsGrid.appendChild(noResultMsg);
+      }
+    } else {
+      if (noResultMsg) {
+        noResultMsg.remove();
+      }
+    }
+  }
+
+  // Event listeners
+  filterLoai.addEventListener('change', filterRooms);
+  filterTrangThai.addEventListener('change', filterRooms);
+  searchInput.addEventListener('input', filterRooms);
+
+  // Legend click to filter
+  legendItems.forEach(item => {
+    item.addEventListener('click', function() {
+      const statusToFilter = item.dataset.status;
+      filterTrangThai.value = statusToFilter;
+      filterRooms();
+      
+      // Update active state
+      statCards.forEach(card => card.classList.remove('active'));
+    });
+  });
+
+  // Stat card click to filter
+  statCards.forEach(card => {
+    card.addEventListener('click', function() {
+      const statusToFilter = card.dataset.filter;
+      filterTrangThai.value = statusToFilter;
+      filterRooms();
+      
+      // Update active state
+      statCards.forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+    });
+  });
+
+  // URL parameter handling
+  const urlParams = new URLSearchParams(window.location.search);
+  const trangThaiFromUrl = urlParams.get('trang_thai');
+  if (trangThaiFromUrl) {
+    filterTrangThai.value = trangThaiFromUrl;
+    filterRooms();
+  }
+});
+</script>
+
+{% endblock %}

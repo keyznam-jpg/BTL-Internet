@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block content %}
+<h2>Thống kê khách thuê</h2>
+
+<div class="card">
+  <form method="get" class="grid-2">
+    <div>
+      <label>Từ ngày</label>
+      <input type="date" name="tu" value="{{ tu or '' }}">
+    </div>
+    <div>
+      <label>Đến ngày</label>
+      <input type="date" name="den" value="{{ den or '' }}">
+    </div>
+    <div style="grid-column:1 / -1; margin-top:10px;">
+      <button class="primary" type="submit">Lọc</button>
+      <a class="primary" href="{{ url_for('thong_ke_khach') }}" style="padding:10px 12px; text-decoration:none;">Bỏ lọc</a>
+    </div>
+  </form>
+</div>
+
+<div class="card">
+  <table>
+    <tr>
+      <th>Mã</th><th>Khách</th><th>CMND</th><th>Phòng</th>
+      <th>Nhận (thực)</th><th>Trả (thực)</th><th>Số đêm</th>
+      <th>Tiền phòng</th><th>Tiền dịch vụ</th><th>Tổng</th>
+    </tr>
+    {% for dp,so_dem,tien_phong,tien_dv,tong in rows %}
+      <tr>
+        <td>{{ dp.id }}</td>
+        <td>{{ dp.khachhang.ho_ten }}</td>
+        <td>{{ dp.khachhang.cmnd }}</td>
+        <td>{{ dp.phong.ten }}</td>
+        <td>{{ (dp.thuc_te_nhan or dp.ngay_nhan)|fmt_dt }}</td>
+        <td>{{ (dp.thuc_te_tra  or dp.ngay_tra)|fmt_dt }}</td>
+        <td>{{ so_dem }}</td>
+        <td>{{ tien_phong|vnd }}</td>
+        <td>{{ tien_dv|vnd }}</td>
+        <td><b>{{ tong|vnd }}</b></td>
+      </tr>
+    {% endfor %}
+    <tr>
+      <th colspan="6" style="text-align:right;">Tổng cộng</th>
+      <th>{{ totals.dem }}</th>
+      <th>{{ totals.phong|vnd }}</th>
+      <th>{{ totals.dv|vnd }}</th>
+      <th>{{ totals.tong|vnd }}</th>
+    </tr>
+  </table>
+</div>
+{% endblock %}

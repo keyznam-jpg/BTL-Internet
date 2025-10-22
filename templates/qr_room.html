@@ -1,0 +1,121 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='payments.css') }}">
+
+<div class="qr-shell">
+  <div class="qr-card">
+    <div class="qr-header">
+      <div>
+        <h1>Quét QR xác nhận thanh toán trả phòng</h1>
+        <p class="muted-text">Khách hàng quét mã QR để chuyển đến trang xác nhận thanh toán trả phòng.</p>
+      </div>
+      <div class="countdown-badge" id="countdown">--:--</div>
+    </div>
+
+    <div class="qr-info">
+      <div class="qr-info-row">
+        <span>Mã đặt phòng</span>
+        <strong>#{{ dp.id }}</strong>
+      </div>
+      <div class="qr-info-row">
+        <span>Khách hàng</span>
+        <strong>{{ dp.khachhang.ho_ten }}</strong>
+      </div>
+      <div class="qr-info-row">
+        <span>Phòng</span>
+        <strong>{{ dp.phong.ten }}</strong>
+      </div>
+      <div class="qr-info-row">
+        <span>Số tiền cần thanh toán</span>
+        <strong>{{ amount_due | vnd }}</strong>
+      </div>
+    </div>
+
+    <div class="qr-image-wrapper">
+      <img src="{{ qr_url }}" alt="QR xác nhận thanh toán phòng">
+      <div class="muted-text">Khách hàng quét mã QR để chuyển đến trang xác nhận thanh toán.</div>
+    </div>
+
+    <div class="payment-card">
+      <h2>Tổng kết hóa đơn</h2>
+      <div class="service-list">
+        <div class="service-item">
+          <span>Tiền phòng</span>
+          <span>{{ calc_values.tien_phong | vnd }}</span>
+        </div>
+        <div class="service-item">
+          <span>Tiền dịch vụ</span>
+          <span>{{ calc_values.tien_dv | vnd }}</span>
+        </div>
+        <div class="service-item">
+          <span>Tiền phạt</span>
+          <span>{{ calc_values.tien_phat | vnd }}</span>
+        </div>
+        {% if dp.tien_coc %}
+        <div class="service-item">
+          <span>Đã thu cọc</span>
+          <span>- {{ dp.tien_coc | vnd }}</span>
+        </div>
+        {% endif %}
+        {% if tien_da_tra_truoc and tien_da_tra_truoc > 0 %}
+        <div class="service-item">
+          <span>Tiền dịch vụ đã thanh toán</span>
+          <span>- {{ tien_da_tra_truoc | vnd }}</span>
+        </div>
+        {% endif %}
+        <div class="service-item total-row">
+          <span>Số tiền còn phải thanh toán</span>
+          <span>{{ amount_due | vnd }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="qr-actions">
+      <a class="primary-btn" href="{{ confirm_url }}" target="_blank" rel="noopener">
+        <i class="fas fa-check-circle"></i>
+        Mở trang khách xác nhận thanh toán
+      </a>
+      <button class="secondary-btn" type="button" id="copyLink">
+        <i class="fas fa-link"></i>
+        Sao chép liên kết xác nhận
+      </button>
+      <div class="qr-status" id="statusBox" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='payments.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const countdownEl = document.getElementById('countdown');
+  const statusBox = document.getElementById('statusBox');
+
+  startCountdown(countdownEl, {{ countdown_seconds }}, function () {
+    statusBox.textContent = 'Phiên thanh toán đã hết hạn. Vui lòng tạo lại QR mới.';
+    statusBox.className = 'qr-status error';
+    statusBox.style.display = 'block';
+  });
+
+  pollPaymentStatus('{{ status_url }}', function () {
+    statusBox.textContent = 'Khách hàng đã xác nhận thanh toán. Đang mở hóa đơn...';
+    statusBox.className = 'qr-status success';
+    statusBox.style.display = 'block';
+    setTimeout(function () {
+      window.location.href = '{{ invoice_url }}';
+    }, 1200);
+  }, function () {
+    statusBox.textContent = 'Phiên thanh toán đã hết hạn. Vui lòng tạo lại QR mới.';
+    statusBox.className = 'qr-status error';
+    statusBox.style.display = 'block';
+  });
+
+  document.getElementById('copyLink').addEventListener('click', function () {
+    copyToClipboard('{{ confirm_url }}');
+    statusBox.textContent = 'Đã sao chép liên kết xác nhận cho khách hàng.';
+    statusBox.className = 'qr-status';
+    statusBox.style.display = 'block';
+  });
+});
+</script>
+{% endblock %}

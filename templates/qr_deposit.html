@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='payments.css') }}">
+
+<div class="qr-shell">
+  <div class="qr-card">
+    <div class="qr-header">
+      <div>
+        <h1>Quét QR xác nhận thanh toán tiền cọc</h1>
+        <p class="muted-text">Gửi mã QR cho khách để họ quét và xác nhận thanh toán tiền cọc đặt phòng.</p>
+      </div>
+      <div class="countdown-badge" id="countdown">--:--</div>
+    </div>
+
+    <div class="qr-info">
+      <div class="qr-info-row">
+        <span>Mã đặt phòng</span>
+        <strong>#{{ dp.id }}</strong>
+      </div>
+      <div class="qr-info-row">
+        <span>Khách hàng</span>
+        <strong>{{ dp.khachhang.ho_ten }}</strong>
+      </div>
+      <div class="qr-info-row">
+        <span>Phòng</span>
+        <strong>{{ dp.phong.ten }}</strong>
+      </div>
+      <div class="qr-info-row">
+        <span>Số tiền cọc</span>
+        <strong>{{ amount | vnd }}</strong>
+      </div>
+    </div>
+
+    <div class="qr-image-wrapper">
+      <img src="{{ qr_url }}" alt="QR xác nhận thanh toán cọc">
+      <div class="muted-text">Khách hàng quét mã QR để chuyển đến trang xác nhận thanh toán. Mã QR tự động hết hạn sau 5 phút để đảm bảo an toàn.</div>
+    </div>
+
+    <div class="qr-actions">
+      <a class="primary-btn" href="{{ confirm_url }}" target="_blank" rel="noopener">
+        <i class="fas fa-check-circle"></i>
+        Mở trang khách xác nhận thanh toán
+      </a>
+      <button class="secondary-btn" type="button" id="copyLink">
+        <i class="fas fa-link"></i>
+        Sao chép liên kết xác nhận
+      </button>
+      <div class="qr-status" id="statusBox" style="display:none;"></div>
+    </div>
+  </div>
+</div>
+
+<script src="{{ url_for('static', filename='payments.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+  const countdownEl = document.getElementById('countdown');
+  const statusBox = document.getElementById('statusBox');
+
+  startCountdown(countdownEl, {{ countdown_seconds }}, function () {
+    statusBox.textContent = 'Phiên thanh toán đã hết hạn. Vui lòng tạo lại QR mới.';
+    statusBox.className = 'qr-status error';
+    statusBox.style.display = 'block';
+  });
+
+  pollPaymentStatus('{{ status_url }}', function () {
+    statusBox.textContent = 'Khách hàng đã xác nhận thanh toán. Đang mở hóa đơn tiền cọc...';
+    statusBox.className = 'qr-status success';
+    statusBox.style.display = 'block';
+    setTimeout(function () {
+      window.location.href = '{{ invoice_url }}';
+    }, 1200);
+  }, function () {
+    statusBox.textContent = 'Phiên thanh toán đã hết hạn. Vui lòng tạo lại QR mới.';
+    statusBox.className = 'qr-status error';
+    statusBox.style.display = 'block';
+  });
+
+  document.getElementById('copyLink').addEventListener('click', function () {
+    copyToClipboard('{{ confirm_url }}');
+    statusBox.textContent = 'Đã sao chép liên kết xác nhận cho khách hàng.';
+    statusBox.className = 'qr-status';
+    statusBox.style.display = 'block';
+  });
+});
+</script>
+{% endblock %}

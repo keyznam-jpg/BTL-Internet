@@ -1,317 +1,306 @@
 {% extends "base.html" %}
 {% block content %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
 
-<div class="attendance-page">
-  <!-- Two Column Layout -->
-  <div class="attendance-layout">
-    
-    <!-- LEFT COLUMN: Check-in Form -->
-    <div class="left-column">
-      <!-- Time Display Card -->
-      <div class="time-display-card animate-fade-in">
-        <div class="time-icon animate-pulse">
-          <i class="fas fa-clock fa-2x" style="color: #ffffff;"></i>
+<div class="dashboard-page">
+  <!-- Header Section -->
+  <div class="page-header">
+    <div class="header-content">
+      <h1 class="page-title">
+        <i class="fas fa-calendar-check"></i>
+        Chấm công
+      </h1>
+    </div>
+  </div>
+
+  <!-- Stats Grid - Quick Overview -->
+  <div class="stats-grid">
+    <!-- Tổng số chấm công -->
+    <div class="stat-card stat-card-blue">
+      <div class="stat-header">
+        <div class="stat-icon-wrapper">
+          <i class="fas fa-clipboard-check"></i>
         </div>
-        <div class="time-content">
+        <h3 class="stat-title">Tổng chấm công</h3>
+      </div>
+      <div class="stat-body">
+        <p class="stat-number">{{ attendances|length }}</p>
+        <span class="stat-label">lần trong tháng</span>
+      </div>
+    </div>
+
+    <!-- Chờ duyệt -->
+    <div class="stat-card stat-card-orange">
+      <div class="stat-header">
+        <div class="stat-icon-wrapper">
+          <i class="fas fa-hourglass-half"></i>
+        </div>
+        <h3 class="stat-title">Chờ duyệt</h3>
+      </div>
+      <div class="stat-body">
+        <p class="stat-number">{{ attendances|selectattr('status', 'equalto', 'pending')|list|length }}</p>
+        <span class="stat-label">yêu cầu</span>
+      </div>
+    </div>
+
+    <!-- Đã duyệt -->
+    <div class="stat-card stat-card-green">
+      <div class="stat-header">
+        <div class="stat-icon-wrapper">
+          <i class="fas fa-thumbs-up"></i>
+        </div>
+        <h3 class="stat-title">Đã duyệt</h3>
+      </div>
+      <div class="stat-body">
+        <p class="stat-number">{{ attendances|selectattr('status', 'equalto', 'approved')|list|length }}</p>
+        <span class="stat-label">lần</span>
+      </div>
+    </div>
+
+    <!-- Từ chối -->
+    <div class="stat-card stat-card-red">
+      <div class="stat-header">
+        <div class="stat-icon-wrapper">
+          <i class="fas fa-ban"></i>
+        </div>
+        <h3 class="stat-title">Từ chối</h3>
+      </div>
+      <div class="stat-body">
+        <p class="stat-number">{{ attendances|selectattr('status', 'equalto', 'rejected')|list|length }}</p>
+        <span class="stat-label">lần</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Content Grid -->
+  <div class="content-grid">
+    <!-- Left Column: Check-in Form -->
+    <div class="content-card">
+      <div class="card-header">
+        <div class="card-icon">
+          <i class="fas fa-clock"></i>
+        </div>
+        <div>
+          <h3 class="card-title">Chấm công hôm nay</h3>
+          <p class="card-subtitle">Gửi yêu cầu chấm công của bạn</p>
+        </div>
+      </div>
+
+      <div class="time-display">
+        <div class="time-current">
           <span class="time-label">Thời gian hiện tại</span>
           <span class="time-value" id="currentTime">{{ now().strftime('%H:%M:%S') }}</span>
           <span class="date-value">{{ now().strftime('%d/%m/%Y') }}</span>
         </div>
       </div>
 
-      <!-- Check-in Form Card -->
-      <div class="checkin-form-card animate-slide-up">
-        <div class="form-header">
-          <div class="form-icon animate-bounce">
-            <i class="fas fa-calendar-check fa-2x" style="color: #00d4aa;"></i>
-          </div>
-          <div>
-            <h3 class="form-title">Chấm công hôm nay</h3>
-            <p class="form-description">Gửi yêu cầu chấm công của bạn</p>
-          </div>
+      <form method="POST" action="{{ url_for('attendance_checkin') }}" class="attendance-form">
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fas fa-calendar-check"></i>
+            Thời gian chấm công
+          </label>
+          <input type="text" name="checkin_time" value="{{ now().strftime('%H:%M:%S - %d/%m/%Y') }}" readonly class="form-input readonly">
         </div>
 
-        <form method="POST" action="{{ url_for('attendance_checkin') }}" class="attendance-form">
-          <div class="form-group">
-            <label class="form-label">
-              <i class="fas fa-clock" style="color: #00d4aa;"></i>
-              Thời gian chấm công
-            </label>
-            <input type="text" name="checkin_time" value="{{ now().strftime('%H:%M:%S - %d/%m/%Y') }}" readonly class="form-input readonly-input">
-          </div>
-
-          <div class="form-group">
-            <label class="form-label">
-              <i class="fas fa-sticky-note" style="color: #00d4aa;"></i>
-              Ghi chú
-            </label>
-            <textarea name="note" placeholder="Nhập ghi chú (nếu có)..." class="form-textarea" rows="4"></textarea>
-          </div>
-
-          <button type="submit" class="btn-checkin-submit animate-hover">
-            <i class="fas fa-paper-plane"></i>
-            Gửi chấm công
-          </button>
-        </form>
-      </div>
-
-      <!-- Quick Stats -->
-      <div class="quick-stats animate-fade-in-delay">
-        <div class="stat-item stat-pending animate-scale">
-          <div class="stat-icon-small">
-            <i class="fas fa-clock fa-lg" style="color: #ff9500;"></i>
-          </div>
-          <div class="stat-info">
-            <span class="stat-number">{{ attendances|selectattr('status', 'equalto', 'pending')|list|length }}</span>
-            <span class="stat-label">Chờ duyệt</span>
-          </div>
+        <div class="form-group">
+          <label class="form-label">
+            <i class="fas fa-sticky-note"></i>
+            Ghi chú (tùy chọn)
+          </label>
+          <textarea name="note" placeholder="Nhập ghi chú nếu có..." class="form-textarea" rows="3"></textarea>
         </div>
-        
-        <div class="stat-item stat-approved animate-scale-delay">
-          <div class="stat-icon-small">
-            <i class="fas fa-check-circle fa-lg" style="color: #00d4aa;"></i>
-          </div>
-          <div class="stat-info">
-            <span class="stat-number">{{ attendances|selectattr('status', 'equalto', 'approved')|list|length }}</span>
-            <span class="stat-label">Đã duyệt</span>
-          </div>
-        </div>
-        
-        <div class="stat-item stat-rejected">
-          <div class="stat-icon-small">
-            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </div>
-          <div class="stat-info">
-            <span class="stat-number">{{ attendances|selectattr('status', 'equalto', 'rejected')|list|length }}</span>
-            <span class="stat-label">Từ chối</span>
-          </div>
-        </div>
-      </div>
+
+        <button type="submit" class="btn-primary">
+          <i class="fas fa-paper-plane"></i>
+          Gửi chấm công
+        </button>
+      </form>
     </div>
 
-    <!-- RIGHT COLUMN: History -->
-    <div class="right-column">
-      <div class="history-section">
-        <div class="section-header">
-          <h3 class="section-title">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            Lịch sử chấm công
-          </h3>
-          <span class="record-count">{{ attendances|length }} bản ghi</span>
+    <!-- Right Column: History -->
+    <div class="content-card">
+      <div class="card-header">
+        <div class="card-icon">
+          <i class="fas fa-history"></i>
         </div>
+        <div>
+          <h3 class="card-title">Lịch sử chấm công</h3>
+          <p class="card-subtitle">{{ attendances|length }} bản ghi</p>
+        </div>
+      </div>
 
-        {% if attendances %}
-        <div class="attendance-list">
-          {% for att in attendances %}
-          <div class="attendance-item status-{{ att.status }}">
-            <div class="item-indicator"></div>
-            
-            <div class="item-content">
-              <div class="item-header">
-                <div class="item-time">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <circle cx="12" cy="12" r="10"></circle>
-                    <polyline points="12 6 12 12 16 14"></polyline>
-                  </svg>
-                  <span>{{ att.checkin_time|fmt_dt }}</span>
-                </div>
-                
-                <div class="item-status">
-                  {% if att.status == 'approved' %}
-                    <span class="status-badge badge-approved animate-fade-in">
-                      <i class="fas fa-check-circle"></i>
-                      Đã duyệt
-                    </span>
-                  {% elif att.status == 'rejected' %}
-                    <span class="status-badge badge-rejected animate-shake">
-                      <i class="fas fa-times-circle"></i>
-                      Từ chối
-                    </span>
-                  {% else %}
-                    <span class="status-badge badge-pending animate-pulse">
-                      <i class="fas fa-clock"></i>
-                      Chờ duyệt
-                    </span>
-                  {% endif %}
-                </div>
-              </div>
-
-              {% if att.note %}
-              <div class="item-note">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-                  <polyline points="14 2 14 8 20 8"></polyline>
-                </svg>
-                <span>{{ att.note }}</span>
-              </div>
-              {% endif %}
-
-              {% if att.status != 'pending' and att.approver %}
-              <div class="item-approver">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-                  <circle cx="9" cy="7" r="4"></circle>
-                  <polyline points="16 11 18 13 22 9"></polyline>
-                </svg>
-                <span>{{ 'Duyệt' if att.status == 'approved' else 'Từ chối' }} bởi <strong>{{ att.approver.ten }}</strong></span>
-              </div>
+      {% if attendances %}
+      <div class="attendance-list">
+        {% for att in attendances %}
+        <div class="attendance-item status-{{ att.status }}">
+          <div class="item-icon">
+            {% if att.status == 'approved' %}
+              <i class="fas fa-check-circle"></i>
+            {% elif att.status == 'rejected' %}
+              <i class="fas fa-times-circle"></i>
+            {% else %}
+              <i class="fas fa-clock"></i>
+            {% endif %}
+          </div>
+          
+          <div class="item-content">
+            <div class="item-time">{{ att.checkin_time|fmt_dt }}</div>
+            <div class="item-status">
+              {% if att.status == 'approved' %}
+                <span class="status-badge approved">Đã duyệt</span>
+              {% elif att.status == 'rejected' %}
+                <span class="status-badge rejected">Từ chối</span>
+              {% else %}
+                <span class="status-badge pending">Chờ duyệt</span>
               {% endif %}
             </div>
+            
+            {% if att.note %}
+            <div class="item-note">{{ att.note }}</div>
+            {% endif %}
+            
+            {% if att.status != 'pending' and att.approver %}
+            <div class="item-approver">
+              {{ 'Duyệt' if att.status == 'approved' else 'Từ chối' }} bởi <strong>{{ att.approver.ten }}</strong>
+            </div>
+            {% endif %}
           </div>
-          {% endfor %}
         </div>
-        {% else %}
-        <div class="empty-state">
-          <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-            <line x1="16" y1="2" x2="16" y2="6"></line>
-            <line x1="8" y1="2" x2="8" y2="6"></line>
-            <line x1="3" y1="10" x2="21" y2="10"></line>
-          </svg>
-          <h3>Chưa có lịch sử chấm công</h3>
-          <p>Hãy thực hiện chấm công đầu tiên của bạn</p>
-        </div>
-        {% endif %}
+        {% endfor %}
       </div>
+      {% else %}
+      <div class="empty-state">
+        <div class="empty-icon">
+          <i class="fas fa-calendar-times"></i>
+        </div>
+        <h3>Chưa có lịch sử chấm công</h3>
+        <p>Hãy thực hiện chấm công đầu tiên của bạn</p>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
 
 <style>
-/* ===== PAGE LAYOUT ===== */
-.attendance-page {
-  max-width: 1400px;
-  margin: 0 auto;
+/* ========== ATTENDANCE PAGE CUSTOM STYLES ========== */
+
+/* Page Header */
+.page-header {
+  margin-bottom: 32px;
 }
 
-/* ===== TWO COLUMN LAYOUT ===== */
-.attendance-layout {
-  display: grid;
-  grid-template-columns: 400px 1fr;
-  gap: 24px;
-  align-items: start;
+.header-content {
+  text-align: center;
 }
 
-.left-column {
-  position: sticky;
-  top: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.right-column {
-  min-height: 100vh;
-}
-
-/* ===== TIME DISPLAY CARD ===== */
-.time-display-card {
-  background: linear-gradient(135deg, #2f7d5a 0%, #1e5a3d 100%);
-  border-radius: 20px;
-  padding: 28px;
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  box-shadow: 0 8px 24px rgba(47, 125, 90, 0.4);
-  color: white;
-}
-
-.time-icon {
-  width: 64px;
-  height: 64px;
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 16px;
+.page-title {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: #1c5b45;
+  margin: 0 0 8px 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
+  gap: 12px;
 }
 
-.time-icon svg {
-  color: white;
+.page-title i {
+  color: #2f7d5a;
 }
 
-.time-content {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
+.page-subtitle {
+  font-size: 1.1rem;
+  color: #6c757d;
+  margin: 0;
 }
 
-.time-label {
-  font-size: 0.85em;
-  opacity: 0.9;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-weight: 600;
+/* Content Grid */
+.content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
 }
 
-.time-value {
-  font-size: 2.2em;
-  font-weight: 800;
-  line-height: 1;
-  font-family: 'Courier New', monospace;
-  letter-spacing: 2px;
-}
-
-.date-value {
-  font-size: 0.95em;
-  opacity: 0.9;
-  font-weight: 600;
-}
-
-/* ===== CHECK-IN FORM CARD ===== */
-.checkin-form-card {
+.content-card {
   background: white;
   border-radius: 20px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
   overflow: hidden;
-  border: 2px solid #e9ecef;
+  border: 1px solid rgba(255, 255, 255, 0.8);
 }
 
-.form-header {
+.card-header {
   background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
   padding: 24px;
   display: flex;
   align-items: center;
   gap: 16px;
-  border-bottom: 2px solid #dee2e6;
+  border-bottom: 1px solid #dee2e6;
 }
 
-.form-icon {
-  width: 56px;
-  height: 56px;
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-  border-radius: 14px;
+.card-icon {
+  width: 48px;
+  height: 48px;
+  background: linear-gradient(135deg, #2f7d5a 0%, #4a9b7a 100%);
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  flex-shrink: 0;
-  box-shadow: 0 4px 12px rgba(67, 233, 123, 0.3);
-}
-
-.form-icon svg {
   color: white;
+  font-size: 20px;
 }
 
-.form-title {
+.card-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #1c5b45;
   margin: 0 0 4px 0;
-  font-size: 1.2em;
-  color: #212529;
-  font-weight: 700;
 }
 
-.form-description {
-  margin: 0;
+.card-subtitle {
+  font-size: 0.95rem;
   color: #6c757d;
-  font-size: 0.85em;
+  margin: 0;
 }
 
+/* Time Display */
+.time-display {
+  padding: 24px;
+  background: linear-gradient(135deg, #2f7d5a 0%, #1e5a3d 100%);
+  color: white;
+  text-align: center;
+}
+
+.time-current {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.time-label {
+  font-size: 0.9rem;
+  opacity: 0.9;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-weight: 500;
+}
+
+.time-value {
+  font-size: 2.5rem;
+  font-weight: 800;
+  font-family: 'Courier New', monospace;
+  letter-spacing: 3px;
+}
+
+.date-value {
+  font-size: 1rem;
+  opacity: 0.9;
+  font-weight: 600;
+}
+
+/* Form Styles */
 .attendance-form {
   padding: 24px;
 }
@@ -321,476 +310,328 @@
 }
 
 .form-label {
+  display: block;
+  font-weight: 600;
+  color: #1c5b45;
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   gap: 8px;
-  font-weight: 600;
-  color: #495057;
-  margin-bottom: 10px;
-  font-size: 0.9em;
 }
 
-.form-label svg {
-  color: #43e97b;
-  flex-shrink: 0;
-}
-
-.form-input,
-.form-textarea {
+.form-input, .form-textarea {
   width: 100%;
   padding: 12px 16px;
-  border: 2px solid #e0e0e0;
+  border: 2px solid #e9ecef;
   border-radius: 12px;
-  font-size: 14px;
+  font-size: 1rem;
   transition: all 0.3s ease;
-  font-family: inherit;
-  box-sizing: border-box;
-}
-
-.form-input:focus,
-.form-textarea:focus {
-  border-color: #43e97b;
-  outline: none;
-  box-shadow: 0 0 0 4px rgba(67, 233, 123, 0.1);
-}
-
-.readonly-input {
   background: #f8f9fa;
+}
+
+.form-input:focus, .form-textarea:focus {
+  outline: none;
+  border-color: #2f7d5a;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(47, 125, 90, 0.1);
+}
+
+.form-input.readonly {
+  background: #e9ecef;
   cursor: not-allowed;
-  font-weight: 600;
-  color: #495057;
 }
 
 .form-textarea {
   resize: vertical;
-  min-height: 90px;
+  min-height: 80px;
 }
 
-.btn-checkin-submit {
+.btn-primary {
   width: 100%;
   padding: 14px 24px;
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+  background: linear-gradient(135deg, #2f7d5a 0%, #4a9b7a 100%);
   color: white;
   border: none;
   border-radius: 12px;
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 1.1rem;
+  font-weight: 600;
   cursor: pointer;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  transition: all 0.3s ease;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin: 0;
-  box-shadow: 0 4px 12px rgba(67, 233, 123, 0.3);
+  gap: 8px;
 }
 
-.btn-checkin-submit:hover {
+.btn-primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(67, 233, 123, 0.4);
+  box-shadow: 0 8px 25px rgba(47, 125, 90, 0.3);
 }
 
-/* ===== QUICK STATS ===== */
-.quick-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.stat-item {
-  background: white;
-  border-radius: 14px;
-  padding: 16px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  border: 2px solid #e9ecef;
-  transition: all 0.3s ease;
-}
-
-.stat-item:hover {
-  transform: translateX(4px);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-}
-
-.stat-icon-small {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.stat-pending .stat-icon-small {
-  background: linear-gradient(135deg, #ffa751 0%, #ffe259 100%);
-}
-
-.stat-approved .stat-icon-small {
-  background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
-}
-
-.stat-rejected .stat-icon-small {
-  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-}
-
-.stat-icon-small svg {
-  color: white;
-}
-
-.stat-info {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.stat-number {
-  font-size: 1.6em;
-  font-weight: 800;
-  line-height: 1;
-  color: #2d3748;
-}
-
-.stat-label {
-  font-size: 0.85em;
-  color: #718096;
-  font-weight: 600;
-}
-
-/* ===== HISTORY SECTION ===== */
-.history-section {
-  background: white;
-  border-radius: 20px;
-  padding: 28px;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
-  border: 2px solid #e9ecef;
-  min-height: 600px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-  padding-bottom: 16px;
-  border-bottom: 2px solid #f8f9fa;
-}
-
-.section-title {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 0;
-  font-size: 1.5em;
-  color: #212529;
-  font-weight: 700;
-}
-
-.section-title svg {
-  color: #2f7d5a;
-  flex-shrink: 0;
-}
-
-.record-count {
-  background: #e9ecef;
-  color: #495057;
-  padding: 8px 16px;
-  border-radius: 20px;
-  font-size: 0.9em;
-  font-weight: 600;
-}
-
-/* ===== ATTENDANCE LIST ===== */
+/* Attendance List */
 .attendance-list {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
+  max-height: 500px;
+  overflow-y: auto;
+  padding: 0 24px 24px 24px;
 }
 
 .attendance-item {
-  background: white;
-  border: 2px solid #e9ecef;
-  border-radius: 16px;
-  overflow: hidden;
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px;
+  margin-bottom: 12px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border-left: 4px solid #dee2e6;
   transition: all 0.3s ease;
-  position: relative;
 }
 
 .attendance-item:hover {
+  background: #e9ecef;
   transform: translateX(4px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.08);
 }
 
-.item-indicator {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 4px;
-  transition: all 0.3s ease;
+.attendance-item.status-approved {
+  border-left-color: #28a745;
+  background: linear-gradient(135deg, #f8fff8 0%, #f0f8f0 100%);
 }
 
-.status-approved .item-indicator {
-  background: linear-gradient(180deg, #28a745 0%, #20c997 100%);
+.attendance-item.status-rejected {
+  border-left-color: #dc3545;
+  background: linear-gradient(135deg, #fff8f8 0%, #f8f0f0 100%);
 }
 
-.status-rejected .item-indicator {
-  background: linear-gradient(180deg, #dc3545 0%, #fd7e14 100%);
+.attendance-item.status-pending {
+  border-left-color: #ffc107;
+  background: linear-gradient(135deg, #fffef8 0%, #fef8f0 100%);
 }
 
-.status-pending .item-indicator {
-  background: linear-gradient(180deg, #ffc107 0%, #ff9800 100%);
+.item-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.attendance-item.status-approved .item-icon {
+  background: #28a745;
+  color: white;
+}
+
+.attendance-item.status-rejected .item-icon {
+  background: #dc3545;
+  color: white;
+}
+
+.attendance-item.status-pending .item-icon {
+  background: #ffc107;
+  color: #212529;
 }
 
 .item-content {
-  padding: 20px 20px 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.item-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
+  flex: 1;
+  min-width: 0;
 }
 
 .item-time {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   font-weight: 600;
-  color: #2d3748;
-  font-size: 0.95em;
-}
-
-.item-time svg {
-  color: #2f7d5a;
-  flex-shrink: 0;
-}
-
-.item-status {
-  flex-shrink: 0;
+  color: #1c5b45;
+  margin-bottom: 4px;
 }
 
 .status-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 20px;
-  font-size: 0.8em;
-  font-weight: 700;
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
-.badge-approved {
+.status-badge.approved {
   background: #d4edda;
   color: #155724;
-  border: 1px solid #28a745;
 }
 
-.badge-rejected {
+.status-badge.rejected {
   background: #f8d7da;
   color: #721c24;
-  border: 1px solid #dc3545;
 }
 
-.badge-pending {
+.status-badge.pending {
   background: #fff3cd;
   color: #856404;
-  border: 1px solid #ffc107;
 }
 
 .item-note {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  padding: 12px;
-  background: #fff3cd;
-  border-left: 3px solid #ffc107;
-  border-radius: 8px;
-  font-size: 0.85em;
-  color: #856404;
-  line-height: 1.5;
-}
-
-.item-note svg {
-  flex-shrink: 0;
-  margin-top: 2px;
+  font-size: 0.9rem;
+  color: #6c757d;
+  margin-top: 6px;
+  font-style: italic;
 }
 
 .item-approver {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px;
-  background: #f8f9fa;
-  border-radius: 8px;
-  font-size: 0.85em;
+  font-size: 0.85rem;
   color: #495057;
+  margin-top: 4px;
 }
 
-.item-approver svg {
-  color: #2f7d5a;
-  flex-shrink: 0;
-}
-
-.item-approver strong {
-  color: #2d3748;
-}
-
-/* ===== EMPTY STATE ===== */
+/* Empty State */
 .empty-state {
+  padding: 48px 24px;
   text-align: center;
-  padding: 80px 40px;
   color: #6c757d;
 }
 
-.empty-state svg {
+.empty-icon {
+  font-size: 4rem;
   color: #dee2e6;
-  margin-bottom: 24px;
+  margin-bottom: 16px;
 }
 
 .empty-state h3 {
-  margin: 0 0 12px 0;
+  font-size: 1.5rem;
   color: #495057;
-  font-size: 1.4em;
+  margin: 0 0 8px 0;
 }
 
 .empty-state p {
   margin: 0;
-  font-size: 15px;
+  font-size: 1rem;
 }
 
-/* ===== RESPONSIVE ===== */
+/* Responsive */
 @media (max-width: 1024px) {
-  .attendance-layout {
-    grid-template-columns: 350px 1fr;
+  .content-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
 @media (max-width: 768px) {
-  .attendance-layout {
+  .stats-grid {
     grid-template-columns: 1fr;
   }
   
-  .left-column {
-    position: static;
+  .page-title {
+    font-size: 2rem;
   }
   
-  .time-display-card {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .form-header {
-    flex-direction: column;
-    text-align: center;
-  }
-  
-  .quick-stats {
-    flex-direction: row;
-    overflow-x: auto;
-  }
-  
-  .stat-item {
-    min-width: 150px;
+  .time-value {
+    font-size: 2rem;
   }
 }
 
-/* ===== ANIMATIONS ===== */
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(20px); }
-  to { opacity: 1; transform: translateY(0); }
+/* ========== OPTIMIZED ICON ANIMATIONS ========== */
+
+/* Stat card red styling for rejected status */
+.stat-card-red::before {
+  background: linear-gradient(90deg, #d32f2f, #f44336, #ef5350);
+}
+.stat-card-red .stat-icon-wrapper {
+  background: linear-gradient(135deg, #d32f2f 0%, #f44336 50%, #ef5350 100%);
+  box-shadow: 0 6px 20px rgba(244, 67, 54, 0.4);
+}
+.stat-card-red:hover {
+  border-color: #f44336;
+  background: linear-gradient(135deg, #ffffff 0%, #ffebee 100%);
+}
+.stat-card-red:hover .stat-icon-wrapper {
+  box-shadow: 0 8px 28px rgba(244, 67, 54, 0.5);
+  transform: scale(1.1) rotate(5deg);
 }
 
-@keyframes slideUp {
-  from { opacity: 0; transform: translateY(30px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Hourglass animation for pending status */
+.stat-card-orange .stat-icon-wrapper .fa-hourglass-half {
+  animation: hourglass-rotate 2s linear infinite;
 }
 
-@keyframes bounce {
-  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
-  40% { transform: translateY(-10px); }
-  60% { transform: translateY(-5px); }
+@keyframes hourglass-rotate {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
+/* Thumbs up pulse animation for approved */
+.stat-card-green .stat-icon-wrapper .fa-thumbs-up {
+  animation: thumbs-pulse 2s ease-in-out infinite;
 }
 
-@keyframes scale {
-  0% { transform: scale(0.8); opacity: 0; }
-  100% { transform: scale(1); opacity: 1; }
+@keyframes thumbs-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
 }
 
-@keyframes shake {
+/* Ban icon shake animation for rejected */
+.stat-card-red .stat-icon-wrapper .fa-ban {
+  animation: ban-shake 2s ease-in-out infinite;
+  color: #ffffff !important;
+}
+
+@keyframes ban-shake {
   0%, 100% { transform: translateX(0); }
-  10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-  20%, 40%, 60%, 80% { transform: translateX(5px); }
+  25% { transform: translateX(-2px); }
+  75% { transform: translateX(2px); }
 }
 
-.animate-fade-in {
-  animation: fadeIn 0.6s ease-out;
+/* Clipboard check bounce animation */
+.stat-card-blue .stat-icon-wrapper .fa-clipboard-check {
+  animation: clipboard-bounce 2s ease-in-out infinite;
 }
 
-.animate-fade-in-delay {
-  animation: fadeIn 0.6s ease-out 0.3s both;
+@keyframes clipboard-bounce {
+  0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+  40% { transform: translateY(-3px); }
+  60% { transform: translateY(-1px); }
 }
 
-.animate-slide-up {
-  animation: slideUp 0.8s ease-out;
+/* Enhanced hover effects for icons */
+.stat-card:hover .stat-icon-wrapper i {
+  transform: scale(1.2);
+  transition: transform 0.3s ease;
 }
 
-.animate-bounce {
-  animation: bounce 2s infinite;
+.stat-card .stat-icon-wrapper i {
+  transition: transform 0.3s ease;
 }
 
-.animate-pulse {
-  animation: pulse 2s infinite;
+/* ========== BALANCED STAT CARD SIZING ========== */
+.stats-grid .stat-card {
+  min-height: 160px;
+  padding: 20px;
 }
 
-.animate-scale {
-  animation: scale 0.5s ease-out;
+.stats-grid .stat-icon-wrapper {
+  width: 48px;
+  height: 48px;
 }
 
-.animate-scale-delay {
-  animation: scale 0.5s ease-out 0.2s both;
+.stats-grid .stat-icon-wrapper svg {
+  width: 24px;
+  height: 24px;
 }
 
-.animate-shake {
-  animation: shake 0.5s ease-in-out;
+.stats-grid .stat-title {
+  font-size: 14px;
+  font-weight: 600;
 }
 
-.animate-hover:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(0,0,0,0.15);
-  transition: all 0.3s ease;
+.stats-grid .stat-number {
+  font-size: 2rem;
+  font-weight: 700;
 }
 
-.text-primary { color: #007bff; }
-.text-success { color: #28a745; }
-.text-warning { color: #ffc107; }
-.text-info { color: #17a2b8; }
-.text-danger { color: #dc3545; }
-
-@media (max-width: 480px) {
-  .item-header {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-  
-  .item-status {
-    align-self: flex-end;
-  }
+.stats-grid .stat-label {
+  font-size: 0.85rem;
 }
 </style>
 

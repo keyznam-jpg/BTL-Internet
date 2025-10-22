@@ -77,6 +77,11 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 # Initialize Cache
 cache = Cache(app, config={'CACHE_TYPE': 'simple'})  # Use 'redis' if Redis available
 
+# Disable caching in development
+if app.debug:
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+    cache.init_app(app, config={'CACHE_TYPE': 'null'})
+
 # Initialize Compress
 compress = Compress(app)
 

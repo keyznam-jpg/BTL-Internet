@@ -43,8 +43,8 @@ from flask_compress import Compress
 # Load environment variables from the .env file
 load_dotenv()
 
-# Payment session timeout: 5 minutes
-PAYMENT_SESSION_TTL = timedelta(minutes=5)
+# Default payment session timeout (minutes)
+DEFAULT_PAYMENT_TIMEOUT_MINUTES = 5
 
 def build_mysql_uri():
     """Build the MySQL connection string from environment variables."""
@@ -305,23 +305,51 @@ class PaymentSession(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.now)
 
 
-PAYMENT_SESSION_TTL = timedelta(minutes=5)
-PAYMENT_SESSION_TTL_SECONDS = int(PAYMENT_SESSION_TTL.total_seconds())
+def get_payment_timeout_minutes():
+    setting = HeThongCauHinh.query.filter_by(key='payment_timeout_minutes').first()
+    if setting and setting.value:
+        try:
+            minutes = int(setting.value)
+            if 1 <= minutes <= 60:
+                return minutes
+            app.logger.warning(
+                "payment_timeout_minutes out of range: %s",
+                setting.value,
+            )
+        except (TypeError, ValueError):
+            app.logger.warning(
+                "Invalid payment_timeout_minutes value: %s",
+                setting.value,
+            )
+    return DEFAULT_PAYMENT_TIMEOUT_MINUTES
 
 
-def payment_session_expired(created_at):
+def get_payment_session_ttl():
+    return timedelta(minutes=get_payment_timeout_minutes())
+
+
+def payment_session_expired(created_at, ttl=None):
     if not created_at:
         return True
     now = datetime.now()
+    ttl = ttl or get_payment_session_ttl()
     diff = now - created_at
-    expired = diff > PAYMENT_SESSION_TTL
-    app.logger.info(f"Payment session check: created_at={created_at}, now={now}, diff={diff}, ttl={PAYMENT_SESSION_TTL}, expired={expired}")
+    expired = diff > ttl
+    app.logger.info(
+        "Payment session check: created_at=%s, now=%s, diff=%s, ttl=%s, expired=%s",
+        created_at,
+        now,
+        diff,
+        ttl,
+        expired,
+    )
     return expired
 
 
-def payment_session_expires_at(created_at):
+def payment_session_expires_at(created_at, ttl=None):
     base = created_at or datetime.now()
-    return base + PAYMENT_SESSION_TTL
+    ttl = ttl or get_payment_session_ttl()
+    return base + ttl
 
 
 def create_payment_session(token, kind, data_dict):
@@ -1953,12 +1981,16 @@ def huy_dat_phong_khong_den():
             db.session.commit()  # Commit trạng thái phòng
             count += 1
         if count > 0:
-            app.logger.info(f'Đã tự động hủy {count} đặt phòng không đến trong 5 phút. Doanh thu từ tiền cọc đã được ghi nhận.')
+            app.logger.info(
+                f'Đã tự động hủy {count} đặt phòng không đến trong {minutes} phút. '
+                'Doanh thu từ tiền cọc đã được ghi nhận.'
+            )
             # flash(f'Đã tự động hủy {count} đặt phòng không đến trong 5 phút. Doanh thu từ tiền cọc đã được ghi nhận.', 'success')
 
 def clean_expired_payment_sessions():
     with app.app_context():
-        cutoff = datetime.now() - PAYMENT_SESSION_TTL
+        ttl = get_payment_session_ttl()
+        cutoff = datetime.now() - ttl
         expired = PaymentSession.query.filter(PaymentSession.created_at < cutoff).all()
         if not expired:
             return
@@ -1981,7 +2013,10 @@ def clean_expired_payment_sessions():
 def cleanup_expired_data():
     """Cleanup expired payment sessions and vouchers."""
     now = datetime.now()
-    expired_sessions = PaymentSession.query.filter(PaymentSession.created_at < now - PAYMENT_SESSION_TTL).all()
+    ttl = get_payment_session_ttl()
+    expired_sessions = PaymentSession.query.filter(
+        PaymentSession.created_at < now - ttl
+    ).all()
     for session in expired_sessions:
         db.session.delete(session)
     
@@ -1998,6 +2033,7 @@ def huy_dat_phong_timeout():
         # Lấy thời gian timeout từ cấu hình
         timeout_setting = HeThongCauHinh.query.filter_by(key='payment_timeout_minutes').first()
         timeout_minutes = int(timeout_setting.value) if timeout_setting and timeout_setting.value else 5
+        timeout_minutes = max(1, timeout_minutes)
         timeout_timedelta = timedelta(minutes=timeout_minutes)
 
         now = datetime.now()
@@ -2141,6 +2177,8 @@ def thanh_toan_chua_hoan_tat():
     # Lấy thời gian timeout từ cấu hình
     timeout_setting = HeThongCauHinh.query.filter_by(key='payment_timeout_minutes').first()
     timeout_minutes = int(timeout_setting.value) if timeout_setting and timeout_setting.value else 5
+    timeout_minutes = max(1, timeout_minutes)
+    payment_session_ttl = timedelta(minutes=timeout_minutes)
 
     now = datetime.now()
     pending_sessions = []
@@ -2152,12 +2190,12 @@ def thanh_toan_chua_hoan_tat():
         has_active_session = False
         if dp.payment_token:
             session = PaymentSession.query.filter_by(token=dp.payment_token).first()
-            if session and not payment_session_expired(session.created_at):
+            if session and not payment_session_expired(session.created_at, ttl=payment_session_ttl):
                 has_active_session = True
         
         # Nếu không có payment session hoặc session đã expired, hiển thị booking này
         if not has_active_session:
-            expires_at = dp.created_at + timedelta(minutes=timeout_minutes)
+            expires_at = dp.created_at + payment_session_ttl
             remaining_seconds = max(0, int((expires_at - now).total_seconds()))
             
             info = {
@@ -2176,7 +2214,7 @@ def thanh_toan_chua_hoan_tat():
     
     # 2. Lấy các payment sessions đang pending
     sessions = PaymentSession.query.filter(
-        PaymentSession.created_at > now - PAYMENT_SESSION_TTL
+        PaymentSession.created_at > now - payment_session_ttl
     ).all()
     
     for sess in sessions:
@@ -3206,9 +3244,16 @@ def qr_confirm(token):
     if not session:
         return render_template('payment_confirm.html', error='Phiên thanh toán không hợp lệ hoặc đã hết hạn.')
 
-    if payment_session_expired(session['created_at']):
+    ttl = get_payment_session_ttl()
+    timeout_minutes = max(1, int(ttl.total_seconds() // 60))
+
+    if payment_session_expired(session['created_at'], ttl=ttl):
         pop_payment_session(token)
-        return render_template('payment_confirm.html', error='Phiên thanh toán đã hết hạn (quá 5 phút).')
+        return render_template(
+            'payment_confirm.html',
+            error=f'Phiên thanh toán đã hết hạn (quá {timeout_minutes} phút).',
+            timeout_minutes=timeout_minutes,
+        )
 
     data = session['data']
     if data.get('completed'):
@@ -3230,7 +3275,7 @@ def qr_confirm(token):
     else:
         return render_template('payment_confirm.html', error='Loại thanh toán không được hỗ trợ.')
 
-    expires_at = payment_session_expires_at(session['created_at'])
+    expires_at = payment_session_expires_at(session['created_at'], ttl=ttl)
     remaining = max(0, int((expires_at - datetime.now()).total_seconds()))
 
     return render_template(
@@ -3242,6 +3287,7 @@ def qr_confirm(token):
         expires_at=expires_at,
         expires_at_iso=expires_at.isoformat(),
         countdown_seconds=remaining,
+        timeout_minutes=timeout_minutes,
     )
 
 
@@ -3283,9 +3329,15 @@ def show_qr_deposit(token):
         flash('Phiên thanh toán không hợp lệ hoặc đã hết hạn.', 'danger')
         return redirect(url_for('dat_phong'))
 
-    if payment_session_expired(session['created_at']):
+    ttl = get_payment_session_ttl()
+    timeout_minutes = max(1, int(ttl.total_seconds() // 60))
+
+    if payment_session_expired(session['created_at'], ttl=ttl):
         pop_payment_session(token)
-        flash('Phiên thanh toán đã hết hạn (quá 5 phút).', 'danger')
+        flash(
+            f'Phiên thanh toán đã hết hạn (quá {timeout_minutes} phút).',
+            'danger',
+        )
         return redirect(url_for('dat_phong'))
 
     data = session['data']
@@ -3298,7 +3350,7 @@ def show_qr_deposit(token):
     if data.get('completed'):
         flash('Phiên thanh toán đã được xác nhận. Vui lòng tạo mã QR mới nếu cần.', 'info')
         return redirect(invoice_url)
-    expires_at = payment_session_expires_at(session['created_at'])
+    expires_at = payment_session_expires_at(session['created_at'], ttl=ttl)
     remaining = max(0, int((expires_at - datetime.now()).total_seconds()))
 
     return render_template(
@@ -3310,6 +3362,7 @@ def show_qr_deposit(token):
         status_url=status_url,
         invoice_url=invoice_url,
         countdown_seconds=remaining,
+        timeout_minutes=timeout_minutes,
     )
 
 
@@ -3320,9 +3373,15 @@ def show_qr_service(token):
         flash('Phiên thanh toán không hợp lệ hoặc đã hết hạn.', 'danger')
         return redirect(url_for('dich_vu_thanh_toan'))
 
-    if payment_session_expired(session['created_at']):
+    ttl = get_payment_session_ttl()
+    timeout_minutes = max(1, int(ttl.total_seconds() // 60))
+
+    if payment_session_expired(session['created_at'], ttl=ttl):
         pop_payment_session(token)
-        flash('Phiên thanh toán đã hết hạn (quá 5 phút).', 'danger')
+        flash(
+            f'Phiên thanh toán đã hết hạn (quá {timeout_minutes} phút).',
+            'danger',
+        )
         return redirect(url_for('dich_vu_thanh_toan'))
 
     data = session['data']
@@ -3335,7 +3394,7 @@ def show_qr_service(token):
     if data.get('completed'):
         flash('Phiên thanh toán đã được xác nhận. Vui lòng tạo mã QR mới nếu cần.', 'info')
         return redirect(invoice_url)
-    expires_at = payment_session_expires_at(session['created_at'])
+    expires_at = payment_session_expires_at(session['created_at'], ttl=ttl)
     remaining = max(0, int((expires_at - datetime.now()).total_seconds()))
 
     return render_template(
@@ -3348,6 +3407,7 @@ def show_qr_service(token):
         invoice_url=invoice_url,
         countdown_seconds=remaining,
         items=data.get('items', []),
+        timeout_minutes=timeout_minutes,
     )
 
 
@@ -3358,9 +3418,15 @@ def show_qr_room(token):
         flash('Phiên thanh toán không hợp lệ hoặc đã hết hạn.', 'danger')
         return redirect(url_for('thanh_toan', dat_id=session['data'].get('dat_id', 0)))
 
-    if payment_session_expired(session['created_at']):
+    ttl = get_payment_session_ttl()
+    timeout_minutes = max(1, int(ttl.total_seconds() // 60))
+
+    if payment_session_expired(session['created_at'], ttl=ttl):
         pop_payment_session(token)
-        flash('Phiên thanh toán đã hết hạn (quá 5 phút).', 'danger')
+        flash(
+            f'Phiên thanh toán đã hết hạn (quá {timeout_minutes} phút).',
+            'danger',
+        )
         return redirect(url_for('thanh_toan', dat_id=session['data'].get('dat_id', 0)))
 
     data = session['data']
@@ -3374,7 +3440,7 @@ def show_qr_room(token):
     if data.get('completed'):
         flash('Phiên thanh toán đã được xác nhận. Vui lòng tạo mã QR mới nếu cần.', 'info')
         return redirect(invoice_url)
-    expires_at = payment_session_expires_at(session['created_at'])
+    expires_at = payment_session_expires_at(session['created_at'], ttl=ttl)
     remaining = max(0, int((expires_at - datetime.now()).total_seconds()))
     calc_values = data.get('calc_values', {})
 
@@ -3389,6 +3455,7 @@ def show_qr_room(token):
         invoice_url=invoice_url,
         countdown_seconds=remaining,
         calc_values=calc_values,
+        timeout_minutes=timeout_minutes,
     )
 
 

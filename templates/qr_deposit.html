@@ -34,7 +34,7 @@
 
     <div class="qr-image-wrapper">
       <img src="{{ qr_url }}" alt="QR xác nhận thanh toán cọc">
-      <div class="muted-text">Khách hàng quét mã QR để chuyển đến trang xác nhận thanh toán. Mã QR tự động hết hạn sau 5 phút để đảm bảo an toàn.</div>
+      <div class="muted-text">Khách hàng quét mã QR để chuyển đến trang xác nhận thanh toán. Mã QR tự động hết hạn sau {{ timeout_minutes or 5 }} phút để đảm bảo an toàn.</div>
     </div>
 
     <div class="qr-actions">

@@ -1552,18 +1552,30 @@
             const meta = document.createElement('div');
             meta.className = 'meta';
             let senderLabel = '';
-            if (isStaffSender) {
-                if (msg.ten_nhan_vien) {
-                    senderLabel = msg.ten_nhan_vien;
-                } else if (isSystem) {
-                    senderLabel = 'Hệ thống';
-                }
+            if (msg.ten_nguoi_gui) {
+                senderLabel = msg.ten_nguoi_gui;
+            } else if (isSystem) {
+                senderLabel = 'Hệ thống';
+            } else if (isStaffSender) {
+                senderLabel = msg.ten_nhan_vien || 'Nhân viên';
+            } else {
+                senderLabel = msg.ten_khach || msg.ten_khach_hang || 'Khách';
+            }
+
+            const safeSenderLabel = senderLabel ? escapeHtml(senderLabel) : '';
+            const timeLabel = msg.thoi_gian ? escapeHtml(msg.thoi_gian) : '';
+            const metaParts = [];
+            if (safeSenderLabel) {
+                metaParts.push(`<strong>${safeSenderLabel}</strong>`);
+            }
+            if (timeLabel) {
+                metaParts.push(timeLabel);
             }
             
             // Thêm trạng thái tin nhắn cho staff
             const statusIcon = isStaffSender ? '<span class="message-status"><i class="fas fa-check-double"></i></span>' : '';
-            meta.innerHTML = `${senderLabel ? '<strong>' + senderLabel + '</strong> · ' : ''}${msg.thoi_gian || ''} ${statusIcon}`;
-
+            const metaContent = metaParts.join(' &bull; ');
+            meta.innerHTML = `${metaContent}${statusIcon ? ` ${statusIcon}` : ''}`.trim();
             contentWrap.appendChild(bubble);
             if (!shouldGroup) {
                 contentWrap.appendChild(meta);

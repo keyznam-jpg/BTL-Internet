@@ -1166,7 +1166,28 @@
             // Time
             const timeDiv = document.createElement('div');
             timeDiv.className = 'message-time';
-            timeDiv.textContent = msg.thoi_gian || new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            let senderLabel = '';
+            if (msg.ten_nguoi_gui) {
+                senderLabel = msg.ten_nguoi_gui;
+            } else if (type === 'staff') {
+                senderLabel = msg.ten_nhan_vien || 'Nhân viên';
+            } else if (type === 'system') {
+                senderLabel = 'Hệ thống';
+            } else {
+                senderLabel = msg.ten_khach || msg.ten_khach_hang || 'Bạn';
+            }
+            const safeSender = senderLabel ? escapeHtml(senderLabel) : '';
+            const timeLabel = msg.thoi_gian
+                ? escapeHtml(msg.thoi_gian)
+                : new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+            const metaPieces = [];
+            if (safeSender) {
+                metaPieces.push(`<strong>${safeSender}</strong>`);
+            }
+            if (timeLabel) {
+                metaPieces.push(timeLabel);
+            }
+            timeDiv.innerHTML = metaPieces.join(' &bull; ');
 
             bubbleWrapper.appendChild(bubble);
             bubbleWrapper.appendChild(timeDiv);

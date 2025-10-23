@@ -145,11 +145,11 @@ Hệ thống được thiết kế để đáp ứng nhu cầu của các khách
 
 ### 11. Đặt phòng online chờ xác nhận
 ![Đặt phòng online chờ xác nhận](screenshots/datphongonlinechoxacnhan.png)
-*Danh sách các booking online đang chờ xác nhận từ admin*
+*Danh sách các booking online đang chờ xác nhận từ nhân viên*
 
-### 12. Quản lý dịch vụ
-![Quản lý dịch vụ](screenshots/dichvu.png)
-*Giao diện quản lý các dịch vụ bổ sung của khách sạn*
+### 12. Dịch vụ và thanh toán
+![Dịch vụ và thanh toán](screenshots/dichvu.png)
+*Giao diện các dịch vụ khách hàng có thể sử dụng ở khách sạn*
 
 ### 13. Lịch sử email
 ![Lịch sử email](screenshots/lichsuemail.png)

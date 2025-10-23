@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Trang không tồn tại</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #2563eb;
+      --accent: #0ea5e9;
+      --text: #0f172a;
+      --muted: #4b5563;
+      --pointer-x: 0.5;
+      --pointer-y: 0.5;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Manrope', 'Segoe UI', sans-serif;
+      background: #ffffff;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 48px 16px;
+    }
+
+    .error-stage {
+      position: relative;
+      width: min(960px, 100%);
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 32px;
+      padding: clamp(32px, 6vw, 64px);
+      box-shadow:
+        0 40px 90px -45px rgba(15, 23, 42, 0.45),
+        0 20px 30px -20px rgba(15, 23, 42, 0.25);
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    .glow {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+    }
+
+    .glow::before {
+      content: '';
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(
+        circle at calc(var(--pointer-x) * 100%) calc(var(--pointer-y) * 100%),
+        rgba(14, 165, 233, 0.18),
+        rgba(37, 99, 235, 0.05),
+        transparent 65%
+      );
+      transition: background 0.15s ease-out;
+    }
+
+    .floating-shapes span {
+      position: absolute;
+      display: block;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, rgba(37, 99, 235, 0.2), rgba(14, 165, 233, 0.05));
+      filter: blur(0);
+      animation: float 18s ease-in-out infinite;
+    }
+
+    .floating-shapes span:nth-child(1) {
+      width: 220px;
+      height: 220px;
+      top: -80px;
+      right: -60px;
+      animation-duration: 22s;
+    }
+
+    .floating-shapes span:nth-child(2) {
+      width: 160px;
+      height: 160px;
+      bottom: -70px;
+      left: -40px;
+      animation-duration: 18s;
+      animation-delay: -4s;
+    }
+
+    .floating-shapes span:nth-child(3) {
+      width: 120px;
+      height: 120px;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      animation-duration: 16s;
+      animation-delay: -8s;
+    }
+
+    .error-content {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      gap: 24px;
+      text-align: center;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+    }
+
+    .brand img {
+      display: block;
+      width: 52px;
+      height: 52px;
+      object-fit: contain;
+      filter: drop-shadow(0 6px 12px rgba(37, 99, 235, 0.2));
+    }
+
+    .error-code {
+      display: flex;
+      justify-content: center;
+      gap: clamp(12px, 4vw, 24px);
+      font-size: clamp(72px, 14vw, 160px);
+      font-weight: 700;
+      letter-spacing: -0.04em;
+      margin: 0;
+      background: linear-gradient(120deg, #2563eb 0%, #0ea5e9 50%, #22d3ee 100%);
+      background-size: 180% 180%;
+      -webkit-background-clip: text;
+      color: transparent;
+      animation: gradientFlow 9s ease infinite;
+    }
+
+    .error-code span {
+      display: inline-block;
+      transform-origin: center;
+      animation: floatDigits 6s ease-in-out infinite;
+    }
+
+    .error-code span:nth-child(2) {
+      animation-delay: -3s;
+    }
+
+    .error-title {
+      font-size: clamp(26px, 5vw, 42px);
+      margin: 0;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .error-message {
+      margin: 0 auto;
+      max-width: 520px;
+      font-size: clamp(16px, 3.4vw, 18px);
+      line-height: 1.7;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 8px;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 999px;
+      padding: 14px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      color: #ffffff;
+      background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
+      box-shadow: 0 12px 24px -14px rgba(37, 99, 235, 0.8);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 18px 28px -14px rgba(14, 165, 233, 0.55);
+    }
+
+    .btn-ghost {
+      background: rgba(14, 165, 233, 0.06);
+      color: var(--primary);
+      box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.25);
+    }
+
+    .btn-ghost:hover {
+      transform: translateY(-2px);
+      background: rgba(14, 165, 233, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.35);
+    }
+
+    .status-hint {
+      margin-top: 8px;
+      font-size: 14px;
+      color: rgba(75, 85, 99, 0.85);
+    }
+
+    .status-hint code {
+      background: rgba(15, 23, 42, 0.05);
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    @keyframes float {
+      0%, 100% {
+        transform: translate3d(0, 0, 0) scale(1);
+        opacity: 0.85;
+      }
+      50% {
+        transform: translate3d(0, -28px, 0) scale(1.05);
+        opacity: 1;
+      }
+    }
+
+    @keyframes floatDigits {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 32px 12px;
+      }
+
+      .error-stage {
+        border-radius: 24px;
+        padding: clamp(24px, 8vw, 36px);
+      }
+
+      .btn {
+        width: 100%;
+        justify-content: center;
+      }
+
+      .brand img {
+        width: 44px;
+        height: 44px;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="error-stage">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="floating-shapes" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div class="error-content">
+      <div class="brand">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Hotel Logo">
+        Hệ thống quản lý khách sạn
+      </div>
+      <h1 class="error-code" aria-label="404">
+        <span>4</span>
+        <span>0</span>
+        <span>4</span>
+      </h1>
+      <p class="error-title">Rất tiếc, chúng tôi không tìm thấy trang bạn yêu cầu.</p>
+      <p class="error-message">
+        Có thể đường dẫn đã thay đổi hoặc nội dung này hiện không còn tồn tại. Hãy kiểm tra lại URL hoặc quay về khu vực chính của hệ thống.
+      </p>
+      <div class="actions">
+        {% if current_user.is_authenticated %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+          <span>Về bảng điều khiển</span>
+        </a>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="btn btn-primary">
+          <span>Đăng nhập lại</span>
+        </a>
+        {% endif %}
+        <button type="button" class="btn btn-ghost" onclick="window.history.back()">
+          <span>Quay lại trang trước</span>
+        </button>
+      </div>
+      <p class="status-hint">Mã lỗi kỹ thuật: <code>404</code></p>
+    </div>
+  </div>
+  <script>
+    const root = document.documentElement;
+    const stage = document.querySelector('.error-stage');
+
+    function updatePointerPosition(xRatio, yRatio) {
+      root.style.setProperty('--pointer-x', xRatio.toFixed(4));
+      root.style.setProperty('--pointer-y', yRatio.toFixed(4));
+    }
+
+    stage.addEventListener('pointermove', function (event) {
+      const rect = stage.getBoundingClientRect();
+      const xRatio = (event.clientX - rect.left) / rect.width;
+      const yRatio = (event.clientY - rect.top) / rect.height;
+      updatePointerPosition(Math.min(Math.max(xRatio, 0), 1), Math.min(Math.max(yRatio, 0), 1));
+    });
+
+    stage.addEventListener('pointerleave', function () {
+      updatePointerPosition(0.5, 0.5);
+    });
+  </script>
+</body>
+</html>

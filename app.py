@@ -7216,6 +7216,11 @@ def handle_join_room(data):
         join_room(token)
         print(f'Client joined room: {token}')
 
+# ========================= ERROR HANDLERS =========================
+@app.errorhandler(404)
+def handle_not_found(error):
+    return render_template('404.html'), 404
+
 # ========================= STATIC FILES OPTIMIZATION =========================
 @app.after_request
 def add_cache_headers(response):

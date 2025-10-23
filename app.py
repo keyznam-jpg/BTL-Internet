@@ -7053,7 +7053,7 @@ def export_luong_nhan_vien(nhanvien_id):
         'Ghi chú': [
             f'Lương tháng {now.month}/{now.year}',
             f'Ngày công: {work_days}/{min_days}',
-            f'Doanh thu: {vnd(month_revenue)} ({rate*100:.1f}%)',
+            f'Doanh thu: {vnd(month_revenue)} ({rate*1:.1f}%)',
             'Top doanh thu' if top_bonus > 0 else '',
             ''
         ]

@@ -212,6 +212,11 @@
             display: flex;
             flex-direction: column;
             gap: 4px;
+            align-items: flex-start;
+        }
+
+        .message.staff .bubble-wrapper {
+            align-items: flex-end;
         }
 
         .system .bubble-wrapper {
@@ -219,12 +224,23 @@
         }
 
         .bubble {
+            display: inline-block;
+            max-width: 100%;
             padding: 12px 16px;
             border-radius: 18px;
             line-height: 1.5;
             font-size: 0.95rem;
             word-wrap: break-word;
             box-shadow: 0 4px 12px -8px rgba(0, 0, 0, 0.2);
+        }
+
+        .bubble.compact {
+            padding: 8px 12px;
+            line-height: 1.25;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
         }
 
         .staff .bubble {
@@ -993,6 +1009,16 @@
             return result.replace(/\r?\n/g, '<br>');
         }
 
+        function applyCompactBubble(bubbleEl, rawText) {
+            if (!bubbleEl) return;
+            if (bubbleEl.children.length > 0) return;
+            const trimmed = (rawText || '').trim();
+            if (!trimmed || /\r|\n/.test(trimmed)) return;
+            if (/\s/.test(trimmed)) return;
+            if (Array.from(trimmed).length > 4) return;
+            bubbleEl.classList.add('compact');
+        }
+
         // Giỏ hàng
         const cart = {
             items: new Map(), // serviceId -> {id, ten, gia, so_luong}
@@ -1155,12 +1181,14 @@
                     `;
                 } else {
                     bubble.innerHTML = renderMessageHtml(text);
+                    applyCompactBubble(bubble, text);
                 }
             } else if (text.includes('đặt dịch vụ')) {
                 const safeText = escapeHtml(text).replace(/\r?\n/g, '<br>');
                 bubble.innerHTML = `<i class="fas fa-utensils"></i> ${safeText}`;
             } else {
                 bubble.innerHTML = renderMessageHtml(text);
+                applyCompactBubble(bubble, text);
             }
 
             // Time

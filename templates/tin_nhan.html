@@ -290,10 +290,17 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
-        flex: 1;
+        flex: 0 1 auto;
+        align-items: flex-start;
+    }
+
+    .message.staff .message-content {
+        align-items: flex-end;
     }
 
     .bubble {
+        display: inline-block;
+        max-width: 100%;
         padding: 14px 18px;
         border-radius: 18px;
         font-size: 0.97rem;
@@ -301,6 +308,15 @@
         box-shadow: 0 12px 28px -24px rgba(15, 23, 42, 0.34);
         word-break: break-word;
         position: relative;
+    }
+
+    .bubble.compact {
+        padding: 8px 12px;
+        line-height: 1.25;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 0;
     }
 
     .guest .bubble {
@@ -1448,6 +1464,16 @@
             return result.replace(/\r?\n/g, '<br>');
         }
 
+        function applyCompactBubble(bubbleEl, rawText) {
+            if (!bubbleEl) return;
+            if (bubbleEl.children.length > 0) return;
+            const trimmed = (rawText || '').trim();
+            if (!trimmed || /\r|\n/.test(trimmed)) return;
+            if (/\s/.test(trimmed)) return;
+            if (Array.from(trimmed).length > 4) return;
+            bubbleEl.classList.add('compact');
+        }
+
         function addMessage(raw) {
             const msg = normalizeMessage(raw);
             if (!msg) return;
@@ -1532,6 +1558,7 @@
                     `;
                 } else {
                     bubble.innerHTML = renderMessageHtml(text);
+                    applyCompactBubble(bubble, text);
                 }
             } else {
                 // Thêm icon cho tin nhắn đặt dịch vụ - KHÔNG hiển thị nội dung chi tiết

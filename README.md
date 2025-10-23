@@ -159,6 +159,42 @@ Hệ thống được thiết kế để đáp ứng nhu cầu của các khách
 ![Thanh toán chưa hoàn tất](screenshots/thanhtoanchuahoantat.png)
 *Danh sách các thanh toán đang pending hoặc chưa hoàn tất*
 
+### 15. Giao diện 404
+![Giao diện 404](screenshots/giaodien404.png)
+*Trang lỗi 404 khi truy cập đường dẫn không tồn tại*
+
+### 16. Giao diện cảm ơn
+![Giao diện cảm ơn](screenshots/giaodiencamon.png)
+*Trang cảm ơn sau khi hoàn tất đặt phòng hoặc thanh toán*
+
+### 17. Giao diện quản lý dịch vụ
+![Giao diện quản lý dịch vụ](screenshots/giaodienquanlydichvu.png)
+*Quản lý các dịch vụ bổ sung và giá cả*
+
+### 18. Hồ sơ cá nhân
+![Hồ sơ cá nhân](screenshots/hosocanhan.png)
+*Thông tin cá nhân của nhân viên với avatar và thông tin liên hệ*
+
+### 19. Lương và thưởng cá nhân
+![Lương và thưởng cá nhân](screenshots/Luongvathuongcanhan.png)
+*Xem lương cơ bản, phụ cấp và thưởng theo doanh thu*
+
+### 20. Nhận và trả phòng
+![Nhận và trả phòng](screenshots/nhanvatraphong.png)
+*Giao diện nhận phòng và trả phòng cho khách hàng*
+
+### 21. Quét QR xác nhận thanh toán
+![Quét QR xác nhận thanh toán](screenshots/quetqrxacnhacthanhtoan.png)
+*Khách hàng quét QR để xác nhận thanh toán online*
+
+### 22. Thanh toán trả phòng
+![Thanh toán trả phòng](screenshots/thanhtoantraphong.png)
+*Thanh toán cuối cùng khi trả phòng với tổng chi phí*
+
+### 23. Giao diện hóa đơn thanh toán
+![Giao diện hóa đơn thanh toán](screenshots/giaodienhoadonthanhtoan.png)
+*Hiển thị chi tiết hóa đơn và thanh toán cho khách hàng*
+
 ### Yêu cầu hệ thống
 - **Python**: 3.8 hoặc cao hơn
 - **MySQL**: 5.7 hoặc cao hơn

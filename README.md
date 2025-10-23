@@ -135,7 +135,29 @@ Hệ thống được thiết kế để đáp ứng nhu cầu của các khách
 ![Thống kê](screenshots/statistics.png)
 *Biểu đồ doanh thu theo tháng với khả năng xuất báo cáo*
 
-## 📦 Cài đặt và chạy
+### 9. Chấm công
+![Chấm công](screenshots/chamcong.png)
+*Giao diện chấm công hàng ngày cho nhân viên*
+
+### 10. Phê duyệt chấm công
+![Phê duyệt chấm công](screenshots/pheduyetchamcong.png)
+*Admin phê duyệt các yêu cầu chấm công của nhân viên*
+
+### 11. Đặt phòng online chờ xác nhận
+![Đặt phòng online chờ xác nhận](screenshots/datphongonlinechoxacnhan.png)
+*Danh sách các booking online đang chờ xác nhận từ admin*
+
+### 12. Quản lý dịch vụ
+![Quản lý dịch vụ](screenshots/dichvu.png)
+*Giao diện quản lý các dịch vụ bổ sung của khách sạn*
+
+### 13. Lịch sử email
+![Lịch sử email](screenshots/lichsuemail.png)
+*Theo dõi và quản lý các email đã gửi tự động*
+
+### 14. Thanh toán chưa hoàn tất
+![Thanh toán chưa hoàn tất](screenshots/thanhtoanchuahoantat.png)
+*Danh sách các thanh toán đang pending hoặc chưa hoàn tất*
 
 ### Yêu cầu hệ thống
 - **Python**: 3.8 hoặc cao hơn

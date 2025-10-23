@@ -101,7 +101,7 @@ Hệ thống được thiết kế để đáp ứng nhu cầu của các khách
 - **python-dotenv**: Quản lý environment variables
 - **email**: Gửi email với MIME support
 
-## 📸 Ảnh chụp màn hình
+## 📸 Ảnh chụp demo dự án
 
 ### 1. Trang đăng nhập
 ![Trang đăng nhập](screenshots/login.png)

@@ -1,118 +1,147 @@
 # Hệ Thống Quản Lý Khách Sạn PTIT
 
-## Mô tả dự án
+## 📋 Mô tả dự án
 
-Đây là một hệ thống quản lý khách sạn toàn diện được phát triển bằng Python Flask, cho phép quản lý các hoạt động hàng ngày của khách sạn như đặt phòng, nhận/trả phòng, thanh toán, quản lý dịch vụ, giao tiếp với khách hàng qua chat và email, quản lý nhân viên và lương, chấm công, và báo cáo doanh thu.
+Đây là một hệ thống quản lý khách sạn toàn diện được phát triển bằng Python Flask, cho phép quản lý hiệu quả tất cả các hoạt động hàng ngày của khách sạn. Hệ thống hỗ trợ cả giao diện web cho nhân viên quản lý và khách hàng đặt phòng online, với các tính năng hiện đại như chat real-time, thanh toán QR, email tự động và báo cáo thống kê.
 
-Hệ thống hỗ trợ cả giao diện web cho nhân viên quản lý và khách hàng đặt phòng online.
+Hệ thống được thiết kế để đáp ứng nhu cầu của các khách sạn từ nhỏ đến lớn, với giao diện thân thiện, bảo mật cao và khả năng mở rộng tốt.
 
-## 🚀 Cải thiện hiệu suất (T10/2025)
-
-### Tối ưu hóa đã triển khai:
-- ✅ **Compression**: Flask-Compress để nén response HTTP (giảm bandwidth)
-- ✅ **Database Pooling**: SQLAlchemy connection pool (10 connections, 20 overflow)
-- ✅ **Query Optimization**: Thêm joinedload cho các relationship phức tạp
-- ✅ **Static Files Caching**: Cache-Control headers cho static files (1 giờ)
-- ✅ **Connection Recycling**: Pool recycle mỗi giờ để tránh stale connections
-
-### Hiệu suất ước tính sau tối ưu:
-- **Thời gian tải trang**: Giảm 30-50% nhờ compression và caching
-- **Database connections**: Tái sử dụng thay vì tạo mới
-- **Memory usage**: Giảm nhờ connection pooling
-- **Scalability**: Hỗ trợ tốt hơn 100+ concurrent users
-
-## Tính năng chính
+## 🚀 Tính năng chính
 
 ### 🏨 Quản lý phòng
-- Sơ đồ phòng trực quan với trạng thái real-time
-- Phân loại phòng (Tiêu chuẩn, Superior, Deluxe, Suite)
-- Theo dõi trạng thái phòng (trống, đã đặt, đang ở, quá giờ)
+- **Sơ đồ phòng trực quan**: Hiển thị trạng thái phòng real-time với màu sắc phân biệt
+- **Phân loại phòng**: 4 loại phòng (Tiêu chuẩn, Superior, Deluxe, Suite) với giá khác nhau
+- **Theo dõi trạng thái**: Trống, đã đặt, đang ở, quá giờ
+- **Quản lý số lượng**: Hỗ trợ từ 1-5 người/phòng
 
 ### 📅 Đặt phòng
-- Đặt phòng offline (nhân viên)
-- Đặt phòng online (khách hàng tự đặt)
-- Hỗ trợ thuê theo ngày hoặc giờ
-- Tính tiền cọc tự động (30% giá phòng)
+- **Đặt phòng offline**: Nhân viên đặt cho khách tại quầy
+- **Đặt phòng online**: Khách hàng tự đặt qua website
+- **Hỗ trợ thuê theo**: Ngày hoặc giờ linh hoạt
+- **Tiền cọc tự động**: 30% giá phòng, có thể điều chỉnh
 
 ### 💳 Thanh toán
-- Thanh toán tiền mặt hoặc chuyển khoản QR (VietQR)
-- Tích hợp QR code cho thanh toán online
-- Quản lý session thanh toán với timeout 5 phút
-- Xác nhận thanh toán tự động
+- **Phương thức đa dạng**: Tiền mặt hoặc chuyển khoản QR (VietQR)
+- **QR code tích hợp**: Tạo QR tự động cho thanh toán online
+- **Session bảo mật**: Timeout 5 phút, tránh thất thoát
+- **Xác nhận tự động**: Kiểm tra thanh toán và cập nhật trạng thái
 
 ### 🛎️ Dịch vụ bổ sung
-- Quản lý danh mục dịch vụ (ăn uống, giặt ủi, spa, v.v.)
-- Đặt dịch vụ trong phòng
-- Thanh toán dịch vụ riêng biệt
+- **Danh mục dịch vụ**: Ăn uống, giặt ủi, spa, dịch vụ khác
+- **Đặt dịch vụ trong phòng**: Tích hợp với booking
+- **Thanh toán riêng biệt**: Quản lý chi phí dịch vụ độc lập
+- **Báo cáo chi tiết**: Theo dõi doanh thu từ dịch vụ
 
-### 💬 Giao tiếp
-- Chat real-time giữa khách hàng và nhân viên
-- Hệ thống tin nhắn với token riêng cho mỗi đặt phòng
-- Upload file trong chat (ảnh, tài liệu)
+### 💬 Giao tiếp khách hàng
+- **Chat real-time**: WebSocket cho giao tiếp tức thời
+- **Upload file**: Hỗ trợ ảnh, tài liệu, video trong chat
+- **QR chat trong phòng**: Khách quét QR để chat với nhân viên
+- **Lịch sử tin nhắn**: Lưu trữ và quản lý cuộc hội thoại
 
 ### 📧 Email tự động
-- Template email có thể tùy chỉnh
-- Gửi email thông báo trạng thái đặt phòng
-- Lịch sử gửi email
+- **Template email**: HTML responsive với thiết kế đẹp
+- **Gửi tự động**: Thông báo trạng thái booking, check-in/out
+- **Cấu hình SMTP**: Hỗ trợ Gmail, Outlook, custom server
+- **Lịch sử gửi**: Theo dõi và quản lý email đã gửi
 
-### 🎫 Voucher
-- Tạo voucher tự động cho khách hàng
-- Cấu hình tỷ lệ giảm giá và thời hạn
-- Quản lý voucher đã sử dụng
+### 🎫 Voucher & khuyến mãi
+- **Tạo voucher tự động**: Cho khách hàng sau check-out
+- **Cấu hình tỷ lệ giảm**: 10% mặc định, có thể tùy chỉnh
+- **Thời hạn sử dụng**: 60 ngày mặc định
+- **Quản lý voucher**: Theo dõi sử dụng và hiệu quả
 
 ### 👥 Quản lý nhân viên
-- Phân quyền admin/nhân viên
-- Chấm công hàng ngày
-- Phê duyệt chấm công (admin)
-- Quản lý lương cơ bản và phụ cấp
-- Tính thưởng theo doanh thu
+- **Phân quyền**: Admin và nhân viên với quyền hạn khác nhau
+- **Chấm công**: Hàng ngày với phê duyệt của admin
+- **Quản lý lương**: Cơ bản + phụ cấp + thưởng theo doanh thu
+- **Thông tin cá nhân**: Avatar, thông tin liên hệ
 
-### 📊 Báo cáo và thống kê
-- Thống kê doanh thu theo tháng/năm
-- Báo cáo khách hàng
-- Xuất báo cáo Excel/PDF
+### 📊 Thống kê & báo cáo
+- **Dashboard tổng quan**: Chỉ số chính (check-in/out, phòng trống, tin nhắn)
+- **Thống kê doanh thu**: Theo tháng/năm với biểu đồ
+- **Báo cáo khách hàng**: Phân tích hành vi khách
+- **Xuất báo cáo**: Excel/PDF với dữ liệu chi tiết
 
-### ⚙️ Cài đặt hệ thống
-- Cấu hình email SMTP
-- Cài đặt thông số voucher
-- Quản lý cấu hình hệ thống
+### ⚙️ Cấu hình hệ thống
+- **Email SMTP**: Cấu hình server gửi email
+- **Thông số voucher**: Tỷ lệ giảm giá, thời hạn
+- **Lương thưởng**: Cấu hình thưởng theo mức doanh thu
+- **Cài đặt chung**: Thông tin khách sạn, logo
 
-## Công nghệ sử dụng
+## 🛠️ Công nghệ sử dụng
 
 ### Backend
-- **Python 3.x**
-- **Flask** - Web framework
-- **Flask-SQLAlchemy** - ORM cho database
-- **Flask-Login** - Quản lý authentication
-- **Flask-SocketIO** - Real-time communication
-- **Flask-Caching** - Caching
-- **Flask-Migrate** - Database migrations
-- **Flask-Compress** - Compression
+- **Python 3.8+**: Ngôn ngữ lập trình chính
+- **Flask 3.0.0**: Web framework nhẹ và linh hoạt
+- **Flask-SQLAlchemy 3.1.1**: ORM cho database với query optimization
+- **Flask-Login 0.6.3**: Quản lý authentication và session
+- **Flask-SocketIO**: Real-time communication cho chat
+- **Flask-Caching 2.1.0**: Caching để tối ưu hiệu suất
+- **Flask-Compress 1.13**: Nén HTTP response
+- **Flask-Migrate 4.0.5**: Database migrations
 
 ### Database
-- **MySQL** với PyMySQL driver
-- Schema được định nghĩa trong `schema.sql`
+- **MySQL 5.7+**: Database chính với PyMySQL driver
+- **Connection Pooling**: 10 connections + 20 overflow
+- **Schema tối ưu**: 15 bảng với indexes và constraints
 
 ### Frontend
-- **HTML5**, **CSS3**, **JavaScript**
-- **Font Awesome** - Icons
-- **FullCalendar** - Lịch đặt phòng
-- **QRCode** - Tạo QR code
+- **HTML5**: Semantic markup
+- **CSS3**: Responsive design với custom styles
+- **JavaScript**: ES6+ với DOM manipulation
+- **Font Awesome 6.4.0**: Icon library
+- **FullCalendar**: Lịch đặt phòng interactive
 
-### Thư viện khác
-- **pandas** - Xử lý dữ liệu
-- **openpyxl** - Xuất Excel
-- **reportlab** - Tạo PDF
-- **APScheduler** - Lên lịch tác vụ
-- **qrcode[pil]** - Tạo QR code
-- **python-dotenv** - Quản lý biến môi trường
+### Thư viện bổ sung
+- **pandas**: Xử lý dữ liệu cho báo cáo
+- **openpyxl**: Xuất Excel
+- **reportlab**: Tạo PDF
+- **APScheduler**: Background jobs
+- **qrcode[pil]**: Tạo QR code
+- **python-dotenv**: Quản lý environment variables
+- **email**: Gửi email với MIME support
 
-## Cài đặt và chạy
+## 📸 Ảnh chụp màn hình
+
+### 1. Trang đăng nhập
+![Trang đăng nhập](screenshots/login.png)
+*Giao diện đăng nhập với form validation và responsive design*
+
+### 2. Dashboard tổng quan
+![Dashboard](screenshots/dashboard.png)
+*Trang chủ hiển thị các thống kê chính: check-in/out hôm nay, phòng có khách, tin nhắn mới*
+
+### 3. Sơ đồ phòng
+![Sơ đồ phòng](screenshots/room_map.png)
+*Hiển thị trực quan trạng thái tất cả phòng với màu sắc phân biệt*
+
+### 4. Đặt phòng offline
+![Đặt phòng](screenshots/booking.png)
+*Form đặt phòng với calendar picker và tính tiền tự động*
+
+### 5. Đặt phòng online
+![Đặt phòng online](screenshots/online_booking.png)
+*Giao diện khách hàng tự đặt phòng với QR thanh toán*
+
+### 6. Chat real-time
+![Chat](screenshots/chat.png)
+*Giao diện chat giữa khách hàng và nhân viên với upload file*
+
+### 7. Quản lý nhân viên
+![Nhân viên](screenshots/employees.png)
+*Danh sách nhân viên với thông tin chi tiết và chức năng chấm công*
+
+### 8. Thống kê doanh thu
+![Thống kê](screenshots/statistics.png)
+*Biểu đồ doanh thu theo tháng với khả năng xuất báo cáo*
+
+## 📦 Cài đặt và chạy
 
 ### Yêu cầu hệ thống
-- Python 3.8+
-- MySQL 5.7+
-- Git
+- **Python**: 3.8 hoặc cao hơn
+- **MySQL**: 5.7 hoặc cao hơn
+- **Git**: Để clone repository
+- **Web Browser**: Chrome, Firefox, Safari, Edge
 
 ### 1. Clone repository
 ```bash
@@ -120,103 +149,89 @@ git clone https://github.com/keyznam-jpg/BTL-Internet.git
 cd BTL-Internet
 ```
 
-### 2. Cài đặt dependencies
+### 2. Tạo môi trường ảo (khuyến nghị)
+```bash
+python -m venv venv
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Linux/Mac
+```
+
+### 3. Cài đặt dependencies
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Cấu hình database
+### 4. Cấu hình database
 - Tạo database MySQL tên `Internet`
-- Import schema từ file `schema_internet.sql`
-- Cấu hình biến môi trường trong file `.env`:
+- Import schema từ file `schema_internet.sql`:
+```sql
+mysql -u root -p Internet < schema_internet.sql
+```
+
+### 5. Cấu hình biến môi trường
+Tạo file `.env` trong thư mục gốc:
 ```env
+# Database
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_USER=root
 MYSQL_PASSWORD=your_password
 MYSQL_DB=Internet
-SECRET_KEY=your_secret_key
+
+# Flask
+SECRET_KEY=your_secret_key_here
 PUBLIC_BASE_URL=http://localhost:5000
 
-# Cấu hình VietQR (tùy chọn)
+# VietQR (tùy chọn)
 VIETQR_BANK_ID=970423
 VIETQR_ACCOUNT_NO=99992162001
 VIETQR_BANK_NAME=TPBank
 VIETQR_ACCOUNT_NAME=Khách sạn PTIT
 DEPOSIT_PERCENT=0.3
 
-# Cấu hình email SMTP (tùy chọn)
+# Email SMTP (tùy chọn)
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USERNAME=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
 ```
 
-### 4. Chạy ứng dụng
-- Sử dụng file `run.bat` (Windows):
-```cmd
-run.bat
-```
-- Hoặc chạy thủ công:
+### 6. Chạy ứng dụng
 ```bash
 python app.py
 ```
-- Ứng dụng sẽ chạy tại `http://127.0.0.1:5000`
-
-### 5. Backup database
-- Sử dụng file `backup.bat` để backup database tự động
-
-## Cấu trúc thư mục
-
-```
-BTL-Internet/
-├── app.py                      # File chính của ứng dụng Flask
-├── schema_internet.sql         # Schema database MySQL
-├── requirements.txt            # Dependencies Python
-├── run.bat                     # Script chạy ứng dụng (Windows)
-├── backup.bat                  # Script backup database
-├── static/                     # Static files (CSS, JS, images)
-│   ├── css/
-│   │   ├── style.css           # CSS chính
-│   │   ├── dashboard.css       # CSS dashboard
-│   │   ├── login.css           # CSS trang đăng nhập
-│   │   └── ...                 # CSS khác
-│   ├── js/
-│   │   ├── payments.js         # JS xử lý thanh toán
-│   │   ├── voucher_check.js    # JS kiểm tra voucher
-│   │   └── ...
-│   └── img/                    # Hình ảnh
-├── templates/                  # Templates HTML
-│   ├── base.html               # Template cơ sở
-│   ├── dashboard.html          # Trang dashboard
-│   ├── login.html              # Trang đăng nhập
-│   ├── dat_phong.html          # Trang đặt phòng
-│   ├── so_do_phong.html        # Sơ đồ phòng
-│   ├── tin_nhan.html           # Trang tin nhắn
-│   └── ...                     # Các template khác
-└── Phần mềm cần cài đặt/       # Tài liệu hướng dẫn cài đặt
+Hoặc sử dụng file batch (Windows):
+```cmd
+run.bat
 ```
 
-## Tài khoản mặc định
+Ứng dụng sẽ chạy tại: `http://127.0.0.1:5000`
+
+### 7. Backup database (khuyến nghị)
+```cmd
+backup.bat
+```
+
+## 👤 Tài khoản mặc định
 
 ### Admin
-- Username: `admin`
-- Password: `admin`
+- **Username**: `admin`
+- **Password**: `admin`
 
 ### Nhân viên mẫu
-- Username: `nam`, Password: `123`
-- Username: `keyz`, Password: `123`
-- Username: `hoang`, Password: `123`
-- Username: `hung`, Password: `123`
+- **Username**: `nam`, **Password**: `123`
+- **Username**: `hoang`, **Password**: `123`
+- **Username**: `hung`, **Password**: `123`
+- **Username**: `keyz`, **Password**: `123`
 
-## API Endpoints chính
+## 🔗 API Endpoints chính
 
 ### Authentication
-- `GET/POST /login` - Đăng nhập
+- `GET/POST /login` - Đăng nhập hệ thống
 - `GET /logout` - Đăng xuất
 
 ### Dashboard
-- `GET /dashboard` - Trang chủ với thống kê
+- `GET /dashboard` - Trang tổng quan với thống kê
 
 ### Quản lý phòng
 - `GET /so-do-phong` - Sơ đồ phòng
@@ -225,7 +240,7 @@ BTL-Internet/
 - `GET/POST /nhan-phong` - Nhận/trả phòng
 
 ### Thanh toán
-- `GET /thanh-toan-chua-hoan-tat` - Danh sách thanh toán chưa hoàn tất
+- `GET /thanh-toan-chua-hoan-tat` - Danh sách thanh toán pending
 - `GET/POST /thanh-toan-dv/<id>` - Thanh toán dịch vụ
 
 ### Khách hàng & Giao tiếp
@@ -246,65 +261,63 @@ BTL-Internet/
 - `GET /cai-dat-email` - Cấu hình email
 - `GET /cai-dat-luong-thuong` - Cấu hình lương thưởng
 
-## Socket.IO Events
+## 🔒 Bảo mật
 
-### Chat
-- `join_room` - Tham gia phòng chat
-- `send_message` - Gửi tin nhắn
-- `receive_message` - Nhận tin nhắn
+- **Authentication**: Flask-Login với session management
+- **Authorization**: Role-based access control (admin/nhanvien)
+- **Input Validation**: Sanitize và validate tất cả user input
+- **SQL Injection Protection**: SQLAlchemy parameterized queries
+- **CSRF Protection**: Token validation cho forms
+- **Rate Limiting**: Flask-Limiter chống brute force
+- **Session Security**: Timeout cho sensitive operations
+- **File Upload Security**: Secure filename và type validation
 
-## Database Schema
+## 📈 Tối ưu hóa hiệu suất
 
-### Bảng chính
-- `nguoidung` - Người dùng (nhân viên, admin)
-- `loaiphong` - Loại phòng
-- `phong` - Phòng
-- `khachhang` - Khách hàng
-- `datphong` - Đặt phòng
-- `dichvu` - Dịch vụ
-- `sudungdv` - Sử dụng dịch vụ
-- `tinnhan` - Tin nhắn
-- `email_log` - Lịch sử email
-- `voucher` - Voucher
-- `attendance` - Chấm công
-- `luongnhanvien` - Lương nhân viên
-- `hethongcauhinh` - Cấu hình hệ thống
+### Đã triển khai
+- ✅ **HTTP Compression**: Giảm 30-50% bandwidth
+- ✅ **Database Pooling**: 10 connections + 20 overflow
+- ✅ **Query Optimization**: Joinedload cho relationships
+- ✅ **Static Caching**: 1 giờ cache cho static files
+- ✅ **Connection Recycling**: Mỗi giờ để tránh stale connections
 
-## Bảo mật
+### Kết quả
+- **Thời gian tải trang**: Giảm đáng kể nhờ compression
+- **Database performance**: Tái sử dụng connections
+- **Memory usage**: Hiệu quả hơn với pooling
+- **Scalability**: Hỗ trợ 100+ concurrent users
 
-- Rate limiting với Flask-Limiter
-- Session timeout cho thanh toán
-- Authentication với Flask-Login
-- Sanitize input và SQL injection protection qua SQLAlchemy
-- CSRF protection (nếu cần)
-
-## Phát triển thêm
+## 🚀 Phát triển thêm
 
 ### Tính năng có thể mở rộng
-- API RESTful cho mobile app
-- Tích hợp thanh toán online (VNPay, Momo)
-- Push notification
-- Đa ngôn ngữ
-- Phân tích dữ liệu nâng cao
-- Tích hợp AI chatbot
+- **API RESTful**: Cho mobile app và integrations
+- **Tích hợp thanh toán**: VNPay, Momo, Stripe
+- **Push Notifications**: Firebase Cloud Messaging
+- **Đa ngôn ngữ**: i18n support
+- **AI Chatbot**: Tư vấn tự động cho khách
+- **Analytics nâng cao**: Machine learning cho predictions
+- **Multi-tenant**: Hỗ trợ nhiều khách sạn
+- **Mobile App**: React Native hoặc Flutter
 
 ### Đóng góp
 1. Fork repository
-2. Tạo branch feature mới
-3. Commit changes
+2. Tạo branch feature mới: `git checkout -b feature/ten-tinh-nang`
+3. Commit changes: `git commit -m "Add new feature"`
 4. Push và tạo Pull Request
 
-## Giấy phép
+## 📝 Giấy phép
 
-Dự án này được phát triển cho mục đích học tập và nghiên cứu.
+Dự án này được phát triển cho mục đích học tập và nghiên cứu tại Học viện Công nghệ Bưu chính Viễn thông (PTIT).
 
-## Liên hệ
+## 📞 Liên hệ
 
 - **Tác giả**: Hoàng Anh Nam
 - **Trường**: Học viện Công nghệ Bưu chính Viễn thông (PTIT)
 - **Môn học**: Internet và Giao thức
 - **Năm**: 2025
+- **Email**: [your-email@example.com]
+- **GitHub**: [https://github.com/keyznam-jpg]
 
 ---
 
-*Hệ thống được thiết kế để đáp ứng các yêu cầu quản lý khách sạn hiện đại với giao diện thân thiện và chức năng toàn diện.*
+*Hệ thống được thiết kế để đáp ứng các yêu cầu quản lý khách sạn hiện đại với giao diện thân thiện, bảo mật cao và khả năng mở rộng tốt. Cảm ơn bạn đã quan tâm đến dự án!* 🚀

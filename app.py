@@ -4119,7 +4119,7 @@ def tai_xuong_luong_excel():
     wb.save(output)
     output.seek(0)
 
-    filename = f'Bang_luong_{current_user.ten.replace(" ", "_")}_{start_month.strftime("%m_%Y")}.xlsx'
+    filename = f'Bảng lương {current_user.ten.replace(" ", "_")}_{start_month.strftime("%m_%Y")}.xlsx'
 
     return send_file(
         output,
@@ -5310,7 +5310,7 @@ def xuat_excel_hoa_don():
     output.seek(0)
     
     # Tạo response với file Excel
-    filename = f"danh_sach_hoa_don_nang_cao_{now.strftime('%Y%m%d_%H%M%S')}.xlsx"
+    filename = f"Danh sách hóa đơn_{now.strftime('%Y%m%d_%H%M%S')}.xlsx"
     return send_file(
         output,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -5434,7 +5434,7 @@ def xuat_excel_khach_hang():
     output.seek(0)
     
     # Tạo response với file Excel
-    filename = f"danh_sach_khach_hang_{now.strftime('%Y%m%d_%H%M%S')}.xlsx"
+    filename = f"Danh sách khách hàng_{now.strftime('%Y%m%d_%H%M%S')}.xlsx"
     return send_file(
         output,
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -5885,7 +5885,7 @@ def xuat_bao_cao_doanh_thu(nam):
     return send_file(
         output, 
         as_attachment=True, 
-        download_name=f'Bao_cao_doanh_thu_{nam}_nang_cao.xlsx', 
+        download_name=f'Báo cáo doanh thu_{nam}.xlsx', 
         mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
@@ -7219,8 +7219,8 @@ def export_luong_nhan_vien(nhanvien_id):
             worksheet.column_dimensions[column_letter].width = min(adjusted_width, 40)
     
     output.seek(0)
-    
-    filename = f'luong_{nv.ten}_{now.month}_{now.year}_nang_cao.xlsx'
+
+    filename = f'Lương {nv.ten}_{now.month}_{now.year}.xlsx'
     return send_file(
         output,
         as_attachment=True,
@@ -7434,8 +7434,8 @@ def export_luong_all():
         summary_sheet.column_dimensions['B'].width = 25
     
     output.seek(0)
-    
-    filename = f'luong_tong_hop_{now.month}_{now.year}_nang_cao.xlsx'
+
+    filename = f'Lương tổng hợp tháng {now.month} năm {now.year}.xlsx'
     return send_file(
         output,
         as_attachment=True,

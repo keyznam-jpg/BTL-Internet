@@ -2835,12 +2835,107 @@ def nhan_phong():
     ds_thue = DatPhong.query.filter_by(trang_thai='nhan').order_by(DatPhong.ngay_nhan.desc()).all()
     return render_template('nhan_phong.html', ds_nhan=ds_nhan, ds_thue=ds_thue, voucher_discount=discount_percent)
 
+
+def build_service_booking_payload(dat_phong):
+    """Return booking/service details for async updates."""
+    if not dat_phong:
+        return None
+
+    rows = (
+        SuDungDichVu.query
+        .filter_by(datphong_id=dat_phong.id, trang_thai='chua_thanh_toan')
+        .order_by(SuDungDichVu.thoi_gian.asc())
+        .all()
+    )
+    services = []
+    total = 0
+    for row in rows:
+        unit_price = row.dichvu.gia if row.dichvu else 0
+        quantity = row.so_luong or 0
+        amount = unit_price * quantity
+        total += amount
+        services.append({
+            'id': row.id,
+            'ten': row.dichvu.ten if row.dichvu else '',
+            'gia': unit_price,
+            'so_luong': quantity,
+            'thanh_tien': amount
+        })
+
+    return {
+        'id': dat_phong.id,
+        'phong_id': dat_phong.phong_id,
+        'phong_ten': dat_phong.phong.ten if dat_phong.phong else '',
+        'khach_ten': dat_phong.khachhang.ho_ten if dat_phong.khachhang else '',
+        'khach_sdt': getattr(dat_phong.khachhang, 'dien_thoai', '') if dat_phong.khachhang else '',
+        'services': services,
+        'tong': total
+    }
+
+
+def build_salary_settings_context(selected_id=None):
+    """Return context data used by the salary settings page."""
+    all_staffs = NguoiDung.query.order_by(NguoiDung.ten.asc()).all()
+    if selected_id:
+        staffs = [s for s in all_staffs if s.id == selected_id]
+        if not staffs:
+            selected_id = None
+            staffs = all_staffs
+    else:
+        staffs = all_staffs
+
+    bonus_amount = get_top_bonus()
+
+    now = datetime.now()
+    start_month = datetime(now.year, now.month, 1)
+    next_month = (start_month + timedelta(days=32)).replace(day=1)
+    month_rows = db.session.query(
+        DatPhong.nhanvien_id.label('nv_id'),
+        func.coalesce(func.sum(DatPhong.tong_thanh_toan), 0).label('doanh_thu')
+    ).filter(
+        DatPhong.trang_thai == 'da_thanh_toan',
+        DatPhong.thuc_te_tra >= start_month,
+        DatPhong.thuc_te_tra < next_month
+    ).group_by(DatPhong.nhanvien_id).all()
+    top_staff_ids = set()
+    if month_rows:
+        top_max = max(int(row.doanh_thu or 0) for row in month_rows)
+        if top_max > 0:
+            top_staff_ids = {row.nv_id for row in month_rows if int(row.doanh_thu or 0) == top_max}
+
+    salary_records = {item.nguoidung_id: item for item in LuongNhanVien.query.all()}
+    tiers = LuongThuongCauHinh.query.order_by(LuongThuongCauHinh.moc_duoi.asc()).all()
+
+    total_base = sum((record.luong_co_ban or 0) for record in salary_records.values())
+    total_allowance = sum((record.phu_cap or 0) for record in salary_records.values())
+    configured_count = len(salary_records)
+
+    min_days = get_min_work_days()
+    auto_cancel_minutes = get_config_int('auto_cancel_minutes', 5)
+
+    return {
+        'staffs': staffs,
+        'all_staffs': all_staffs,
+        'selected_id': selected_id,
+        'bonus_amount': bonus_amount,
+        'top_staff_ids': top_staff_ids,
+        'top_staffs': [s for s in all_staffs if s.id in top_staff_ids],
+        'salary_records': salary_records,
+        'tiers': tiers,
+        'total_base': total_base,
+        'total_allowance': total_allowance,
+        'configured_count': configured_count,
+        'min_days': min_days,
+        'auto_cancel_minutes': auto_cancel_minutes,
+    }
+
 @app.route('/dich-vu-thanh-toan')
 @login_required
 def dich_vu_thanh_toan():
     dat_id = request.args.get("dat_id")
     chon_dat = DatPhong.query.get(int(dat_id)) if dat_id else None
     hoa_don_dv = SuDungDichVu.query.filter_by(datphong_id=dat_id, trang_thai='chua_thanh_toan').all() if dat_id else []
+    initial_booking = build_service_booking_payload(chon_dat) if chon_dat else None
     
     phongs = Phong.query.all()
     now = datetime.now()
@@ -2856,7 +2951,14 @@ def dich_vu_thanh_toan():
         else:
             p.calculated_status = p.trang_thai
             
-    return render_template('dichvu_thanhtoan.html', loais=DichVuLoai.query.all(), phongs=phongs, chon_dat=chon_dat, hoa_don_dv=hoa_don_dv)
+    return render_template(
+        'dichvu_thanhtoan.html',
+        loais=DichVuLoai.query.all(),
+        phongs=phongs,
+        chon_dat=chon_dat,
+        hoa_don_dv=hoa_don_dv,
+        initial_booking=initial_booking
+    )
 
 @app.route('/thanh-toan-dv/<int:dat_id>', methods=['GET', 'POST'])
 @login_required
@@ -3102,13 +3204,16 @@ def thanh_toan(dat_id):
 def qr_confirm(token):
     session = get_payment_session(token)
     if not session:
-        return render_template('payment_confirm.html', error='Phien thanh toan khong hop le hoac da het han.')
+        return render_template('payment_confirm.html', error='Phiên thanh toán không hợp lệ hoặc đã hết hạn.')
 
     if payment_session_expired(session['created_at']):
         pop_payment_session(token)
-        return render_template('payment_confirm.html', error='Phien thanh toan da het han (qua 5 phut).')
+        return render_template('payment_confirm.html', error='Phiên thanh toán đã hết hạn (quá 5 phút).')
 
     data = session['data']
+    if data.get('completed'):
+        return render_template('payment_confirm.html', error='Phiên thanh toán đã được xác nhận. Vui lòng tạo mã QR mới nếu cần.')
+
     kind = session['kind']
     if kind == 'deposit':
         dp = DatPhong.query.get_or_404(data['dat_id'])
@@ -3123,7 +3228,7 @@ def qr_confirm(token):
         amount = data.get('amount_due', 0)
         description = f"Thanh toan phong #{dp.id}"
     else:
-        return render_template('payment_confirm.html', error='Loai thanh toan khong duoc ho tro.')
+        return render_template('payment_confirm.html', error='Loại thanh toán không được hỗ trợ.')
 
     expires_at = payment_session_expires_at(session['created_at'])
     remaining = max(0, int((expires_at - datetime.now()).total_seconds()))
@@ -3190,6 +3295,9 @@ def show_qr_deposit(token):
     confirm_url = url_for('qr_confirm', token=token, _external=True)
     status_url = url_for('api_payment_status', token=token)
     invoice_url = url_for('in_hoa_don_coc', dat_id=dp.id)
+    if data.get('completed'):
+        flash('Phiên thanh toán đã được xác nhận. Vui lòng tạo mã QR mới nếu cần.', 'info')
+        return redirect(invoice_url)
     expires_at = payment_session_expires_at(session['created_at'])
     remaining = max(0, int((expires_at - datetime.now()).total_seconds()))
 
@@ -3224,6 +3332,9 @@ def show_qr_service(token):
     confirm_url = url_for('qr_confirm', token=token, _external=True)
     status_url = url_for('api_payment_status', token=token)
     invoice_url = url_for('in_hoa_don_dv', token=token)
+    if data.get('completed'):
+        flash('Phiên thanh toán đã được xác nhận. Vui lòng tạo mã QR mới nếu cần.', 'info')
+        return redirect(invoice_url)
     expires_at = payment_session_expires_at(session['created_at'])
     remaining = max(0, int((expires_at - datetime.now()).total_seconds()))
 
@@ -3260,6 +3371,9 @@ def show_qr_room(token):
     confirm_url = url_for('qr_confirm', token=token, _external=True)
     status_url = url_for('api_payment_status', token=token)
     invoice_url = url_for('in_hoa_don', dat_id=dp.id)
+    if data.get('completed'):
+        flash('Phiên thanh toán đã được xác nhận. Vui lòng tạo mã QR mới nếu cần.', 'info')
+        return redirect(invoice_url)
     expires_at = payment_session_expires_at(session['created_at'])
     remaining = max(0, int((expires_at - datetime.now()).total_seconds()))
     calc_values = data.get('calc_values', {})
@@ -3282,11 +3396,11 @@ def show_qr_room(token):
 def api_confirm_payment(token):
     session_model = PaymentSession.query.filter_by(token=token).first()
     if not session_model:
-        return jsonify({'success': False, 'message': 'Phien thanh toan khong hop le.'}), 404
+        return jsonify({'success': False, 'message': 'Phiên thanh toán không hợp lệ.'}), 404
 
     if payment_session_expired(session_model.created_at):
         pop_payment_session(token)
-        return jsonify({'success': False, 'message': 'Phien thanh toan da het han.'})
+        return jsonify({'success': False, 'message': 'Phiên thanh toán đã hết hạn.'})
 
     try:
         data = json.loads(session_model.payload or '{}')
@@ -3331,7 +3445,7 @@ def api_confirm_payment(token):
                 updated += 1
             if updated == 0:
                 db.session.rollback()
-                return jsonify({'success': False, 'message': 'Khong tim thay dich vu can xac nhan.'})
+                return jsonify({'success': False, 'message': 'Không tìm thấy dịch vụ cần xác nhận.'})
             dp.tien_dv = (dp.tien_dv or 0) + amount_total
             data['redirect_url'] = url_for('cam_on', token=token)
             data['message'] = 'Cảm ơn bạn đã thanh toán dịch vụ. Dịch vụ của bạn đã được xác nhận.'
@@ -3370,7 +3484,7 @@ def api_confirm_payment(token):
             socketio.emit('room_payment_confirmed', {'dat_id': dat_id})
             return jsonify({'success': True, 'redirect_url': data['redirect_url']})
 
-        return jsonify({'success': False, 'message': 'Loai thanh toan khong duoc ho tro.'}), 400
+        return jsonify({'success': False, 'message': 'Loại thanh toán không được hỗ trợ.'}), 400
     except Exception as exc:
         db.session.rollback()
         return jsonify({'success': False, 'message': str(exc)}), 500
@@ -3594,10 +3708,16 @@ def in_hoa_don(dat_id):
 @app.route('/xoa-sudung-dichvu/<int:sudungdv_id>', methods=['POST'])
 @login_required
 def xoa_sudung_dichvu(sudungdv_id):
+    wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     sd_item = SuDungDichVu.query.get_or_404(sudungdv_id)
     datphong_id = sd_item.datphong_id
-    db.session.delete(sd_item); db.session.commit()
-    flash('Đã xóa dịch vụ khỏi hóa đơn.', 'success')
+    db.session.delete(sd_item)
+    db.session.commit()
+    booking_payload = build_service_booking_payload(DatPhong.query.get(datphong_id))
+    message = 'Đã xóa dịch vụ khỏi hóa đơn.'
+    if wants_json:
+        return jsonify({'message': message, 'booking': booking_payload})
+    flash(message, 'success')
     return redirect(url_for('dich_vu_thanh_toan', dat_id=datphong_id))
 
 @app.route('/tra-phong/<int:dat_id>', methods=['POST'])
@@ -4431,132 +4551,129 @@ def xoa_nhan_vien(nhanvien_id):
 @login_required
 @roles_required('admin')
 def cai_dat_luong_thuong():
+    selected_id = request.args.get('staff_id', type=int)
+    wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+
     if request.method == 'POST':
         form_name = request.form.get('form_name')
+        status = 'success'
+        message = ''
+        http_status = 200
+
         if form_name == 'save_salary':
-            nguoidung_id = int(request.form['nguoidung_id'])
-            luong_co_ban = int(request.form.get('luong_co_ban', 0) or 0)
-            phu_cap = int(request.form.get('phu_cap', 0) or 0)
-            record = LuongNhanVien.query.filter_by(nguoidung_id=nguoidung_id).first()
-            if not record:
-                record = LuongNhanVien(nguoidung_id=nguoidung_id)
-                db.session.add(record)
-            record.luong_co_ban = max(0, luong_co_ban)
-            record.phu_cap = max(0, phu_cap)
-            db.session.commit()
-            flash('Đã cập nhật lương cho nhân viên.', 'success')
+            try:
+                nguoidung_id = int(request.form['nguoidung_id'])
+                luong_co_ban = int(request.form.get('luong_co_ban', 0) or 0)
+                phu_cap = int(request.form.get('phu_cap', 0) or 0)
+                record = LuongNhanVien.query.filter_by(nguoidung_id=nguoidung_id).first()
+                if not record:
+                    record = LuongNhanVien(nguoidung_id=nguoidung_id)
+                    db.session.add(record)
+                record.luong_co_ban = max(0, luong_co_ban)
+                record.phu_cap = max(0, phu_cap)
+                db.session.commit()
+                message = 'Đã cập nhật lương cho nhân viên.'
+            except Exception:
+                db.session.rollback()
+                status = 'danger'
+                http_status = 400
+                message = 'Không thể cập nhật lương cho nhân viên.'
         elif form_name == 'set_min_work_days':
             try:
                 min_days = int(request.form.get('min_work_days', 0) or 0)
                 set_min_work_days(min_days)
-                flash('Đã cập nhật số ngày công tối thiểu nhận phụ cấp.', 'success')
+                message = 'Đã cập nhật số ngày công tối thiểu nhận phụ cấp.'
             except Exception:
-                flash('Cập nhật số ngày công thất bại.', 'danger')
-            return redirect(url_for('cai_dat_luong_thuong'))
+                status = 'danger'
+                http_status = 400
+                message = 'Cập nhật số ngày công thất bại.'
         elif form_name == 'save_tier':
-            tier_id = request.form.get('tier_id')
-            moc_duoi = int(request.form.get('moc_duoi', 0) or 0)
-            moc_tren_raw = request.form.get('moc_tren')
-            moc_tren = int(moc_tren_raw) if moc_tren_raw else None
-            ty_le = float(request.form.get('ty_le', 0) or 0)
-            ghi_chu = request.form.get('ghi_chu', '')
-            if tier_id:
-                tier = LuongThuongCauHinh.query.get(int(tier_id))
-                if tier:
-                    tier.moc_duoi = moc_duoi
-                    tier.moc_tren = moc_tren
-                    tier.ty_le = ty_le
-                    tier.ghi_chu = ghi_chu
+            try:
+                tier_id = request.form.get('tier_id')
+                moc_duoi = int(request.form.get('moc_duoi', 0) or 0)
+                moc_tren_raw = request.form.get('moc_tren')
+                moc_tren = int(moc_tren_raw) if moc_tren_raw else None
+                ty_le = float(request.form.get('ty_le', 0) or 0)
+                ghi_chu = request.form.get('ghi_chu', '')
+            except (TypeError, ValueError):
+                status = 'danger'
+                http_status = 400
+                message = 'Dữ liệu cấu hình không hợp lệ.'
             else:
-                tier = LuongThuongCauHinh(moc_duoi=moc_duoi, moc_tren=moc_tren, ty_le=ty_le, ghi_chu=ghi_chu)
-                db.session.add(tier)
-            db.session.commit()
-            flash('Đã lưu mức thưởng.', 'success')
+                try:
+                    if tier_id:
+                        tier = LuongThuongCauHinh.query.get(int(tier_id))
+                        if tier:
+                            tier.moc_duoi = moc_duoi
+                            tier.moc_tren = moc_tren
+                            tier.ty_le = ty_le
+                            tier.ghi_chu = ghi_chu
+                    else:
+                        tier = LuongThuongCauHinh(moc_duoi=moc_duoi, moc_tren=moc_tren, ty_le=ty_le, ghi_chu=ghi_chu)
+                        db.session.add(tier)
+                    db.session.commit()
+                    message = 'Đã lưu mức thưởng.'
+                except Exception:
+                    db.session.rollback()
+                    status = 'danger'
+                    http_status = 400
+                    message = 'Không thể lưu mức thưởng.'
         elif form_name == 'delete_tier':
-            tier_id = int(request.form['tier_id'])
-            tier = LuongThuongCauHinh.query.get_or_404(tier_id)
-            db.session.delete(tier)
-            db.session.commit()
-            flash('Đã xoá mức thưởng.', 'success')
+            try:
+                tier_id = int(request.form['tier_id'])
+                tier = LuongThuongCauHinh.query.get_or_404(tier_id)
+                db.session.delete(tier)
+                db.session.commit()
+                message = 'Đã xóa mức thưởng.'
+            except Exception:
+                db.session.rollback()
+                status = 'danger'
+                http_status = 400
+                message = 'Không thể xóa mức thưởng.'
         elif form_name == 'save_top_bonus':
             try:
                 bonus_value = int(request.form.get('top_bonus', 0) or 0)
+                set_config_int('TOP_REVENUE_BONUS', bonus_value)
+                message = 'Đã cập nhật thưởng top doanh thu.'
             except ValueError:
-                bonus_value = 0
-            set_config_int('TOP_REVENUE_BONUS', bonus_value)
-            flash('Đã cập nhật thưởng top doanh thu.', 'success')
-            return redirect(url_for('cai_dat_luong_thuong', staff_id=request.args.get('staff_id', '')))
+                status = 'danger'
+                http_status = 400
+                message = 'Giá trị không hợp lệ.'
         elif form_name == 'save_auto_cancel':
             try:
                 minutes = int(request.form.get('auto_cancel_minutes', 5) or 5)
                 if minutes < 1:
                     minutes = 5
                 set_config_int('auto_cancel_minutes', minutes)
-                flash('Đã cập nhật thời gian tự động hủy đặt phòng.', 'success')
+                message = 'Đã cập nhật thời gian tự động hủy đặt phòng.'
             except ValueError:
-                flash('Giá trị không hợp lệ.', 'danger')
-            return redirect(url_for('cai_dat_luong_thuong', staff_id=request.args.get('staff_id', '')))
+                status = 'danger'
+                http_status = 400
+                message = 'Giá trị không hợp lệ.'
         else:
-            flash('Yêu cầu không hợp lệ.', 'warning')
-        return redirect(url_for('cai_dat_luong_thuong', staff_id=request.args.get('staff_id', '')))
+            status = 'warning'
+            http_status = 400
+            message = 'Yêu cầu không hợp lệ.'
 
-    all_staffs = NguoiDung.query.order_by(NguoiDung.ten.asc()).all()
-    selected_id = request.args.get('staff_id', type=int)
-    if selected_id:
-        staffs = [s for s in all_staffs if s.id == selected_id]
-        if not staffs:
-            selected_id = None
-            staffs = all_staffs
-    else:
-        staffs = all_staffs
+        if wants_json:
+            context = build_salary_settings_context(selected_id)
+            payload = {
+                'message': message,
+                'status': status,
+                'stats_html': render_template('partials/salary_stats_grid.html', **context),
+                'employees_html': render_template('partials/salary_employee_list.html', **context),
+                'tiers_html': render_template('partials/salary_tier_list.html', **context),
+            }
+            return jsonify(payload), http_status
 
-    bonus_amount = get_top_bonus()
+        flash(message, status)
+        redirect_kwargs = {}
+        if selected_id:
+            redirect_kwargs['staff_id'] = selected_id
+        return redirect(url_for('cai_dat_luong_thuong', **redirect_kwargs))
 
-    now = datetime.now()
-    start_month = datetime(now.year, now.month, 1)
-    next_month = (start_month + timedelta(days=32)).replace(day=1)
-    month_rows = db.session.query(
-        DatPhong.nhanvien_id.label('nv_id'),
-        func.coalesce(func.sum(DatPhong.tong_thanh_toan), 0).label('doanh_thu')
-    ).filter(
-        DatPhong.trang_thai == 'da_thanh_toan',
-        DatPhong.thuc_te_tra >= start_month,
-        DatPhong.thuc_te_tra < next_month
-    ).group_by(DatPhong.nhanvien_id).all()
-    top_staff_ids = set()
-    if month_rows:
-        top_max = max(int(row.doanh_thu or 0) for row in month_rows)
-        if top_max > 0:
-            top_staff_ids = {row.nv_id for row in month_rows if int(row.doanh_thu or 0) == top_max}
-
-    top_staffs = [s for s in all_staffs if s.id in top_staff_ids]
-
-    salary_records = {item.nguoidung_id: item for item in LuongNhanVien.query.all()}
-    tiers = LuongThuongCauHinh.query.order_by(LuongThuongCauHinh.moc_duoi.asc()).all()
-
-    total_base = sum((record.luong_co_ban or 0) for record in salary_records.values())
-    total_allowance = sum((record.phu_cap or 0) for record in salary_records.values())
-    configured_count = len(salary_records)
-
-    min_days = get_min_work_days()
-    auto_cancel_minutes = get_config_int('auto_cancel_minutes', 5)
-    return render_template(
-        'cai_dat_luong_thuong.html',
-        staffs=staffs,
-        all_staffs=all_staffs,
-        selected_id=selected_id,
-        salary_records=salary_records,
-        tiers=tiers,
-        total_base=total_base,
-        total_allowance=total_allowance,
-        configured_count=configured_count,
-        top_staff_ids=top_staff_ids,
-        top_staffs=top_staffs,
-        bonus_amount=bonus_amount,
-        start_month=start_month,
-        min_days=min_days,
-        auto_cancel_minutes=auto_cancel_minutes
-    )
+    context = build_salary_settings_context(selected_id)
+    return render_template('cai_dat_luong_thuong.html', **context)
 
 
 @app.route('/cai-dat-email', methods=['GET', 'POST'])
@@ -6806,8 +6923,12 @@ def api_validate_voucher():
 @login_required
 def api_dat_theo_phong(phong_id):
     dp = DatPhong.query.filter_by(phong_id=phong_id, trang_thai='nhan').order_by(DatPhong.id.desc()).first()
-    if not dp: return jsonify({'error': 'Không có đặt phòng hợp lệ'}), 404
-    return jsonify({'id': dp.id})
+    if not dp:
+        return jsonify({'error': 'Không có đặt phòng hợp lệ'}), 404
+    return jsonify({
+        'id': dp.id,
+        'booking': build_service_booking_payload(dp)
+    })
 
 @app.route('/api/dichvu-theo-loai/<int:loai_id>')
 @login_required
@@ -6818,16 +6939,51 @@ def api_dichvu_theo_loai(loai_id):
 @app.route('/them-dich-vu', methods=['POST'])
 @login_required
 def them_dich_vu():
-    dat_id = int(request.form['dat_id'])
+    wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    dat_raw = (request.form.get('dat_id') or '').strip()
+    try:
+        dat_id = int(dat_raw)
+    except (TypeError, ValueError):
+        dat_id = None
+
+    if not dat_id:
+        message = 'Vui lòng chọn phòng đang sử dụng trước khi thêm dịch vụ.'
+        if wants_json:
+            return jsonify({'message': message}), 400
+        flash(message, 'danger')
+        return redirect(url_for('dich_vu_thanh_toan'))
+
     dp = DatPhong.query.get_or_404(dat_id)
     if dp.trang_thai != 'nhan':
-        flash('Không thể thêm dịch vụ cho phòng chưa được nhận hoặc đã trả.', 'danger')
+        message = 'Không thể thêm dịch vụ cho phòng chưa nhận hoặc đã trả.'
+        if wants_json:
+            return jsonify({'message': message}), 400
+        flash(message, 'danger')
         return redirect(url_for('dich_vu_thanh_toan'))
-    dv_id = int(request.form['dv_id'])
-    so_luong = int(request.form.get('so_luong', '1'))
+
+    try:
+        dv_id = int(request.form['dv_id'])
+    except (KeyError, TypeError, ValueError):
+        message = 'Vui lòng chọn dịch vụ hợp lệ.'
+        if wants_json:
+            return jsonify({'message': message}), 400
+        flash(message, 'danger')
+        return redirect(url_for('dich_vu_thanh_toan', dat_id=dat_id))
+
+    try:
+        so_luong = int(request.form.get('so_luong', '1'))
+    except (TypeError, ValueError):
+        so_luong = 1
+
     sd = SuDungDichVu(datphong_id=dat_id, dichvu_id=dv_id, so_luong=max(1, so_luong))
-    db.session.add(sd); db.session.commit()
-    flash('Đã thêm dịch vụ.', 'success')
+    db.session.add(sd)
+    db.session.commit()
+
+    booking_payload = build_service_booking_payload(dp)
+    message = 'Đã thêm dịch vụ.'
+    if wants_json:
+        return jsonify({'message': message, 'booking': booking_payload})
+    flash(message, 'success')
     return redirect(url_for('dich_vu_thanh_toan', dat_id=dat_id))
 
 @app.route('/export-luong/<int:nhanvien_id>')

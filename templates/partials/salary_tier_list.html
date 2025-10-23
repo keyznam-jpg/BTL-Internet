@@ -1,0 +1,72 @@
+<div class="tier-list">
+  {% for tier in tiers %}
+  <div class="tier-card">
+    <form method="post">
+      <input type="hidden" name="tier_id" value="{{ tier.id }}">
+      
+      <div class="tier-fields">
+        <div class="tier-field">
+          <label><i class="fas fa-money-bill-wave"></i> Từ mức (VNĐ)</label>
+          <input type="number" min="0" name="moc_duoi" value="{{ tier.moc_duoi }}" required>
+        </div>
+        <div class="tier-field">
+          <label><i class="fas fa-money-bill-wave"></i> Đến mức (VNĐ)</label>
+          <input type="number" min="0" name="moc_tren" 
+                 value="{{ tier.moc_tren if tier.moc_tren is not none else '' }}" 
+                 placeholder="Không giới hạn">
+        </div>
+        <div class="tier-field">
+          <label><i class="fas fa-chart-pie"></i> Tỷ lệ (%)</label>
+          <input type="number" step="0.1" min="0" name="ty_le" value="{{ tier.ty_le }}" required>
+        </div>
+      </div>
+
+      <div class="tier-note">
+        <label><i class="fas fa-sticky-note"></i> Ghi chú</label>
+        <input type="text" name="ghi_chu" value="{{ tier.ghi_chu or '' }}" 
+               placeholder="Ví dụ: Hoa hồng cao">
+      </div>
+
+      <div class="tier-actions">
+        <button type="submit" name="form_name" value="save_tier" class="btn-tier-save">
+          <i class="fas fa-save"></i> Lưu
+        </button>
+        <button type="submit" name="form_name" value="delete_tier" class="btn-tier-delete"
+                onclick="return confirm('Xóa mức thưởng này?');">
+          <i class="fas fa-trash"></i> Xóa
+        </button>
+      </div>
+    </form>
+  </div>
+  {% endfor %}
+
+  <div class="tier-card add-new">
+    <form method="post">
+      <input type="hidden" name="form_name" value="save_tier">
+      
+      <div class="tier-fields">
+        <div class="tier-field">
+          <label><i class="fas fa-money-bill-wave"></i> Từ mức (VNĐ)</label>
+          <input type="number" min="0" name="moc_duoi" required placeholder="0">
+        </div>
+        <div class="tier-field">
+          <label><i class="fas fa-money-bill-wave"></i> Đến mức (VNĐ)</label>
+          <input type="number" min="0" name="moc_tren" placeholder="Không giới hạn">
+        </div>
+        <div class="tier-field">
+          <label><i class="fas fa-chart-pie"></i> Tỷ lệ (%)</label>
+          <input type="number" step="0.1" min="0" name="ty_le" required placeholder="0.0">
+        </div>
+      </div>
+
+      <div class="tier-note">
+        <label><i class="fas fa-sticky-note"></i> Ghi chú</label>
+        <input type="text" name="ghi_chu" placeholder="Ví dụ: Thưởng vượt KPI">
+      </div>
+
+      <button type="submit" class="btn-add-tier">
+        <span><i class="fas fa-plus"></i></span> Thêm mức thưởng mới
+      </button>
+    </form>
+  </div>
+</div>

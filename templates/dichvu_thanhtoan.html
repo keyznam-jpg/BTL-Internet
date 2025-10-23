@@ -38,17 +38,32 @@
         </div>
       </div>
 
-      {% if chon_dat %}
-      <div class="selected-room-info">
-        <strong><i class="fas fa-check"></i> Đang xử lý:</strong>
-        <div class="room-detail">
+      <div
+        class="selected-room-info"
+        id="selected-room-info"
+        data-has-room="{{ '1' if chon_dat else '0' }}"
+      >
+        <strong
+          class="selected-room-label"
+          {% if not chon_dat %}style="display:none;"{% endif %}
+        >
+          <i class="fas fa-check"></i> Đang xử lý:
+        </strong>
+        <div class="room-detail" id="selected-room-detail">
+          {% if chon_dat %}
           <i class="fas fa-user"></i> {{ chon_dat.khachhang.ho_ten }}<br>
           <i class="fas fa-door-open"></i> {{ chon_dat.phong.ten }}
+          {% else %}
+          <i class="fas fa-info-circle"></i> Chọn phòng đang có khách để thao tác dịch vụ.
+          {% endif %}
         </div>
       </div>
-      {% endif %}
 
-      <div class="rooms-grid">
+      <div
+        class="rooms-grid"
+        id="rooms-grid"
+        data-selected-phong="{{ chon_dat.phong.id if chon_dat and chon_dat.phong else '' }}"
+      >
         {% for p in phongs %}
         {% set room_class = 'available' %}
         {% set room_title = 'Phòng trống' %}
@@ -164,7 +179,7 @@
             <th style="width: 80px;">Thao tác</th>
           </tr>
         </thead>
-        <tbody>
+        <tbody id="invoice-body">
           {% set ns = namespace(tong=0) %}
           {% if hoa_don_dv %}
             {% for r in hoa_don_dv %}
@@ -177,10 +192,13 @@
               <td style="text-align: center;">{{ r.so_luong }}</td>
               <td><strong>{{ thanh|vnd }}</strong></td>
               <td>
-                <form method="post" action="{{ url_for('xoa_sudung_dichvu', sudungdv_id=r.id) }}" 
-                      onsubmit="return confirm('Bạn có chắc muốn xóa dịch vụ này?');" style="margin: 0;">
-                  <button type="submit" class="btn-delete"><i class="fas fa-trash"></i> Xóa</button>
-                </form>
+                <button
+                  type="button"
+                  class="btn-delete btn-remove-service"
+                  data-id="{{ r.id }}"
+                >
+                  <i class="fas fa-trash"></i> Xóa
+                </button>
               </td>
             </tr>
             {% endfor %}
@@ -196,123 +214,53 @@
         <tfoot>
           <tr>
             <th colspan="4" style="text-align: right; font-size: 16px;">Tổng cộng:</th>
-            <th colspan="2" style="font-size: 18px;">{{ ns.tong|vnd }}</th>
+            <th colspan="2" id="invoice-total" style="font-size: 18px;">{{ ns.tong|vnd }}</th>
           </tr>
         </tfoot>
         </table>
       </div>
 
-      {% if chon_dat and hoa_don_dv|length > 0 %}
-      <div class="invoice-footer">
-        <form method="post" action="{{ url_for('thanh_toan_dv', dat_id=chon_dat.id) }}">
-          <button class="btn-payment" type="submit">
+      <div
+        class="invoice-footer"
+        id="invoice-footer"
+        data-base-action="{{ url_for('thanh_toan_dv', dat_id=0).rsplit('/', 1)[0] }}"
+        {% if not chon_dat or hoa_don_dv|length == 0 %}style="display: none;"{% endif %}
+      >
+        <form
+          id="payment-form"
+          method="post"
+          {% if chon_dat %}action="{{ url_for('thanh_toan_dv', dat_id=chon_dat.id) }}"{% endif %}
+        >
+          <button
+            id="btn-payment"
+            class="btn-payment"
+            type="submit"
+            {% if not chon_dat or hoa_don_dv|length == 0 %}disabled{% endif %}
+          >
             <span><i class="fas fa-credit-card"></i></span> Thanh toán Dịch vụ
           </button>
         </form>
       </div>
-      {% endif %}
     </div>
   </div>
 </div>
 
 <script>
-// ========== ROOM SELECTION ==========
-async function selectPhongAndRedirect(pid) {
-  try {
-    const res = await fetch('/api/dat-theo-phong/' + pid);
-    if (!res.ok) {
-      alert('Phòng chưa có khách đang thuê.');
-      return;
-    }
-    const d = await res.json();
-    window.location.href = '{{ url_for("dich_vu_thanh_toan") }}?dat_id=' + d.id;
-  } catch (e) {
-    console.error(e);
-    alert('Không thể lấy thông tin đặt phòng.');
-  }
-}
-
-document.querySelectorAll('.room-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    const trangThai = btn.dataset.trangThai;
-    if (trangThai === 'dang_o') {
-      selectPhongAndRedirect(btn.dataset.phongId);
-    } else if (trangThai === 'da_dat') {
-      alert('Phòng đã được đặt nhưng chưa nhận. Không thể thêm dịch vụ.');
-    }
-  });
-});
-
-// ========== ROOM SEARCH & FILTER ==========
+const initialBooking = {{ initial_booking|tojson|safe }};
+const roomsGrid = document.getElementById('rooms-grid');
+const roomButtons = Array.from(document.querySelectorAll('.room-btn'));
 const roomSearchInput = document.getElementById('room-search');
 const roomStatusFilter = document.getElementById('room-status-filter');
-const allRoomBtns = document.querySelectorAll('.room-btn');
 
-function filterRooms() {
-  const searchText = roomSearchInput.value.toLowerCase().trim();
-  const statusFilter = roomStatusFilter.value;
-  
-  let visibleCount = 0;
-  
-  allRoomBtns.forEach(btn => {
-    const roomName = btn.textContent.trim().toLowerCase();
-    const roomStatus = btn.dataset.trangThai;
-    
-    // Check search text match
-    const matchesSearch = !searchText || roomName.includes(searchText);
-    
-    // Check status filter
-    let matchesStatus = false;
-    if (statusFilter === 'all') {
-      matchesStatus = true;
-    } else if (statusFilter === 'trong') {
-      matchesStatus = (roomStatus !== 'dang_o' && roomStatus !== 'da_dat');
-    } else {
-      matchesStatus = (roomStatus === statusFilter);
-    }
-    
-    // Show/hide button
-    if (matchesSearch && matchesStatus) {
-      btn.style.display = 'block';
-      visibleCount++;
-    } else {
-      btn.style.display = 'none';
-    }
-  });
-  
-  // Show message if no rooms found
-  const roomsGrid = document.querySelector('.rooms-grid');
-  let noResultMsg = roomsGrid.querySelector('.no-rooms-message');
-  
-  if (visibleCount === 0) {
-    if (!noResultMsg) {
-      noResultMsg = document.createElement('div');
-      noResultMsg.className = 'no-rooms-message';
-      noResultMsg.innerHTML = 'Không tìm thấy phòng phù hợp';
-      roomsGrid.appendChild(noResultMsg);
-    }
-  } else {
-    if (noResultMsg) {
-      noResultMsg.remove();
-    }
-  }
-}
+const selectedInfoBox = document.getElementById('selected-room-info');
+const selectedLabel = selectedInfoBox ? selectedInfoBox.querySelector('.selected-room-label') : null;
+const selectedDetail = document.getElementById('selected-room-detail');
 
-// Event listeners for search and filter
-if (roomSearchInput) {
-  roomSearchInput.addEventListener('input', filterRooms);
-}
-if (roomStatusFilter) {
-  roomStatusFilter.addEventListener('change', filterRooms);
-  // Auto filter on page load to show only occupied rooms
-  filterRooms();
-}
-
-// ========== SERVICE MANAGEMENT ==========
-let SERVICES_CACHE = [], SERVICES_VIEW = [];
+const serviceForm = document.getElementById('form-dv');
+const datIdInp = serviceForm ? serviceForm.querySelector('input[name="dat_id"]') : null;
+const dvIdInp = document.getElementById('dv_id');
 const loaiSel = document.getElementById('loai_id');
 const dvSel = document.getElementById('dv_select');
-const dvIdInp = document.getElementById('dv_id');
 const priceInp = document.getElementById('gia_view');
 const qtyInp = document.getElementById('so_luong');
 const sumInp = document.getElementById('tam_tinh');
@@ -320,31 +268,178 @@ const filterI = document.getElementById('filter');
 const sortSel = document.getElementById('sort');
 const addBtn = document.getElementById('btn-add');
 
+const invoiceBody = document.getElementById('invoice-body');
+const invoiceTotal = document.getElementById('invoice-total');
+const paymentFooter = document.getElementById('invoice-footer');
+const paymentForm = document.getElementById('payment-form');
+const paymentButton = document.getElementById('btn-payment');
+const paymentBaseAction = paymentFooter ? paymentFooter.dataset.baseAction || '' : '';
+
+let currentBooking = initialBooking;
+let SERVICES_CACHE = [];
+let SERVICES_VIEW = [];
+
 function vnd(n) {
-  return (n || 0).toLocaleString('vi-VN') + ' đ';
+  const amount = Number(n || 0);
+  return amount.toLocaleString('vi-VN') + ' đ';
+}
+
+function renderSelectedRoom() {
+  if (!selectedInfoBox || !selectedDetail) return;
+  selectedDetail.innerHTML = '';
+  if (currentBooking) {
+    selectedInfoBox.dataset.hasRoom = '1';
+    if (selectedLabel) selectedLabel.style.display = '';
+    const nameLine = document.createElement('div');
+    const nameIcon = document.createElement('i');
+    nameIcon.className = 'fas fa-user';
+    nameLine.appendChild(nameIcon);
+    nameLine.insertAdjacentText('beforeend', ' ' + (currentBooking.khach_ten || ''));
+    const roomLine = document.createElement('div');
+    const roomIcon = document.createElement('i');
+    roomIcon.className = 'fas fa-door-open';
+    roomLine.appendChild(roomIcon);
+    roomLine.insertAdjacentText('beforeend', ' ' + (currentBooking.phong_ten || ''));
+    selectedDetail.appendChild(nameLine);
+    selectedDetail.appendChild(roomLine);
+  } else {
+    selectedInfoBox.dataset.hasRoom = '0';
+    if (selectedLabel) selectedLabel.style.display = 'none';
+    const infoLine = document.createElement('div');
+    const infoIcon = document.createElement('i');
+    infoIcon.className = 'fas fa-info-circle';
+    infoLine.appendChild(infoIcon);
+    infoLine.insertAdjacentText('beforeend', ' Chọn phòng đang có khách để thao tác dịch vụ.');
+    selectedDetail.appendChild(infoLine);
+  }
+}
+
+function highlightSelectedRoom() {
+  const currentPhongId = currentBooking ? String(currentBooking.phong_id) : '';
+  roomButtons.forEach(btn => {
+    btn.classList.toggle('selected', btn.dataset.phongId === currentPhongId);
+  });
+  if (roomsGrid) {
+    roomsGrid.dataset.selectedPhong = currentPhongId;
+  }
+}
+
+function renderServices() {
+  if (!invoiceBody) return;
+  invoiceBody.innerHTML = '';
+  const services = currentBooking && Array.isArray(currentBooking.services) ? currentBooking.services : [];
+  if (!services.length) {
+    const emptyRow = document.createElement('tr');
+    const emptyCell = document.createElement('td');
+    emptyCell.colSpan = 6;
+    emptyCell.className = 'empty-state';
+    emptyCell.innerHTML = '<div class="empty-icon"><i class="fas fa-inbox"></i></div><div class="empty-text">Chưa có dịch vụ nào</div>';
+    emptyRow.appendChild(emptyCell);
+    invoiceBody.appendChild(emptyRow);
+    if (invoiceTotal) invoiceTotal.textContent = vnd(0);
+    return;
+  }
+  services.forEach((item, index) => {
+    const tr = document.createElement('tr');
+
+    const idxTd = document.createElement('td');
+    idxTd.style.textAlign = 'center';
+    idxTd.textContent = index + 1;
+    tr.appendChild(idxTd);
+
+    const nameTd = document.createElement('td');
+    const nameStrong = document.createElement('strong');
+    nameStrong.textContent = item.ten;
+    nameTd.appendChild(nameStrong);
+    tr.appendChild(nameTd);
+
+    const priceTd = document.createElement('td');
+    priceTd.textContent = vnd(item.gia);
+    tr.appendChild(priceTd);
+
+    const qtyTd = document.createElement('td');
+    qtyTd.style.textAlign = 'center';
+    qtyTd.textContent = item.so_luong;
+    tr.appendChild(qtyTd);
+
+    const sumTd = document.createElement('td');
+    const sumStrong = document.createElement('strong');
+    sumStrong.textContent = vnd(item.thanh_tien);
+    sumTd.appendChild(sumStrong);
+    tr.appendChild(sumTd);
+
+    const actionTd = document.createElement('td');
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn-delete btn-remove-service';
+    delBtn.dataset.id = item.id;
+    delBtn.innerHTML = '<i class="fas fa-trash"></i> Xóa';
+    actionTd.appendChild(delBtn);
+    tr.appendChild(actionTd);
+
+    invoiceBody.appendChild(tr);
+  });
+  if (invoiceTotal) {
+    invoiceTotal.textContent = vnd(currentBooking.tong || 0);
+  }
+}
+
+function paymentActionUrl(id) {
+  if (!paymentBaseAction || !id) return '';
+  const base = paymentBaseAction.endsWith('/') ? paymentBaseAction.slice(0, -1) : paymentBaseAction;
+  return `${base}/${id}`;
+}
+
+function updatePaymentState() {
+  if (!paymentFooter || !paymentForm || !paymentButton) return;
+  const hasItems = currentBooking && Array.isArray(currentBooking.services) && currentBooking.services.length > 0;
+  if (hasItems) {
+    const action = paymentActionUrl(currentBooking.id);
+    if (action) paymentForm.action = action;
+    paymentFooter.style.display = 'flex';
+    paymentButton.disabled = false;
+  } else {
+    paymentFooter.style.display = 'none';
+    paymentButton.disabled = true;
+  }
+}
+
+function setCurrentBooking(booking) {
+  currentBooking = booking || null;
+  if (datIdInp) {
+    datIdInp.value = currentBooking ? currentBooking.id : '';
+  }
+  renderSelectedRoom();
+  renderServices();
+  highlightSelectedRoom();
+  updateAddEnabled();
+  updatePaymentState();
+}
+
+function updateAddEnabled() {
+  const selected = !!(dvIdInp && dvIdInp.value);
+  const hasBooking = !!currentBooking;
+  if (addBtn) addBtn.disabled = !selected || !hasBooking;
 }
 
 function chgQty(delta) {
+  if (!qtyInp) return;
   let v = parseInt(qtyInp.value || '1', 10) + delta;
   if (v < 1) v = 1;
   qtyInp.value = v;
   updateSubtotal();
 }
 
-function updateAddEnabled() {
-  const selected = !!dvIdInp.value;
-  const hasBooking = {% if chon_dat %}true{% else %}false{% endif %};
-  if (addBtn) addBtn.disabled = !selected || !hasBooking;
-}
-
 function updateSubtotal() {
-  const op = dvSel.options[dvSel.selectedIndex];
+  if (!sumInp) return;
+  const op = dvSel && dvSel.options[dvSel.selectedIndex];
   const gia = op ? Number(op.dataset.gia || 0) : 0;
-  const sl = Number(qtyInp.value || 1);
+  const sl = Number(qtyInp ? qtyInp.value || 1 : 1);
   sumInp.value = vnd(gia * sl);
 }
 
 function fillServicesSelect() {
+  if (!dvSel) return;
   dvSel.innerHTML = '<option value="" disabled selected>— Chọn dịch vụ —</option>';
   SERVICES_VIEW.forEach(d => {
     const op = document.createElement('option');
@@ -353,60 +448,223 @@ function fillServicesSelect() {
     op.textContent = `${d.ten} — ${vnd(d.gia)}`;
     dvSel.appendChild(op);
   });
-  dvIdInp.value = '';
-  priceInp.value = '';
+  if (dvIdInp) dvIdInp.value = '';
+  if (priceInp) priceInp.value = '';
   updateSubtotal();
   updateAddEnabled();
 }
 
 function applyFilterSort() {
-  const kw = (filterI.value || '').toLowerCase().trim();
-  SERVICES_VIEW = SERVICES_CACHE.filter(d => d.ten.toLowerCase().includes(kw));
-  const s = sortSel.value;
-  if (s === 'name') SERVICES_VIEW.sort((a, b) => a.ten.localeCompare(b.ten, 'vi'));
-  if (s === 'price-asc') SERVICES_VIEW.sort((a, b) => a.gia - b.gia);
-  if (s === 'price-desc') SERVICES_VIEW.sort((a, b) => b.gia - a.gia);
+  const keyword = ((filterI && filterI.value) || '').toLowerCase().trim();
+  SERVICES_VIEW = SERVICES_CACHE.filter(d => d.ten.toLowerCase().includes(keyword));
+  const sortValue = sortSel ? sortSel.value : 'name';
+  if (sortValue === 'name') SERVICES_VIEW.sort((a, b) => a.ten.localeCompare(b.ten, 'vi'));
+  if (sortValue === 'price-asc') SERVICES_VIEW.sort((a, b) => a.gia - b.gia);
+  if (sortValue === 'price-desc') SERVICES_VIEW.sort((a, b) => b.gia - a.gia);
   fillServicesSelect();
 }
 
 async function loadByLoai() {
+  if (!loaiSel) return;
   const loai = loaiSel.value;
   if (!loai) return;
-  const res = await fetch('/api/dichvu-theo-loai/' + loai);
-  SERVICES_CACHE = await res.json();
-  applyFilterSort();
+  try {
+    const res = await fetch('/api/dichvu-theo-loai/' + loai);
+    if (!res.ok) throw new Error('Failed to load services');
+    SERVICES_CACHE = await res.json();
+    applyFilterSort();
+  } catch (error) {
+    console.error(error);
+    SERVICES_CACHE = [];
+    SERVICES_VIEW = [];
+    fillServicesSelect();
+  }
 }
 
-// Event Listeners
-loaiSel && loaiSel.addEventListener('change', loadByLoai);
-filterI && filterI.addEventListener('input', applyFilterSort);
-sortSel && sortSel.addEventListener('change', applyFilterSort);
+function filterRooms() {
+  const searchText = ((roomSearchInput && roomSearchInput.value) || '').toLowerCase().trim();
+  const statusFilter = roomStatusFilter ? roomStatusFilter.value : 'all';
+  let visibleCount = 0;
 
-dvSel && dvSel.addEventListener('change', () => {
-  const op = dvSel.options[dvSel.selectedIndex];
-  if (!op) return;
-  dvIdInp.value = op.value;
-  priceInp.value = vnd(Number(op.dataset.gia || 0));
-  updateSubtotal();
-  updateAddEnabled();
-});
+  roomButtons.forEach(btn => {
+    const roomName = btn.textContent.trim().toLowerCase();
+    const roomStatus = btn.dataset.trangThai;
+    const matchesSearch = !searchText || roomName.includes(searchText);
 
-qtyInp && qtyInp.addEventListener('input', updateSubtotal);
+    let matchesStatus = false;
+    if (statusFilter === 'all') {
+      matchesStatus = true;
+    } else if (statusFilter === 'trong') {
+      matchesStatus = roomStatus !== 'dang_o' && roomStatus !== 'da_dat';
+    } else {
+      matchesStatus = roomStatus === statusFilter;
+    }
 
-document.getElementById('form-dv').addEventListener('submit', (e) => {
-  if (!dvIdInp.value) {
-    e.preventDefault();
-    alert('Vui lòng chọn dịch vụ trước khi thêm.');
+    if (matchesSearch && matchesStatus) {
+      btn.style.display = '';
+      visibleCount++;
+    } else {
+      btn.style.display = 'none';
+    }
+  });
+
+  if (!roomsGrid) return;
+  let noResultMsg = roomsGrid.querySelector('.no-rooms-message');
+  if (visibleCount === 0) {
+    if (!noResultMsg) {
+      noResultMsg = document.createElement('div');
+      noResultMsg.className = 'no-rooms-message';
+      noResultMsg.textContent = 'Không tìm thấy phòng phù hợp';
+      roomsGrid.appendChild(noResultMsg);
+    }
+  } else if (noResultMsg) {
+    noResultMsg.remove();
   }
-});
+}
 
-// Initialize
-window.addEventListener('DOMContentLoaded', () => {
+async function selectPhong(pid) {
+  if (!pid) return;
+  try {
+    const res = await fetch('/api/dat-theo-phong/' + pid);
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.error || 'Phòng chưa có khách đang thuê.');
+      return;
+    }
+    setCurrentBooking(data.booking);
+  } catch (error) {
+    console.error(error);
+    alert('Không thể lấy thông tin đặt phòng.');
+  }
+}
+
+async function addService(event) {
+  event.preventDefault();
+  if (!serviceForm) return;
+  if (!dvIdInp || !dvIdInp.value) {
+    alert('Vui lòng chọn dịch vụ trước khi thêm.');
+    return;
+  }
+  if (!currentBooking) {
+    alert('Vui lòng chọn phòng đang sử dụng trước khi thêm dịch vụ.');
+    return;
+  }
+  const formData = new FormData(serviceForm);
+  try {
+    if (addBtn) addBtn.disabled = true;
+    const res = await fetch(serviceForm.action, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.message || 'Không thể thêm dịch vụ.');
+      return;
+    }
+    setCurrentBooking(data.booking);
+    if (qtyInp) {
+      qtyInp.value = '1';
+    }
+    updateSubtotal();
+  } catch (error) {
+    console.error(error);
+    alert('Có lỗi khi thêm dịch vụ.');
+  } finally {
+    updateAddEnabled();
+  }
+}
+
+async function handleDeleteService(event) {
+  const btn = event.target.closest('.btn-remove-service');
+  if (!btn) return;
+  event.preventDefault();
+  const id = btn.dataset.id;
+  if (!id) return;
+  if (!currentBooking) return;
+  if (!confirm('Bạn có chắc muốn xóa dịch vụ này?')) return;
+  try {
+    const res = await fetch('/xoa-sudung-dichvu/' + id, {
+      method: 'POST',
+      headers: {
+        'X-Requested-With': 'XMLHttpRequest'
+      }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+      alert(data.message || 'Không thể xóa dịch vụ.');
+      return;
+    }
+    setCurrentBooking(data.booking);
+  } catch (error) {
+    console.error(error);
+    alert('Có lỗi khi xóa dịch vụ.');
+  }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
   if (loaiSel) {
-    loaiSel.value = "0";
+    if (!loaiSel.value && loaiSel.querySelector('option[value="0"]')) {
+      loaiSel.value = '0';
+    }
     loadByLoai();
   }
-  updateAddEnabled();
+
+  roomButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const status = btn.dataset.trangThai;
+      if (status === 'dang_o') {
+        selectPhong(btn.dataset.phongId);
+      } else if (status === 'da_dat') {
+        alert('Phòng đã được đặt nhưng chưa nhận. Không thể thêm dịch vụ.');
+      } else {
+        alert('Phòng hiện chưa có khách.');
+      }
+    });
+  });
+
+  if (roomSearchInput) {
+    roomSearchInput.addEventListener('input', filterRooms);
+  }
+  if (roomStatusFilter) {
+    roomStatusFilter.addEventListener('change', filterRooms);
+  }
+  filterRooms();
+
+  if (filterI) {
+    filterI.addEventListener('input', applyFilterSort);
+  }
+  if (sortSel) {
+    sortSel.addEventListener('change', applyFilterSort);
+  }
+
+  if (dvSel) {
+    dvSel.addEventListener('change', () => {
+      const op = dvSel.options[dvSel.selectedIndex];
+      if (!op) return;
+      if (dvIdInp) dvIdInp.value = op.value;
+      if (priceInp) priceInp.value = vnd(Number(op.dataset.gia || 0));
+      updateSubtotal();
+      updateAddEnabled();
+    });
+  }
+
+  if (qtyInp) {
+    qtyInp.addEventListener('input', updateSubtotal);
+  }
+
+  if (serviceForm) {
+    serviceForm.addEventListener('submit', addService);
+  }
+
+  if (invoiceBody) {
+    invoiceBody.addEventListener('click', handleDeleteService);
+  }
+
+  setCurrentBooking(initialBooking || null);
+  updateSubtotal();
 });
 </script>
 

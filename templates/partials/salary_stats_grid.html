@@ -1,0 +1,53 @@
+<div class="stats-grid">
+  <div class="stat-card config-card">
+    <div class="stat-label"><i class="fas fa-calendar-alt"></i> Ngày công tối thiểu</div>
+    <form method="post" class="config-form">
+      <input type="hidden" name="form_name" value="set_min_work_days">
+      <div class="config-row">
+        <input type="number" min="0" name="min_work_days" value="{{ min_days }}" class="config-input" required>
+        <button type="submit" class="btn-config">Cập nhật</button>
+      </div>
+      <div class="config-note">Nhân viên cần đạt số ngày này để nhận phụ cấp</div>
+    </form>
+  </div>
+
+  <div class="stat-card config-card">
+    <div class="stat-label"><i class="fas fa-clock"></i> Thời gian tự động hủy đặt phòng</div>
+    <form method="post" class="config-form">
+      <input type="hidden" name="form_name" value="save_auto_cancel">
+      <div class="config-row">
+        <input type="number" min="1" name="auto_cancel_minutes" value="{{ auto_cancel_minutes }}" class="config-input" required>
+        <span class="config-unit">phút</span>
+        <button type="submit" class="btn-config">Cập nhật</button>
+      </div>
+      <div class="config-note">Đặt phòng sẽ bị hủy tự động nếu khách không đến nhận phòng sau thời gian này</div>
+    </form>
+  </div>
+
+  <div class="stat-card primary">
+    <div class="stat-header">
+      <div class="stat-icon"><i class="fas fa-users"></i></div>
+    </div>
+    <div class="stat-label">Tổng nhân sự</div>
+    <div class="stat-value">{{ all_staffs|length }}</div>
+    <div class="stat-note">{{ configured_count }} đã cấu hình</div>
+  </div>
+
+  <div class="stat-card success">
+    <div class="stat-header">
+      <div class="stat-icon"><i class="fas fa-dollar-sign"></i></div>
+    </div>
+    <div class="stat-label">Quỹ lương cơ bản</div>
+    <div class="stat-value" style="font-size: 20px;">{{ total_base|vnd }}</div>
+    <div class="stat-note">Không gồm phụ cấp & thưởng</div>
+  </div>
+
+  <div class="stat-card info">
+    <div class="stat-header">
+      <div class="stat-icon"><i class="fas fa-gem"></i></div>
+    </div>
+    <div class="stat-label">Quỹ phụ cấp</div>
+    <div class="stat-value" style="font-size: 20px;">{{ total_allowance|vnd }}</div>
+    <div class="stat-note">Tháng {{ now().strftime('%m/%Y') }}</div>
+  </div>
+</div>

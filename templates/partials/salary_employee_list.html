@@ -1,0 +1,62 @@
+<div class="employee-list">
+  {% for nv in staffs %}
+  {% set record = salary_records.get(nv.id) %}
+  <form method="post" class="employee-salary-card">
+    <input type="hidden" name="form_name" value="save_salary">
+    <input type="hidden" name="nguoidung_id" value="{{ nv.id }}">
+    
+    <div class="employee-header">
+      <div class="employee-info">
+        <h4>
+          {{ nv.ten }}
+          {% if nv.id in top_staff_ids %}
+          <span class="top-badge"><i class="fas fa-trophy"></i> TOP +{{ bonus_amount|vnd }}</span>
+          {% endif %}
+        </h4>
+        <div class="employee-username">@{{ nv.ten_dang_nhap }}</div>
+      </div>
+      <span class="role-badge {{ 'admin' if nv.loai == 'admin' else 'staff' }}">
+        {% if nv.loai == 'admin' %}
+          <i class="fas fa-crown"></i> Quản trị viên
+        {% else %}
+          <i class="fas fa-user"></i> Nhân viên
+        {% endif %}
+      </span>
+    </div>
+
+    <div class="salary-fields">
+      <div class="field-group">
+        <label><i class="fas fa-dollar-sign"></i> Lương cơ bản (VNĐ)</label>
+        <input type="number" min="0" name="luong_co_ban" 
+               value="{{ record.luong_co_ban if record else 0 }}" required>
+      </div>
+      <div class="field-group">
+        <label><i class="fas fa-gem"></i> Phụ cấp (VNĐ)</label>
+        <input type="number" min="0" name="phu_cap" 
+               value="{{ record.phu_cap if record else 0 }}" required>
+      </div>
+    </div>
+
+    <div class="employee-footer">
+      <div class="total-info {% if not record %}unconfigured{% endif %}">
+        {% if record %}
+          Thu nhập cố định: <strong>{{ (record.luong_co_ban + record.phu_cap)|vnd }}</strong>
+          {% if nv.id in top_staff_ids %}
+          <span class="top-bonus-note">+ {{ bonus_amount|vnd }} thưởng top tháng</span>
+          {% endif %}
+        {% else %}
+          Chưa thiết lập lương
+        {% endif %}
+      </div>
+      <button type="submit" class="btn-save"><i class="fas fa-save"></i> Lưu</button>
+    </div>
+  </form>
+  {% endfor %}
+
+  {% if not staffs %}
+  <div style="text-align: center; padding: 40px; color: #999;">
+    <div style="font-size: 48px; margin-bottom: 16px;"><i class="fas fa-inbox"></i></div>
+    <p>Không có nhân viên nào</p>
+  </div>
+  {% endif %}
+</div>

@@ -185,6 +185,7 @@ Hệ thống được thiết kế để đáp ứng nhu cầu của các khách
 
 ### 21. Quét QR xác nhận thanh toán
 ![Quét QR xác nhận thanh toán](screenshots/quetqrxacnhacthanhtoan.png)
+
 *Khách hàng quét QR để xác nhận thanh toán online*
 
 ### 22. Thanh toán trả phòng

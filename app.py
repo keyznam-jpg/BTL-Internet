@@ -2058,7 +2058,7 @@ def index():
 
 @app.route('/test-timeout-cleanup')
 @login_required
-@roles_required('admin')
+@roles_required('admin', 'nhanvien')
 def test_timeout_cleanup():
     """Route để test việc dọn dẹp timeout thủ công"""
     huy_dat_phong_timeout()

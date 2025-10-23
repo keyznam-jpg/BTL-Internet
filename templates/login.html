@@ -1,51 +1,99 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đăng Nhập - Hệ Thống Quản Lý Khách Sạn</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}?v={{ config['SEND_FILE_MAX_AGE_DEFAULT'] or '1' }}">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập - Hệ thống quản lý khách sạn</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="{{ url_for('static', filename='login.css') }}?v={{ config['SEND_FILE_MAX_AGE_DEFAULT'] or '1' }}">
 </head>
 <body class="login-body">
-    <div class="login-container">
-        <div class="login-card">
-            <h1 class="login-logo">
-                <span class="logo-main">KHÁCH SẠN</span>
-                <span class="logo-sub">PTIT</span>
-            </h1>
-            <h2 class="login-title">Đăng Nhập</h2>
+  <div class="bg-ambient" aria-hidden="true">
+    <span class="particle particle-1"></span>
+    <span class="particle particle-2"></span>
+    <span class="particle particle-3"></span>
+    <span class="particle particle-4"></span>
+    <span class="particle particle-5"></span>
+  </div>
 
-            {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                    {% for category, message in messages %}
-                        <div class="alert alert-{{ category }}">
-                            {{ message }}
-                        </div>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-            
-            <form method="post" action="{{ url_for('login') }}" class="login-form">
-                <div class="form-group">
-                    <label for="username">Tên đăng nhập</label>
-                    <input type="text" id="username" name="ten_dang_nhap" placeholder="Nhập tên đăng nhập" required autofocus>
-                </div>
-                <div class="form-group">
-                    <label for="password">Mật khẩu</label>
-                    <input type="password" id="password" name="mat_khau" placeholder="Nhập mật khẩu" required>
-                </div>
-                <button type="submit" class="login-button">Đăng Nhập</button>
-            </form>
-            <div class="guest-access">
-                <p>Hoặc:</p>
-                <a class="guest-button" href="{{ url_for('dat_phong_online') }}">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7"></path><path d="M9 22V12h6v10"></path><path d="M21 22H3"></path></svg>
-                    Đặt phòng với tư cách khách
-                </a>
-            </div>
+  <div class="login-shell">
+    <div class="login-card" id="loginCard">
+      <div class="card-info">
+        <div class="brand-badge">
+          <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Logo Khách sạn" class="badge-logo">
         </div>
+        <h1 class="brand-title">Hệ thống quản lý khách sạn PTIT</h1>
+        <p class="brand-copy">
+          Quản lý đặt phòng, nhân sự và vận hành khách sạn trên một nền tảng duy nhất, trực quan và thông minh.
+        </p>
+        <ul class="feature-list">
+          <li><i class="fa-solid fa-chart-line"></i><span>Theo dõi doanh thu theo thời gian thực</span></li>
+          <li><i class="fa-solid fa-users-gear"></i><span>Tự động hóa quy trình chăm sóc khách</span></li>
+          <li><i class="fa-solid fa-lock"></i><span>Bảo mật chuẩn doanh nghiệp với phân quyền chi tiết</span></li>
+        </ul>
+        <div class="brand-foot">
+          <i class="fa-solid fa-earth-asia"></i>
+          <span>Hoạt động mọi lúc, trên mọi thiết bị</span>
+        </div>
+      </div>
+
+      <div class="card-form">
+        <div class="form-header">
+          <h2>Đăng nhập</h2>
+          <p>Đăng nhập vào bảng điều khiển bằng thông tin được cấp.</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+          {% if messages %}
+          <div class="flash-stack">
+            {% for category, message in messages %}
+            <div class="alert alert-{{ category }}">
+              <i class="fa-solid fa-circle-exclamation"></i>
+              <span>{{ message }}</span>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+        {% endwith %}
+
+        <form method="post" action="{{ url_for('login') }}" class="login-form">
+          <div class="form-field">
+            <label for="username">Tên đăng nhập</label>
+            <div class="field-input">
+              <i class="fa-solid fa-user"></i>
+              <input type="text" id="username" name="ten_dang_nhap" placeholder="Nhập tên đăng nhập" required autofocus>
+            </div>
+          </div>
+          <div class="form-field">
+            <label for="password">Mật khẩu</label>
+            <div class="field-input">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="password" name="mat_khau" placeholder="Nhập mật khẩu" required>
+            </div>
+          </div>
+          <button type="submit" class="login-button">
+            <span>Đăng nhập</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+
+        <div class="guest-access">
+          <p>Hoặc trải nghiệm dịch vụ dành cho khách:</p>
+          <a class="guest-button" href="{{ url_for('dat_phong_online') }}">
+            <i class="fa-solid fa-compass"></i>
+            <span>Đặt phòng với tư cách khách</span>
+          </a>
+        </div>
+
+        <p class="support-hint">
+          <i class="fa-solid fa-life-ring"></i>
+          Liên hệ quản trị viên nếu bạn cần cấp lại tài khoản hoặc phân quyền.
+        </p>
+      </div>
     </div>
+  </div>
 </body>
 </html>

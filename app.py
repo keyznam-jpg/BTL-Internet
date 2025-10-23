@@ -7225,8 +7225,10 @@ def handle_not_found(error):
 @app.after_request
 def add_cache_headers(response):
     if request.path.startswith('/static/'):
-        # Cache static files for 1 hour
-        response.headers['Cache-Control'] = 'public, max-age=3600'
+        # Disable cache for static files in development
+        response.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response.headers['Pragma'] = 'no-cache'
+        response.headers['Expires'] = '0'
     return response
 
 # ========================= APP RUN =========================

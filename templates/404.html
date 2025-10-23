@@ -31,6 +31,7 @@
       align-items: center;
       justify-content: center;
       padding: 48px 16px;
+      overflow: hidden;
     }
 
     .error-stage {
@@ -44,6 +45,10 @@
         0 20px 30px -20px rgba(15, 23, 42, 0.25);
       overflow: hidden;
       backdrop-filter: blur(10px);
+      transform: perspective(1600px)
+                 rotateX(calc((0.5 - var(--pointer-y)) * 12deg))
+                 rotateY(calc((var(--pointer-x) - 0.5) * 18deg));
+      transition: transform 0.18s ease-out;
     }
 
     .glow {
@@ -62,7 +67,19 @@
         rgba(37, 99, 235, 0.05),
         transparent 65%
       );
-      transition: background 0.15s ease-out;
+      transition: background 0.12s ease-out;
+    }
+
+    .glow::after {
+      content: '';
+      position: absolute;
+      inset: -25%;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.08), transparent 55%),
+        radial-gradient(circle at 80% 30%, rgba(14, 165, 233, 0.08), transparent 50%),
+        radial-gradient(circle at 60% 80%, rgba(34, 211, 238, 0.08), transparent 55%);
+      opacity: 0.85;
+      animation: shimmer 12s linear infinite;
     }
 
     .floating-shapes span {
@@ -101,12 +118,86 @@
       animation-delay: -8s;
     }
 
+    .orbit {
+      position: absolute;
+      inset: -40%;
+      pointer-events: none;
+    }
+
+    .orbit::before,
+    .orbit::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      border: 1px dashed rgba(37, 99, 235, 0.15);
+      animation: rotate 22s linear infinite;
+    }
+
+    .orbit::before {
+      width: 460px;
+      height: 460px;
+      top: 18%;
+      left: 30%;
+    }
+
+    .orbit::after {
+      width: 360px;
+      height: 360px;
+      top: 40%;
+      left: 48%;
+      animation-duration: 18s;
+      animation-direction: reverse;
+    }
+
+    .confetti {
+      position: absolute;
+      inset: -20%;
+      pointer-events: none;
+      display: grid;
+      place-items: center;
+    }
+
+    .confetti span {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(37, 99, 235, 0.35);
+      animation: fall 12s ease-in-out infinite;
+      backdrop-filter: blur(2px);
+    }
+
+    .confetti span:nth-child(3n) {
+      background: rgba(14, 165, 233, 0.45);
+      width: 8px;
+      height: 8px;
+    }
+
+    .confetti span:nth-child(5n) {
+      background: rgba(34, 211, 238, 0.4);
+      width: 5px;
+      height: 5px;
+    }
+
+    .confetti span:nth-child(1) { top: 12%; left: 20%; animation-delay: -2s; }
+    .confetti span:nth-child(2) { top: 30%; left: 80%; animation-delay: -6s; }
+    .confetti span:nth-child(3) { top: 70%; left: 10%; animation-delay: -4s; }
+    .confetti span:nth-child(4) { top: 80%; left: 60%; animation-delay: -9s; }
+    .confetti span:nth-child(5) { top: 20%; left: 60%; animation-delay: -7s; }
+    .confetti span:nth-child(6) { top: 55%; left: 35%; animation-delay: -3s; }
+    .confetti span:nth-child(7) { top: 42%; left: 15%; animation-delay: -5s; }
+    .confetti span:nth-child(8) { top: 68%; left: 78%; animation-delay: -10s; }
+    .confetti span:nth-child(9) { top: 18%; left: 45%; animation-delay: -1s; }
+    .confetti span:nth-child(10) { top: 88%; left: 28%; animation-delay: -8s; }
+
     .error-content {
       position: relative;
       z-index: 1;
       display: grid;
       gap: 24px;
       text-align: center;
+      animation: fadeInUp 0.8s ease-out forwards;
+      opacity: 0;
     }
 
     .brand {
@@ -159,6 +250,7 @@
       margin: 0;
       font-weight: 700;
       color: var(--text);
+      animation: fadeInUp 0.9s ease-out 0.12s both;
     }
 
     .error-message {
@@ -167,6 +259,7 @@
       font-size: clamp(16px, 3.4vw, 18px);
       line-height: 1.7;
       color: var(--muted);
+      animation: fadeInUp 0.9s ease-out 0.24s both;
     }
 
     .actions {
@@ -175,6 +268,7 @@
       justify-content: center;
       gap: 12px;
       margin-top: 8px;
+      animation: fadeInUp 0.9s ease-out 0.36s both;
     }
 
     .btn {
@@ -197,6 +291,7 @@
       color: #ffffff;
       background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
       box-shadow: 0 12px 24px -14px rgba(37, 99, 235, 0.8);
+      animation: pulse 3.2s ease-in-out infinite;
     }
 
     .btn-primary:hover {
@@ -220,6 +315,7 @@
       margin-top: 8px;
       font-size: 14px;
       color: rgba(75, 85, 99, 0.85);
+      animation: fadeInUp 0.9s ease-out 0.48s both;
     }
 
     .status-hint code {
@@ -241,6 +337,36 @@
       }
     }
 
+    @keyframes shimmer {
+      0% { transform: translate3d(-5%, -5%, 0) rotate(0deg); }
+      50% { transform: translate3d(5%, 5%, 0) rotate(180deg); }
+      100% { transform: translate3d(-5%, -5%, 0) rotate(360deg); }
+    }
+
+    @keyframes rotate {
+      0% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(180deg) scale(1.04); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+
+    @keyframes fall {
+      0% {
+        transform: translate3d(0, 0, 0) scale(1);
+        opacity: 0;
+      }
+      20% {
+        opacity: 1;
+      }
+      50% {
+        transform: translate3d(12px, 22px, 0) scale(1.1);
+        opacity: 0.85;
+      }
+      100% {
+        transform: translate3d(-8px, 60px, 0) scale(0.95);
+        opacity: 0;
+      }
+    }
+
     @keyframes floatDigits {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-12px); }
@@ -250,6 +376,26 @@
       0% { background-position: 0% 50%; }
       50% { background-position: 100% 50%; }
       100% { background-position: 0% 50%; }
+    }
+
+    @keyframes fadeInUp {
+      0% {
+        opacity: 0;
+        transform: translate3d(0, 24px, 0);
+      }
+      100% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 12px 24px -14px rgba(37, 99, 235, 0.8);
+      }
+      50% {
+        box-shadow: 0 18px 36px -16px rgba(14, 165, 233, 0.6);
+      }
     }
 
     @media (max-width: 640px) {
@@ -286,7 +432,20 @@
 <body>
   <div class="error-stage">
     <div class="glow" aria-hidden="true"></div>
+    <div class="orbit" aria-hidden="true"></div>
     <div class="floating-shapes" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div class="confetti" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
       <span></span>
       <span></span>
       <span></span>
@@ -331,6 +490,20 @@
       root.style.setProperty('--pointer-y', yRatio.toFixed(4));
     }
 
+    const confettiPieces = document.querySelectorAll('.confetti span');
+
+    function randomizeConfetti() {
+      confettiPieces.forEach((piece) => {
+        const delay = -Math.random() * 12;
+        const duration = 10 + Math.random() * 6;
+        const translateX = (Math.random() - 0.5) * 40;
+        const translateY = Math.random() * 60;
+        piece.style.animationDelay = `${delay}s`;
+        piece.style.animationDuration = `${duration}s`;
+        piece.style.transform = `translate3d(${translateX}px, ${translateY}px, 0)`;
+      });
+    }
+
     stage.addEventListener('pointermove', function (event) {
       const rect = stage.getBoundingClientRect();
       const xRatio = (event.clientX - rect.left) / rect.width;
@@ -341,6 +514,9 @@
     stage.addEventListener('pointerleave', function () {
       updatePointerPosition(0.5, 0.5);
     });
+
+    randomizeConfetti();
+    window.addEventListener('resize', randomizeConfetti);
   </script>
 </body>
 </html>

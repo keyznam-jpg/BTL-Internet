@@ -209,13 +209,17 @@
 
         .bubble-wrapper {
             max-width: 75%;
-            display: flex;
+            display: inline-flex;
             flex-direction: column;
             gap: 4px;
             align-items: flex-start;
         }
 
         .message.staff .bubble-wrapper {
+            align-items: flex-start;
+        }
+
+        .message.guest .bubble-wrapper {
             align-items: flex-end;
         }
 

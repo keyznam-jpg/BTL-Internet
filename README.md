@@ -193,6 +193,7 @@ Hệ thống được thiết kế để đáp ứng nhu cầu của các khách
 
 ### 23. Giao diện hóa đơn thanh toán
 ![Giao diện hóa đơn thanh toán](screenshots/giaodienhoadonthanhtoan.png)
+
 *Hiển thị chi tiết hóa đơn và thanh toán cho khách hàng*
 
 ### Yêu cầu hệ thống

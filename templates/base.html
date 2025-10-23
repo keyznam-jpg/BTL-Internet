@@ -240,7 +240,7 @@
                     tinNhanLink.classList.remove('menu-link-with-badge');
                 }
             })
-            .catch(err => console.error('Khong the cap nhat badge tin nhan:', err));
+            .catch(err => console.error('Không thể cập nhật badge tin nhắn:', err));
     }
 
     function updateOnlineBookingBadge() {
@@ -267,7 +267,7 @@
                     onlineLink.classList.remove('menu-link-with-badge');
                 }
             })
-            .catch(err => console.error('Khong the cap nhat badge dat phong online:', err));
+            .catch(err => console.error('Không thể cập nhật badge đặt phòng online:', err));
     }
 
     updateMessageBadge();
@@ -280,28 +280,28 @@
     });
 
     socket.on('new_message_from_guest', function(data) {
-        showToast('&#128172;', 'Tin nhan moi', `Phong ${data.phong}: "${data.noi_dung}"`);
+        showToast('&#128172;', 'Tin nhắn mới', `Phòng ${data.phong}: "${data.noi_dung}"`);
         updateMessageBadge();
     });
 
     socket.on('online_booking_deposit_request', function(data) {
-        showToast('&#128179;', 'Yeu cau xac nhan coc', `Khach ${data.khach} bao da thanh toan.`);
+        showToast('&#128179;', 'Yêu cầu xác nhận cọc', `Khách ${data.khach} báo đã thanh toán.`);
         updateOnlineBookingBadge();
         updateMessageBadge();
     });
 
     socket.on('online_booking_confirmed', function(data) {
-        showToast('&#9989;', 'Dat phong online', `Da xac nhan coc cho ${data.khach}.`);
+        showToast('&#9989;', 'Đặt phòng online', `Đã xác nhận cọc cho ${data.khach}.`);
         updateOnlineBookingBadge();
     });
 
     socket.on('online_booking_rejected', function(data) {
-        showToast('&#10060;', 'Dat phong online', `Da tu choi yeu cau cua ${data.khach}.`);
+        showToast('&#10060;', 'Đặt phòng online', `Đã từ chối yêu cầu của ${data.khach}.`);
         updateOnlineBookingBadge();
     });
 
     socket.on('new_booking_notification', function(data) {
-        showToast('&#128276;', 'Dat phong moi', data.message);
+        showToast('&#128276;', 'Đặt phòng mới', data.message);
         updateOnlineBookingBadge();
     });
 

@@ -1300,7 +1300,7 @@
         });
 
         function showToast(text, type = 'info') {
-            toast.textContent = text;
+            toast.innerHTML = text;
             toast.style.background = type === 'error' ? '#c0392b' : (type === 'success' ? '#2f7d5a' : '#1f2933');
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 2500);
@@ -1382,6 +1382,53 @@
                 payload.url = `${window.location.origin}${payload.url.startsWith('/') ? '' : '/'}${payload.url}`;
             }
             return payload;
+        }
+
+        function escapeHtml(str) {
+            if (typeof str !== 'string') {
+                return '';
+            }
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        const ICON_TAG_REGEX = /<i\s+class=(?:"([^"]+)"|'([^']+)')><\/i>/gi;
+
+        function sanitizeIconClass(classValue) {
+            const tokens = (classValue || '').split(/\s+/).filter(Boolean);
+            if (!tokens.length) return null;
+            const isValid = tokens.every(token => /^fa[a-z0-9-]*$/i.test(token));
+            return isValid ? tokens.join(' ') : null;
+        }
+
+        function renderMessageHtml(rawText) {
+            if (typeof rawText !== 'string' || rawText.length === 0) {
+                return '';
+            }
+            let result = '';
+            let lastIndex = 0;
+            ICON_TAG_REGEX.lastIndex = 0;
+            let match;
+            while ((match = ICON_TAG_REGEX.exec(rawText)) !== null) {
+                if (match.index > lastIndex) {
+                    result += escapeHtml(rawText.slice(lastIndex, match.index));
+                }
+                const iconClass = sanitizeIconClass(match[1] || match[2]);
+                if (iconClass) {
+                    result += `<i class="${iconClass}"></i>`;
+                } else {
+                    result += escapeHtml(match[0]);
+                }
+                lastIndex = ICON_TAG_REGEX.lastIndex;
+            }
+            if (lastIndex < rawText.length) {
+                result += escapeHtml(rawText.slice(lastIndex));
+            }
+            return result.replace(/\r?\n/g, '<br>');
         }
 
         function addMessage(raw) {
@@ -1466,7 +1513,7 @@
                         </div>
                     `;
                 } else {
-                    bubble.textContent = text;
+                    bubble.innerHTML = renderMessageHtml(text);
                 }
             } else {
                 // Thêm icon cho tin nhắn đặt dịch vụ - KHÔNG hiển thị nội dung chi tiết
@@ -1474,13 +1521,13 @@
                     // Chỉ hiển thị thông báo ngắn gọn
                     const serviceMatch = text.match(/Khách đã đặt dịch vụ:(.+?)\. Tổng/);
                     if (serviceMatch) {
-                        const services = serviceMatch[1].trim();
+                        const services = escapeHtml(serviceMatch[1].trim()).replace(/\r?\n/g, '<br>');
                         bubble.innerHTML = `<strong><i class="fas fa-utensils"></i> Đơn dịch vụ mới</strong><br><span style="font-size:0.9rem; opacity:0.9;">${services}</span>`;
                     } else {
                         bubble.innerHTML = `<strong><i class="fas fa-utensils"></i> Khách đã đặt dịch vụ</strong><br><span style="font-size:0.9rem; opacity:0.9;">Vui lòng xem chi tiết bên phải</span>`;
                     }
                 } else {
-                    bubble.textContent = text;
+                    bubble.innerHTML = renderMessageHtml(text);
                 }
             }
 

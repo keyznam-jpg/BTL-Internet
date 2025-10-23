@@ -928,6 +928,53 @@
 
         const emojis = ['😊', '👍', '❤️', '🎉', '🙏', '✅', '⭐', '💯', '🔥', '👌'];
         
+        function escapeHtml(str) {
+            if (typeof str !== 'string') {
+                return '';
+            }
+            return str
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        
+        const ICON_TAG_REGEX = /<i\s+class=(?:"([^"]+)"|'([^']+)')><\/i>/gi;
+
+        function sanitizeIconClass(classValue) {
+            const tokens = (classValue || '').split(/\s+/).filter(Boolean);
+            if (!tokens.length) return null;
+            const isValid = tokens.every(token => /^fa[a-z0-9-]*$/i.test(token));
+            return isValid ? tokens.join(' ') : null;
+        }
+
+        function renderMessageHtml(rawText) {
+            if (typeof rawText !== 'string' || rawText.length === 0) {
+                return '';
+            }
+            let result = '';
+            let lastIndex = 0;
+            ICON_TAG_REGEX.lastIndex = 0;
+            let match;
+            while ((match = ICON_TAG_REGEX.exec(rawText)) !== null) {
+                if (match.index > lastIndex) {
+                    result += escapeHtml(rawText.slice(lastIndex, match.index));
+                }
+                const iconClass = sanitizeIconClass(match[1] || match[2]);
+                if (iconClass) {
+                    result += `<i class="${iconClass}"></i>`;
+                } else {
+                    result += escapeHtml(match[0]);
+                }
+                lastIndex = ICON_TAG_REGEX.lastIndex;
+            }
+            if (lastIndex < rawText.length) {
+                result += escapeHtml(rawText.slice(lastIndex));
+            }
+            return result.replace(/\r?\n/g, '<br>');
+        }
+
         // Giỏ hàng
         const cart = {
             items: new Map(), // serviceId -> {id, ten, gia, so_luong}
@@ -1082,12 +1129,13 @@
                         </div>
                     `;
                 } else {
-                    bubble.textContent = text;
+                    bubble.innerHTML = renderMessageHtml(text);
                 }
             } else if (text.includes('đặt dịch vụ')) {
-                bubble.textContent = '<i class="fas fa-utensils"></i> ' + text;
+                const safeText = escapeHtml(text).replace(/\r?\n/g, '<br>');
+                bubble.innerHTML = `<i class="fas fa-utensils"></i> ${safeText}`;
             } else {
-                bubble.textContent = text;
+                bubble.innerHTML = renderMessageHtml(text);
             }
 
             // Time
@@ -1401,7 +1449,8 @@
                     autoScroll = true;
                     loadMessages(true);
                 } else {
-                    showToast('<i class="fas fa-times"></i> ' + (data.message || 'Không thể gửi yêu cầu'));
+                    const icon = data.message === 'Tất cả dịch vụ đã được xử lý' ? 'fas fa-check' : 'fas fa-times';
+                    showToast(`<i class="${icon}"></i> ` + (data.message || 'Không thể gửi yêu cầu'));
                 }
             } catch (err) {
                 console.error('Confirmation error:', err);
@@ -1709,7 +1758,7 @@
 
         // Toast
         function showToast(message) {
-            toast.textContent = message;
+            toast.innerHTML = message;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 3000);
         }

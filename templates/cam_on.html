@@ -4,19 +4,325 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Cảm ơn bạn</title>
-  <link rel="stylesheet" href="{{ url_for('static', filename='payments.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --accent: #22c55e;
+      --accent-dark: #16a34a;
+      --ink: #0f172a;
+      --muted: #475569;
+      --card-bg: rgba(255, 255, 255, 0.9);
+      --shadow: 0 24px 48px -24px rgba(15, 23, 42, 0.6);
+      --border: rgba(255, 255, 255, 0.4);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+      color: var(--ink);
+      background: radial-gradient(circle at 10% 20%, rgba(74, 222, 128, 0.28), transparent 45%),
+        radial-gradient(circle at 90% 10%, rgba(59, 130, 246, 0.24), transparent 40%),
+        #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    body::before,
+    body::after {
+      content: "";
+      position: absolute;
+      inset: -40%;
+      background: conic-gradient(from 140deg, rgba(59, 130, 246, 0.35), rgba(34, 197, 94, 0.4), rgba(59, 130, 246, 0.35));
+      filter: blur(120px);
+      opacity: 0.75;
+      animation: gradientShift 24s cubic-bezier(0.4, 0, 0.2, 1) infinite alternate;
+    }
+
+    body::after {
+      animation-direction: reverse;
+      opacity: 0.45;
+    }
+
+    .thankyou-card {
+      position: relative;
+      z-index: 2;
+      width: min(460px, 100%);
+      padding: 40px 36px;
+      border-radius: 28px;
+      backdrop-filter: blur(22px);
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      text-align: center;
+      overflow: hidden;
+      animation: fadeUp 820ms ease forwards;
+    }
+
+    .thankyou-card::before {
+      content: "";
+      position: absolute;
+      inset: 14px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      pointer-events: none;
+    }
+
+    .icon-circle {
+      width: 88px;
+      height: 88px;
+      margin: 0 auto 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.18), rgba(14, 165, 233, 0.28));
+      display: grid;
+      place-items: center;
+      color: var(--accent-dark);
+      font-size: 44px;
+      animation: popIn 720ms ease forwards;
+      position: relative;
+      box-shadow: 0 16px 34px -18px rgba(34, 197, 94, 0.8);
+    }
+
+    .icon-circle::after {
+      content: "";
+      position: absolute;
+      inset: -16px;
+      border-radius: 50%;
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      opacity: 0;
+      animation: pulse 2.6s ease-in-out infinite;
+    }
+
+    h1 {
+      margin: 0 0 12px;
+      font-size: clamp(2rem, 3vw + 0.5rem, 2.5rem);
+      line-height: 1.1;
+      letter-spacing: -0.02em;
+    }
+
+    .message {
+      margin: 0 0 16px;
+      font-size: 1.04rem;
+      color: var(--muted);
+      line-height: 1.6;
+    }
+
+    .support {
+      margin: 0 0 28px;
+      font-size: 0.92rem;
+      color: rgba(15, 23, 42, 0.64);
+      line-height: 1.55;
+    }
+
+    .cta-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+    }
+
+    .primary-action,
+    .secondary-action {
+      border-radius: 999px;
+      padding: 12px 26px;
+      font-size: 0.98rem;
+      font-weight: 600;
+      border: none;
+      cursor: pointer;
+      transition: transform 220ms ease, box-shadow 220ms ease, background 220ms ease, color 220ms ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .primary-action {
+      background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+      color: #ffffff;
+      box-shadow: 0 12px 22px -14px rgba(34, 197, 94, 0.85);
+    }
+
+    .primary-action:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 16px 32px -18px rgba(34, 197, 94, 0.95);
+    }
+
+    .secondary-action {
+      background: rgba(15, 23, 42, 0.05);
+      color: var(--ink);
+      border: 1px solid rgba(15, 23, 42, 0.12);
+    }
+
+    .secondary-action:hover {
+      background: rgba(15, 23, 42, 0.12);
+      transform: translateY(-1px);
+    }
+
+    .celebration {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    .celebration span {
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.65);
+      opacity: 0;
+      animation: float 9s linear infinite;
+    }
+
+    .celebration span:nth-child(odd) {
+      background: rgba(34, 197, 94, 0.6);
+    }
+
+    .celebration span:nth-child(3n) {
+      background: rgba(56, 189, 248, 0.55);
+    }
+
+    .celebration span:nth-child(1) { left: 12%; animation-delay: -1s; }
+    .celebration span:nth-child(2) { left: 78%; animation-delay: -3.2s; }
+    .celebration span:nth-child(3) { left: 34%; animation-delay: -5.6s; }
+    .celebration span:nth-child(4) { left: 58%; animation-delay: -2.4s; }
+    .celebration span:nth-child(5) { left: 88%; animation-delay: -4.4s; }
+    .celebration span:nth-child(6) { left: 6%; animation-delay: -6.1s; }
+    .celebration span:nth-child(7) { left: 44%; animation-delay: -7.8s; }
+    .celebration span:nth-child(8) { left: 65%; animation-delay: -9.3s; }
+
+    @keyframes gradientShift {
+      0% {
+        transform: rotate(0deg) scale(1.05);
+      }
+      100% {
+        transform: rotate(360deg) scale(1.2);
+      }
+    }
+
+    @keyframes fadeUp {
+      0% {
+        opacity: 0;
+        transform: translateY(16px) scale(0.98);
+      }
+      100% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    @keyframes popIn {
+      0% {
+        transform: scale(0.4);
+        opacity: 0;
+      }
+      65% {
+        transform: scale(1.08);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+      }
+    }
+
+    @keyframes pulse {
+      0%,
+      100% {
+        opacity: 0;
+        transform: scale(0.8);
+      }
+      50% {
+        opacity: 0.7;
+        transform: scale(1.1);
+      }
+    }
+
+    @keyframes float {
+      0% {
+        transform: translateY(120%) scale(0.6);
+        opacity: 0;
+      }
+      10% {
+        opacity: 0.65;
+      }
+      50% {
+        transform: translateY(-10%) scale(1.1);
+        opacity: 0.55;
+      }
+      100% {
+        transform: translateY(-200%) scale(0.8);
+        opacity: 0;
+      }
+    }
+
+    @media (max-width: 540px) {
+      .thankyou-card {
+        padding: 32px 26px;
+        border-radius: 22px;
+      }
+
+      .thankyou-card::before {
+        inset: 10px;
+        border-radius: 18px;
+      }
+
+      .cta-group {
+        flex-direction: column;
+      }
+
+      .primary-action,
+      .secondary-action {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      body::before,
+      body::after,
+      .celebration span,
+      .icon-circle::after {
+        animation: none;
+      }
+    }
+  </style>
 </head>
 <body>
-  <div class="confirm-shell">
-    <div class="confirm-card">
-      <i class="fas fa-check-circle fa-3x" style="color:#10b981;"></i>
-      <h1>Cảm ơn bạn!</h1>
-      <p class="confirm-description">{{ message }}</p>
-      <a class="secondary-btn" href="javascript:window.close();">
-        <i class="fas fa-times"></i>
-        Đóng cửa sổ
+  <div class="thankyou-card">
+    <div class="icon-circle">
+      <i class="fa-solid fa-check"></i>
+    </div>
+    <h1>Cảm ơn bạn!</h1>
+    <p class="message">{{ message or "Chúng tôi đã ghi nhận thông tin và sẽ xử lý trong thời gian sớm nhất." }}</p>
+    <p class="support">Nếu cần hỗ trợ thêm, vui lòng liên hệ qua hotline hoặc email hỗ trợ của chúng tôi.</p>
+    <div class="cta-group">
+      <a class="primary-action" href="/">
+        <i class="fa-solid fa-arrow-left"></i>
+        Quay về trang chủ
       </a>
+      <button class="secondary-action" type="button" onclick="window.close()">
+        <i class="fa-solid fa-xmark"></i>
+        Đóng cửa sổ
+      </button>
+    </div>
+    <div class="celebration" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
     </div>
   </div>
 </body>

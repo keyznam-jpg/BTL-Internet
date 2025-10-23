@@ -178,17 +178,6 @@ MYSQL_USER=root
 MYSQL_PASSWORD=your_password
 MYSQL_DB=Internet
 
-# Flask
-SECRET_KEY=your_secret_key_here
-PUBLIC_BASE_URL=http://localhost:5000
-
-# VietQR (tùy chọn)
-VIETQR_BANK_ID=970423
-VIETQR_ACCOUNT_NO=99992162001
-VIETQR_BANK_NAME=TPBank
-VIETQR_ACCOUNT_NAME=Khách sạn PTIT
-DEPOSIT_PERCENT=0.3
-
 # Email SMTP (tùy chọn)
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
@@ -222,7 +211,6 @@ backup.bat
 - **Username**: `nam`, **Password**: `123`
 - **Username**: `hoang`, **Password**: `123`
 - **Username**: `hung`, **Password**: `123`
-- **Username**: `keyz`, **Password**: `123`
 
 ## 🔗 API Endpoints chính
 
@@ -272,39 +260,6 @@ backup.bat
 - **Session Security**: Timeout cho sensitive operations
 - **File Upload Security**: Secure filename và type validation
 
-## 📈 Tối ưu hóa hiệu suất
-
-### Đã triển khai
-- ✅ **HTTP Compression**: Giảm 30-50% bandwidth
-- ✅ **Database Pooling**: 10 connections + 20 overflow
-- ✅ **Query Optimization**: Joinedload cho relationships
-- ✅ **Static Caching**: 1 giờ cache cho static files
-- ✅ **Connection Recycling**: Mỗi giờ để tránh stale connections
-
-### Kết quả
-- **Thời gian tải trang**: Giảm đáng kể nhờ compression
-- **Database performance**: Tái sử dụng connections
-- **Memory usage**: Hiệu quả hơn với pooling
-- **Scalability**: Hỗ trợ 100+ concurrent users
-
-## 🚀 Phát triển thêm
-
-### Tính năng có thể mở rộng
-- **API RESTful**: Cho mobile app và integrations
-- **Tích hợp thanh toán**: VNPay, Momo, Stripe
-- **Push Notifications**: Firebase Cloud Messaging
-- **Đa ngôn ngữ**: i18n support
-- **AI Chatbot**: Tư vấn tự động cho khách
-- **Analytics nâng cao**: Machine learning cho predictions
-- **Multi-tenant**: Hỗ trợ nhiều khách sạn
-- **Mobile App**: React Native hoặc Flutter
-
-### Đóng góp
-1. Fork repository
-2. Tạo branch feature mới: `git checkout -b feature/ten-tinh-nang`
-3. Commit changes: `git commit -m "Add new feature"`
-4. Push và tạo Pull Request
-
 ## 📝 Giấy phép
 
 Dự án này được phát triển cho mục đích học tập và nghiên cứu tại Học viện Công nghệ Bưu chính Viễn thông (PTIT).
@@ -315,7 +270,6 @@ Dự án này được phát triển cho mục đích học tập và nghiên c�
 - **Trường**: Học viện Công nghệ Bưu chính Viễn thông (PTIT)
 - **Môn học**: Internet và Giao thức
 - **Năm**: 2025
-- **Email**: [your-email@example.com]
 - **GitHub**: [https://github.com/keyznam-jpg]
 
 ---

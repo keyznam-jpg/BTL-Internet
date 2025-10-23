@@ -433,6 +433,24 @@
             cursor: not-allowed;
         }
 
+        .file-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: rgba(47, 125, 90, 0.1);
+            transition: all 0.2s ease;
+        }
+
+        .file-link:hover {
+            background: rgba(47, 125, 90, 0.2);
+            transform: translateY(-1px);
+        }
+
         /* ===== MODALS ===== */
         .modal {
             display: none;
@@ -1110,7 +1128,14 @@
             const bubble = document.createElement('div');
             bubble.className = isVoucher && type === 'system' ? 'bubble voucher' : 'bubble';
 
-            if (isVoucher && type === 'system') {
+            if (msg.type === 'file' && msg.url) {
+                const link = document.createElement('a');
+                link.href = msg.url;
+                link.target = '_blank';
+                link.className = 'file-link';
+                link.innerHTML = `<i class="fas fa-file"></i> ${msg.ten_file || 'File'}`;
+                bubble.appendChild(link);
+            } else if (isVoucher && type === 'system') {
                 const voucherMatch = text.match(/voucher giảm giá (\d+)%.*Mã: ([A-Z0-9]+).*HSD: ([\d\/]+)/i);
                 if (voucherMatch) {
                     const [, percent, code, expiry] = voucherMatch;

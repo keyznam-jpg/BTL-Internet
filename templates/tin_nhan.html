@@ -324,6 +324,18 @@
         box-shadow: 0 8px 24px -12px rgba(102, 126, 234, 0.5);
     }
 
+    .bubble.file-message {
+        background: transparent;
+        color: var(--gray-700);
+        padding: 0;
+        box-shadow: none;
+    }
+
+    .bubble.file-message img {
+        display: block;
+        border-radius: 18px;
+    }
+
     .bubble.voucher-bubble {
         background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
         color: white;
@@ -495,6 +507,11 @@
     .attach-btn:hover, .emoji-btn:hover { 
         background: var(--gray-200); 
         transform: scale(1.05);
+    }
+
+    .attach-btn:focus, .emoji-btn:focus {
+        outline: none;
+        box-shadow: none;
     }
 
     .message-input {
@@ -1474,6 +1491,7 @@
             bubble.className = isVoucher && isSystem ? 'bubble voucher-bubble' : 'bubble';
             
             if (msg.type === 'file' && msg.url) {
+                bubble.classList.add('file-message');
                 if (msg.mime && msg.mime.startsWith('image/')) {
                     const img = document.createElement('img');
                     img.src = msg.url;

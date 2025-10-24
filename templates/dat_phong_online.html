@@ -287,6 +287,18 @@
       min-height: 100px;
     }
 
+    .capacity-note {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.9rem;
+      color: var(--gray-600);
+    }
+
+    .capacity-note i {
+      color: var(--primary);
+    }
+
     /* Radio Buttons */
     .radio-group {
       display: flex;
@@ -1031,9 +1043,13 @@
                 <select id="roomType" name="loai_id" required>
                   <option value="" disabled selected>Chọn loại phòng</option>
                   {% for loai in loais %}
-                  <option value="{{ loai.id }}" data-price="{{ loai.gia }}">{{ loai.ten }} ({{ vnd(loai.gia) }}/đêm)</option>
+                  <option value="{{ loai.id }}" data-price="{{ loai.gia }}" data-capacity="{{ loai.so_nguoi_toi_da }}">{{ loai.ten }} - tối đa {{ loai.so_nguoi_toi_da }} khách ({{ vnd(loai.gia) }}/đêm)</option>
                   {% endfor %}
                 </select>
+                <div class="capacity-note" id="roomTypeCapacityNote">
+                  <i class="fas fa-user-friends"></i>
+                  <span></span>
+                </div>
               </div>
               <div class="form-group">
                 <label for="roomSelect">
@@ -1241,6 +1257,8 @@
     const depositPercent = {{ deposit_percent }};
     const apiUrl = "{{ url_for('api_public_phong_trong') }}";
     const roomTypeSelect = document.getElementById('roomType');
+    const roomTypeCapacityNote = document.getElementById('roomTypeCapacityNote');
+    const roomTypeCapacityText = roomTypeCapacityNote ? roomTypeCapacityNote.querySelector('span') : null;
     const roomSelect = document.getElementById('roomSelect');
     const ngayNhanInput = document.getElementById('ngayNhan');
     const ngayTraInput = document.getElementById('ngayTra');
@@ -1327,6 +1345,24 @@
         hours: Math.max(1, Math.ceil(diffMs / (60 * 60 * 1000))),
         nights: Math.max(1, Math.ceil(diffMs / (24 * 60 * 60 * 1000)))
       };
+    }
+    
+    function updateCapacityHint() {
+      if (!roomTypeCapacityNote || !roomTypeCapacityText) { return; }
+      const selectedOption = roomTypeSelect.options[roomTypeSelect.selectedIndex];
+      const capacity = selectedOption && selectedOption.dataset.capacity
+        ? parseInt(selectedOption.dataset.capacity, 10)
+        : NaN;
+      if (selectedOption && selectedOption.value && !Number.isNaN(capacity) && capacity > 0) {
+        roomTypeCapacityNote.style.display = 'flex';
+        roomTypeCapacityText.textContent = `Tối đa ${capacity} khách`;
+      } else if (selectedOption && selectedOption.value) {
+        roomTypeCapacityNote.style.display = 'flex';
+        roomTypeCapacityText.textContent = 'Sức chứa đang được cập nhật';
+      } else {
+        roomTypeCapacityNote.style.display = 'none';
+        roomTypeCapacityText.textContent = '';
+      }
     }
 
     function updateDepositPreview() {
@@ -1438,6 +1474,7 @@
     }
 
     function onCriteriaChange() {
+      updateCapacityHint();
       updateDepositPreview();
       updateAvailability();
     }
@@ -1458,6 +1495,7 @@
       radio.addEventListener('change', onCriteriaChange);
     });
     refreshBtn.addEventListener('click', updateAvailability);
+    updateCapacityHint();
 
     document.getElementById('bookingForm').addEventListener('submit', (event) => {
       if (!roomSelect.value) {

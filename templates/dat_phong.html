@@ -79,7 +79,7 @@
           <div class="room-type-grid">
             {% for l in loais %}
             <label class="room-type-card">
-              <input type="radio" name="loai_id" value="{{ l.id }}" data-gia="{{ l.gia }}" 
+              <input type="radio" name="loai_id" value="{{ l.id }}" data-gia="{{ l.gia }}" data-capacity="{{ l.so_nguoi_toi_da }}" 
                      {% if loop.first %}checked{% endif %} onchange="loadPhong(); updatePrice();">
               <div class="room-type-content">
                 <div class="room-type-icon">
@@ -90,6 +90,7 @@
                 </div>
                 <div class="room-type-name">{{ l.ten }}</div>
                 <div class="room-type-price">{{ l.gia|vnd }}/đêm</div>
+                <div class="room-type-capacity"><i class="fas fa-user-friends"></i> Tối đa {{ l.so_nguoi_toi_da }} khách</div>
                 {% if 'Cao cấp' in l.ten or 'Tổng thống' in l.ten %}
                 <div class="room-type-badge"><i class="fas fa-gift"></i> Có voucher</div>
                 {% endif %}
@@ -203,6 +204,10 @@
               <div class="confirm-row">
                 <span class="confirm-label">Số phòng:</span>
                 <span class="confirm-value" id="confirm-phong"></span>
+              </div>
+              <div class="confirm-row" id="confirm-capacity-row" style="display:none;">
+                <span class="confirm-label">Sức chứa tối đa:</span>
+                <span class="confirm-value" id="confirm-capacity"></span>
               </div>
               <div class="confirm-row">
                 <span class="confirm-label">Hình thức:</span>
@@ -680,7 +685,8 @@ function updatePrice() {
       selectedLoai = {
         id: input.value,
         gia: parseInt(input.dataset.gia),
-        ten: input.parentElement.querySelector('.room-type-name').textContent
+        ten: input.parentElement.querySelector('.room-type-name').textContent,
+        capacity: parseInt(input.dataset.capacity || '0', 10)
       };
     }
   });
@@ -825,7 +831,8 @@ function updateConfirmation() {
       selectedLoai = {
         id: input.value,
         gia: parseInt(input.dataset.gia),
-        ten: input.parentElement.querySelector('.room-type-name').textContent
+        ten: input.parentElement.querySelector('.room-type-name').textContent,
+        capacity: parseInt(input.dataset.capacity || '0', 10)
       };
     }
   });
@@ -866,6 +873,17 @@ function updateConfirmation() {
   // Update confirmation display
   document.getElementById('confirm-loai').textContent = selectedLoai.ten;
   document.getElementById('confirm-phong').textContent = selectedRoomData ? selectedRoomData.ten : '-';
+  const capacityRow = document.getElementById('confirm-capacity-row');
+  const capacityValue = document.getElementById('confirm-capacity');
+  if (capacityRow && capacityValue) {
+    if (selectedLoai.capacity) {
+      capacityRow.style.display = 'flex';
+      capacityValue.textContent = `${selectedLoai.capacity} khách`;
+    } else {
+      capacityRow.style.display = 'none';
+      capacityValue.textContent = '';
+    }
+  }
   document.getElementById('confirm-hinhthuc').textContent = hinhThuc === 'ngay' ? 'Theo ngày' : 'Theo giờ';
   document.getElementById('confirm-checkin').textContent = formatDateTime(ngayNhan);
   document.getElementById('confirm-checkout').textContent = formatDateTime(ngayTra);

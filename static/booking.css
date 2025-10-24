@@ -334,6 +334,19 @@
   font-weight: 700;
 }
 
+.room-type-capacity {
+  font-size: 13px;
+  color: #4b5563;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.room-type-capacity i {
+  color: #2563eb;
+}
+
 .room-type-badge {
   background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
   color: #333;

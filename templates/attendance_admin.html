@@ -48,7 +48,7 @@
 
   <!-- Filter Tabs -->
   <div class="filter-tabs">
-    <button class="filter-tab active" data-filter="all">
+    <button type="button" class="filter-tab active" data-filter="all">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="21" y1="10" x2="3" y2="10"></line>
         <line x1="21" y1="6" x2="3" y2="6"></line>
@@ -58,7 +58,7 @@
       Tất cả
       <span class="tab-count">{{ attendances|length }}</span>
     </button>
-    <button class="filter-tab" data-filter="pending">
+    <button type="button" class="filter-tab" data-filter="pending">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="12" cy="12" r="10"></circle>
         <polyline points="12 6 12 12 16 14"></polyline>
@@ -66,14 +66,14 @@
       Chờ duyệt
       <span class="tab-count pending-count">{{ attendances|selectattr('status', 'equalto', 'pending')|list|length }}</span>
     </button>
-    <button class="filter-tab" data-filter="approved">
+    <button type="button" class="filter-tab" data-filter="approved">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <polyline points="20 6 9 17 4 12"></polyline>
       </svg>
       Đã duyệt
       <span class="tab-count approved-count">{{ attendances|selectattr('status', 'equalto', 'approved')|list|length }}</span>
     </button>
-    <button class="filter-tab" data-filter="rejected">
+    <button type="button" class="filter-tab" data-filter="rejected">
       <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <line x1="18" y1="6" x2="6" y2="18"></line>
         <line x1="6" y1="6" x2="18" y2="18"></line>
@@ -190,6 +190,21 @@
       {% endif %}
     </div>
     {% endfor %}
+  </div>
+  <div class="filter-empty-state" hidden>
+    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+      <line x1="8" y1="2" x2="8" y2="6"></line>
+      <line x1="16" y1="2" x2="16" y2="6"></line>
+      <line x1="3" y1="10" x2="21" y2="10"></line>
+    </svg>
+    <h3>Không có yêu cầu trong mục này</h3>
+    <p>Chọn bộ lọc khác hoặc kiểm tra lại sau.</p>
+  </div>
+  <div class="load-more-container" hidden>
+    <button type="button" class="load-more-btn">
+      Hiển thị thêm yêu cầu
+    </button>
   </div>
   {% else %}
   <div class="empty-state">
@@ -357,7 +372,9 @@
   box-shadow: 0 12px 32px rgba(0,0,0,0.12);
 }
 
-.admin-attendance-card.hidden {
+.admin-attendance-card.hidden,
+.admin-attendance-card.hidden-by-filter,
+.admin-attendance-card.hidden-by-limit {
   display: none;
 }
 
@@ -620,6 +637,80 @@
   font-size: 15px;
 }
 
+/* ===== FILTER EMPTY STATE & LOAD MORE ===== */
+.filter-empty-state {
+  margin-top: 32px;
+  padding: 48px 24px;
+  background: white;
+  border: 2px dashed #d1d9de;
+  border-radius: 20px;
+  text-align: center;
+  color: #6c757d;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.filter-empty-state[hidden] {
+  display: none !important;
+}
+
+.filter-empty-state svg {
+  color: #adb5bd;
+}
+
+.filter-empty-state h3 {
+  margin: 0;
+  color: #495057;
+  font-size: 1.3em;
+}
+
+.filter-empty-state p {
+  margin: 0;
+  font-size: 0.95em;
+}
+
+.load-more-container {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.load-more-container[hidden] {
+  display: none !important;
+}
+
+.load-more-btn {
+  background: linear-gradient(135deg, #2f7d5a 0%, #1e5a3d 100%);
+  color: white;
+  border: none;
+  border-radius: 999px;
+  padding: 14px 28px;
+  font-size: 0.95em;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(47, 125, 90, 0.35);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.load-more-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(47, 125, 90, 0.4);
+}
+
+.load-more-btn:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(47, 125, 90, 0.3);
+}
+
+.load-more-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
   .stats-mini-grid {
@@ -686,24 +777,121 @@
 </style>
 
 <script>
-// Filter functionality
-document.querySelectorAll('.filter-tab').forEach(tab => {
-  tab.addEventListener('click', () => {
-    const filter = tab.dataset.filter;
-    
-    // Update active tab
-    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    
-    // Filter cards
-    document.querySelectorAll('.admin-attendance-card').forEach(card => {
-      if (filter === 'all' || card.dataset.status === filter) {
-        card.classList.remove('hidden');
+document.addEventListener('DOMContentLoaded', function() {
+  const filterTabs = Array.from(document.querySelectorAll('.filter-tab'));
+  const cards = Array.from(document.querySelectorAll('.admin-attendance-card'));
+  const loadMoreContainer = document.querySelector('.load-more-container');
+  const loadMoreButton = document.querySelector('.load-more-btn');
+  const emptyState = document.querySelector('.filter-empty-state');
+  const INITIAL_BATCH = 12;
+  const BATCH_INCREMENT = 12;
+  const numberFormatter = (typeof Intl !== 'undefined' && typeof Intl.NumberFormat === 'function')
+    ? new Intl.NumberFormat('vi-VN')
+    : null;
+
+  if (!filterTabs.length || !cards.length) {
+    return;
+  }
+
+  const visibleCount = {
+    all: INITIAL_BATCH,
+    pending: INITIAL_BATCH,
+    approved: INITIAL_BATCH,
+    rejected: INITIAL_BATCH
+  };
+
+  let activeFilter = filterTabs.find(tab => tab.classList.contains('active'))?.dataset.filter || 'all';
+
+  function matchesFilter(card, filter) {
+    return filter === 'all' || card.dataset.status === filter;
+  }
+
+  function computeMatches(filter) {
+    return cards.filter(card => matchesFilter(card, filter));
+  }
+
+  function formatCount(value) {
+    if (!numberFormatter) {
+      return value;
+    }
+    try {
+      return numberFormatter.format(value);
+    } catch (err) {
+      console.warn('Khong the dinh dang so:', err);
+      return value;
+    }
+  }
+
+  function updateView(filter) {
+    const limit = visibleCount[filter] || INITIAL_BATCH;
+    let shown = 0;
+
+    cards.forEach(card => {
+      if (!matchesFilter(card, filter)) {
+        card.classList.add('hidden-by-filter');
+        card.classList.remove('hidden-by-limit');
+        return;
+      }
+
+      card.classList.remove('hidden-by-filter');
+
+      if (shown < limit) {
+        card.classList.remove('hidden-by-limit');
+        shown += 1;
       } else {
-        card.classList.add('hidden');
+        card.classList.add('hidden-by-limit');
       }
     });
+
+    const matches = computeMatches(filter);
+    const totalMatches = matches.length;
+
+    if (emptyState) {
+      emptyState.hidden = totalMatches !== 0;
+    }
+
+    if (!loadMoreContainer || !loadMoreButton) {
+      return;
+    }
+
+    const remaining = Math.max(totalMatches - shown, 0);
+    loadMoreButton.dataset.activeFilter = filter;
+
+    if (remaining > 0) {
+      loadMoreContainer.hidden = false;
+      const formatted = formatCount(remaining);
+      loadMoreButton.disabled = false;
+      loadMoreButton.textContent = remaining === 1
+        ? 'Hiển thị thêm 1 yêu cầu'
+        : `Hiển thị thêm ${formatted} yêu cầu`;
+    } else {
+      loadMoreContainer.hidden = true;
+    }
+  }
+
+  filterTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const filter = tab.dataset.filter || 'all';
+      activeFilter = filter;
+      filterTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      if (!visibleCount[filter] || visibleCount[filter] < INITIAL_BATCH) {
+        visibleCount[filter] = INITIAL_BATCH;
+      }
+      updateView(filter);
+    });
   });
+
+  if (loadMoreButton) {
+    loadMoreButton.addEventListener('click', () => {
+      const filter = loadMoreButton.dataset.activeFilter || activeFilter || 'all';
+      visibleCount[filter] = (visibleCount[filter] || INITIAL_BATCH) + BATCH_INCREMENT;
+      activeFilter = filter;
+      updateView(filter);
+    });
+  }
+
+  updateView(activeFilter);
 });
 </script>
 

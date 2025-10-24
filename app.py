@@ -868,8 +868,6 @@ def set_config_int(key, value):
 def get_top_bonus():
     return get_config_int('TOP_REVENUE_BONUS', TOP_REVENUE_BONUS_DEFAULT)
 
-TOP_REVENUE_BONUS = 500_000
-
 # Số ngày công tối thiểu để nhận phụ cấp
 MIN_WORK_DAYS_KEY = 'MIN_WORK_DAYS'
 MIN_WORK_DAYS_DEFAULT = 22
@@ -3886,6 +3884,7 @@ def luong_thuong():
 
     tiers = LuongThuongCauHinh.query.order_by(LuongThuongCauHinh.moc_duoi.asc()).all()
     thuong, ty_le = tinh_thuong_doanh_thu(doanh_thu, tiers)
+    bonus_amount = get_top_bonus()
 
     top_rows = db.session.query(
         DatPhong.nhanvien_id.label('nv_id'),
@@ -3899,7 +3898,7 @@ def luong_thuong():
     if top_rows:
         top_max = max(int(row.doanh_thu or 0) for row in top_rows)
         if top_max > 0 and any(int(row.nv_id) == current_user.id and int(row.doanh_thu or 0) == top_max for row in top_rows):
-            top_bonus = TOP_REVENUE_BONUS
+            top_bonus = bonus_amount
 
     salary_info = {
         'luong_co_ban': luong_co_ban,
@@ -3909,10 +3908,11 @@ def luong_thuong():
         'top_bonus': top_bonus,
         'is_top': bool(top_bonus),
         'tong': luong_co_ban + phu_cap + thuong + top_bonus,
-        'doanh_thu': doanh_thu
+        'doanh_thu': doanh_thu,
+        'configured_top_bonus': bonus_amount
     }
 
-    return render_template('luong_thuong.html', salary_info=salary_info, tiers=tiers, start_month=start_month, bonus_amount=TOP_REVENUE_BONUS)
+    return render_template('luong_thuong.html', salary_info=salary_info, tiers=tiers, start_month=start_month, bonus_amount=bonus_amount)
 
 @app.route('/tai-xuong-luong-excel')
 @login_required
@@ -3959,6 +3959,7 @@ def tai_xuong_luong_excel():
 
     tiers = LuongThuongCauHinh.query.order_by(LuongThuongCauHinh.moc_duoi.asc()).all()
     thuong, ty_le = tinh_thuong_doanh_thu(doanh_thu, tiers)
+    bonus_amount = get_top_bonus()
 
     top_rows = db.session.query(
         DatPhong.nhanvien_id.label('nv_id'),
@@ -3972,7 +3973,7 @@ def tai_xuong_luong_excel():
     if top_rows:
         top_max = max(int(row.doanh_thu or 0) for row in top_rows)
         if top_max > 0 and any(int(row.nv_id) == current_user.id and int(row.doanh_thu or 0) == top_max for row in top_rows):
-            top_bonus = TOP_REVENUE_BONUS
+            top_bonus = bonus_amount
 
     tong_luong = luong_co_ban + phu_cap + thuong + top_bonus
 
@@ -4475,7 +4476,7 @@ def nhan_vien_chi_tiet(nhanvien_id):
     if top_rows:
         top_max = max(int(row.doanh_thu or 0) for row in top_rows)
         if top_max > 0 and any(int(row.nv_id) == nv.id and int(row.doanh_thu or 0) == top_max for row in top_rows):
-            top_bonus = TOP_REVENUE_BONUS
+            top_bonus = bonus_amount
 
     luong_record = LuongNhanVien.query.filter_by(nguoidung_id=nv.id).first()
     luong_co_ban = luong_record.luong_co_ban if luong_record else 0
@@ -4700,8 +4701,9 @@ def cai_dat_luong_thuong():
                 message = 'Không thể xóa mức thưởng.'
         elif form_name == 'save_top_bonus':
             try:
-                bonus_value = int(request.form.get('top_bonus', 0) or 0)
+                bonus_value = max(0, int(request.form.get('top_bonus', 0) or 0))
                 set_config_int('TOP_REVENUE_BONUS', bonus_value)
+                cache.delete_memoized(get_top_bonus)
                 message = 'Đã cập nhật thưởng top doanh thu.'
             except ValueError:
                 status = 'danger'

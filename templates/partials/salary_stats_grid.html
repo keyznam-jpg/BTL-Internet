@@ -24,6 +24,19 @@
     </form>
   </div>
 
+  <div class="stat-card config-card">
+    <div class="stat-label"><i class="fas fa-trophy"></i> Thưởng top doanh thu</div>
+    <form method="post" class="config-form">
+      <input type="hidden" name="form_name" value="save_top_bonus">
+      <div class="config-row">
+        <input type="number" min="0" step="10000" name="top_bonus" value="{{ bonus_amount }}" class="config-input" required>
+        <span class="config-unit">VNĐ</span>
+        <button type="submit" class="btn-config">Cập nhật</button>
+      </div>
+      <div class="config-note">Thưởng thêm cho nhân viên đạt doanh thu cao nhất tháng.</div>
+    </form>
+  </div>
+
   <div class="stat-card primary">
     <div class="stat-header">
       <div class="stat-icon"><i class="fas fa-users"></i></div>

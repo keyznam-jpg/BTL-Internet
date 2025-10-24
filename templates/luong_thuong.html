@@ -10,7 +10,7 @@
         <i class="fas fa-file-excel"></i> Tải Excel
       </a>
     </div>
-    <span class="modern-salary-desc">Thông tin cập nhật theo kỳ lương hiện tại (<b>{{ start_month.strftime('%m/%Y') }}</b>). Số liệu doanh thu chỉ tính các hóa đơn đã hoàn tất.</span>
+    <span class="modern-salary-desc">Thông tin cập nhật theo kỳ lương hiện tại (<b>{{ start_month.strftime('%m/%Y') }}</b>). Số liệu doanh thu chỉ tính các hóa đơn đã hoàn tất.{% if bonus_amount %} Mức thưởng top doanh thu hiện tại: <strong>{{ bonus_amount|vnd }}</strong>.{% endif %}</span>
   </div>
   <div class="modern-salary-main">
     <div class="modern-salary-card">
@@ -33,6 +33,13 @@
             <span>Thưởng doanh thu</span>
             <strong>{{ salary_info.thuong_thang|vnd }}{% if salary_info.ty_le %} ({{ salary_info.ty_le|round(2) }}%) {% endif %}</strong>
           </div>
+          {% if salary_info.top_bonus %}
+          <div class="modern-salary-box modern-top-bonus">
+            <span>Thưởng top doanh thu</span>
+            <strong>{{ salary_info.top_bonus|vnd }}</strong>
+            <span class="modern-top-note">Chúc mừng! Bạn đang nằm trong top doanh thu tháng.</span>
+          </div>
+          {% endif %}
         </div>
         <div class="modern-salary-total">
           <span>Tổng thu nhập tạm tính</span>
@@ -182,6 +189,29 @@
     box-shadow: 0 8px 24px rgba(47,125,90,0.12);
     transform: translateY(-2px) scale(1.03);
     background: linear-gradient(120deg, #eafaf2 0%, #d2e7dd 100%);
+  }
+  .modern-top-bonus {
+    border: 1px solid #f0c24b;
+    background: linear-gradient(120deg, #fff7da 0%, #ffe8a3 100%);
+    color: #7a4a00;
+    position: relative;
+    overflow: hidden;
+  }
+  .modern-top-bonus::after {
+    content: "\2605";
+    position: absolute;
+    top: -18px;
+    right: -12px;
+    font-size: 60px;
+    color: rgba(255, 204, 0, 0.25);
+    transform: rotate(20deg);
+  }
+  .modern-top-note {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.85em;
+    color: #8c5b00;
+    font-weight: 600;
   }
   .modern-salary-total {
     margin-top: 22px;

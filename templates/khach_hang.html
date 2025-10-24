@@ -13,6 +13,7 @@
 
 <div class="card">
   <h3>Danh sách khách hàng</h3>
+  <div class="table-scroll">
   <table class="tbl">
     <thead>
       <tr>
@@ -55,6 +56,7 @@
       {% endif %}
     </tbody>
   </table>
+  </div>
 </div>
 
 <style>
@@ -63,6 +65,43 @@
   padding:14px;margin-bottom:14px;box-shadow:0 4px 10px rgba(0,0,0,.04)
 }
 .card h3{margin:0 0 10px;color:#1b5e20}
+.table-scroll{
+  width:100%;
+  border:1px solid #e6eee6;
+  border-radius:10px;
+  overflow:hidden;
+  position:relative;
+  background:#fff;
+}
+.table-scroll.with-scroll{
+  max-height:calc(14 * 56px + 64px);
+  overflow-y:auto;
+  overflow-x:hidden;
+  scrollbar-width:thin;
+  scrollbar-color:rgba(27,94,32,0.4) rgba(230,238,230,0.6);
+}
+.table-scroll.with-scroll::-webkit-scrollbar{
+  width:10px;
+}
+.table-scroll.with-scroll::-webkit-scrollbar-track{
+  background:rgba(230,238,230,0.5);
+  border-radius:10px;
+}
+.table-scroll.with-scroll::-webkit-scrollbar-thumb{
+  background:rgba(27,94,32,0.45);
+  border-radius:8px;
+  border:2px solid rgba(230,238,230,0.6);
+}
+.table-scroll.with-scroll::-webkit-scrollbar-thumb:hover{
+  background:rgba(27,94,32,0.6);
+}
+.table-scroll.with-scroll .tbl thead th{
+  position:sticky;
+  top:0;
+  z-index:2;
+  background:#f7fbf7;
+  box-shadow:0 2px 0 rgba(230,238,230,0.9);
+}
 .tbl{width:100%;border-collapse:collapse}
 .tbl th,.tbl td{border-bottom:1px solid #eef3ee;padding:10px 8px; vertical-align: middle;}
 .tbl thead th{background:#f7fbf7}
@@ -115,5 +154,17 @@
   text-decoration: none;
 }
 </style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const wrapper = document.querySelector('.table-scroll');
+  if (!wrapper) { return; }
+  const rows = Array.from(wrapper.querySelectorAll('tbody tr'));
+  const dataRows = rows.filter(row => !row.querySelector('.muted'));
+  if (dataRows.length > 14) {
+    wrapper.classList.add('with-scroll');
+  }
+});
+</script>
 
 {% endblock %}

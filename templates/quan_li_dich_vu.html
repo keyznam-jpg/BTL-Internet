@@ -452,8 +452,33 @@
   /* Service Table */
   .table-container {
     overflow-x: auto;
+    overflow-y: auto;
     border-radius: 12px;
     border: 1px solid #e2e8f0;
+    max-height: clamp(360px, 60vh, 640px);
+    position: relative;
+    background: white;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(47, 125, 90, 0.35) rgba(226, 232, 240, 0.6);
+  }
+
+  .table-container::-webkit-scrollbar {
+    width: 10px;
+  }
+
+  .table-container::-webkit-scrollbar-track {
+    background: rgba(226, 232, 240, 0.4);
+    border-radius: 12px;
+  }
+
+  .table-container::-webkit-scrollbar-thumb {
+    background: rgba(47, 125, 90, 0.4);
+    border-radius: 10px;
+    border: 2px solid rgba(226, 232, 240, 0.6);
+  }
+
+  .table-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(47, 125, 90, 0.55);
   }
 
   .service-table {
@@ -474,6 +499,11 @@
     text-transform: uppercase;
     letter-spacing: 0.05em;
     border-bottom: 2px solid #e2e8f0;
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: linear-gradient(135deg, #f6f8fb 0%, #edf2f7 100%);
+    box-shadow: 0 2px 0 rgba(226, 232, 240, 0.75);
   }
 
   .service-table thead th i {

@@ -152,7 +152,7 @@
 </head>
 <body>
     <div class="toolbar">
-        <a class="btn light" href="{{ url_for('dat_phong') }}">Quay lại trang Đặt phòng</a>
+        <a class="btn light" href="{% if request.args.get('return_to') == 'quan_li_hoa_don' %}{{ url_for('quan_li_hoa_don') }}{% else %}{{ url_for('dat_phong') }}{% endif %}">Quay lại</a>
         <button class="btn" onclick="window.print()">In hoá đơn</button>
     </div>
 

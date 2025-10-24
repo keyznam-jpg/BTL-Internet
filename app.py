@@ -136,7 +136,7 @@ CUSTOMER_PENDING_CONFIRMATION_MESSAGE = (
     'Chúng tôi sẽ thông báo ngay khi có kết quả.'
 )
 # ==== CẤU HÌNH VOUCHER TOÀN CỤC ====
-@cache.cached(timeout=300)  # Cache for 5 minutes
+@cache.memoize(timeout=300)  # Cache voucher config for 5 minutes
 def get_voucher_config():
     discount = HeThongCauHinh.query.filter_by(key='voucher_discount').first()
     expires = HeThongCauHinh.query.filter_by(key='voucher_expires').first()
@@ -163,6 +163,7 @@ def cai_dat_voucher():
                 cauhinh = HeThongCauHinh(key=key, value=str(value))
                 db.session.add(cauhinh)
         db.session.commit()
+        cache.delete_memoized(get_voucher_config)
         flash('Đã cập nhật cấu hình voucher. Các mã hiện có giữ nguyên thông tin; voucher mới sẽ dùng cấu hình mới.', 'success')
     except Exception:
         flash('Dữ liệu không hợp lệ!', 'danger')

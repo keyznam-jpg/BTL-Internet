@@ -7,6 +7,74 @@
   min-height: 100vh;
 }
 
+.dashboard-greeting {
+  margin-bottom: 26px;
+}
+
+.greeting-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 24px;
+  border-radius: 18px;
+  background: linear-gradient(120deg, rgba(236, 253, 245, 0.95), rgba(209, 250, 229, 0.88));
+  border: 1px solid rgba(34, 197, 94, 0.12);
+  box-shadow: 0 12px 28px rgba(22, 101, 52, 0.12);
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+}
+
+.greeting-main {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.greeting-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: #065f46;
+  letter-spacing: -0.2px;
+}
+
+.greeting-subtitle {
+  margin: 6px 0 0;
+  font-size: 15px;
+  color: #047857;
+}
+
+.greeting-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #047857;
+}
+
+.meta-time {
+  font-variant-numeric: tabular-nums;
+  min-width: 78px;
+}
+
+.meta-divider {
+  color: rgba(22, 101, 52, 0.35);
+}
+
+.meta-date {
+  text-transform: capitalize;
+}
+
+.meta-time,
+.meta-date {
+  display: inline-flex;
+  align-items: center;
+}
+
 /* ========== STATS GRID - Top Statistics Cards ========== */
 .stats-grid {
   display: grid;
@@ -717,6 +785,22 @@
 }
 
 @media (max-width: 1200px) {
+  .greeting-card {
+    padding: 20px;
+  }
+
+  .greeting-main {
+    gap: 18px;
+  }
+
+  .greeting-title {
+    font-size: 24px;
+  }
+
+  .greeting-meta {
+    gap: 12px;
+  }
+
   .stats-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -737,6 +821,23 @@
 }
 
 @media (max-width: 900px) {
+  .greeting-card {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .greeting-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .greeting-meta {
+    font-size: 14px;
+    gap: 8px;
+  }
+
   .stats-grid {
     grid-template-columns: 1fr 1fr;
   }
@@ -805,11 +906,38 @@
     padding: 16px;
   }
   
+  .greeting-card {
+    padding: 18px;
+    border-radius: 18px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .greeting-main {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .greeting-title {
+    font-size: 22px;
+  }
+
+  .greeting-subtitle,
+  .greeting-meta {
+    font-size: 14px;
+  }
+
+  .greeting-meta {
+    gap: 6px;
+  }
+
   .stats-grid,
   .main-access-grid {
     gap: 16px;
   }
-  
+
   .stat-card {
     padding: 20px;
     min-height: 160px;

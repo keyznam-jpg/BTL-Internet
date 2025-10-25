@@ -3,6 +3,21 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='dashboard.css') }}">
 
 <div class="dashboard-page">
+  <div class="dashboard-greeting">
+    <div class="greeting-card">
+      <div class="greeting-main">
+        <div class="greeting-copy">
+          <h1 class="greeting-title">Xin chào, {{ current_user.ten }}!</h1>
+          <p class="greeting-subtitle" id="dashboard-wish">Chúc bạn một ngày làm việc hiệu quả.</p>
+        </div>
+        <div class="greeting-meta" aria-live="polite">
+          <span class="meta-time" id="dashboard-time"></span>
+          <span class="meta-divider" aria-hidden="true">|</span>
+          <span class="meta-date" id="dashboard-date"></span>
+        </div>
+      </div>
+    </div>
+  </div>
   <!-- Stats Grid - Statistics Cards -->
   <div class="stats-grid">
     <!-- Thẻ Check-in -->
@@ -236,5 +251,53 @@
     {% endif %}
   </div>
 </div>
+
+<script>
+  (function () {
+    const dateEl = document.getElementById('dashboard-date');
+    const timeEl = document.getElementById('dashboard-time');
+    const wishEl = document.getElementById('dashboard-wish');
+    if (!dateEl || !timeEl) {
+      return;
+    }
+
+    const weekdays = ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+    const wishMessages = [
+      { start: 5, end: 10, message: 'Buổi sáng năng lượng.' },
+      { start: 10, end: 13, message: 'Giữ nhịp trưa hứng khởi.' },
+      { start: 13, end: 17, message: 'Chiều làm việc thật tập trung.' },
+      { start: 17, end: 21, message: 'Buổi tối thư thái, nhẹ nhàng.' },
+      { start: 21, end: 24, message: 'Đêm muộn nhớ nghỉ ngơi nhé.' },
+      { start: 0, end: 5, message: 'Giữ sức khỏe trong ca đêm.' }
+    ];
+
+    function pad(value) {
+      return value.toString().padStart(2, '0');
+    }
+
+    function updateWish(hour) {
+      if (!wishEl) {
+        return;
+      }
+      const wish = wishMessages.find(({ start, end }) => hour >= start && hour < end);
+      if (wish) {
+        wishEl.textContent = wish.message;
+      }
+    }
+
+    function updateClock() {
+      const now = new Date();
+      const weekday = weekdays[now.getDay()];
+      const date = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+      const time = `${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      dateEl.textContent = `${weekday}, ${date}`;
+      timeEl.textContent = time;
+      updateWish(now.getHours());
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+  })();
+</script>
 
 {% endblock %}

@@ -40,58 +40,126 @@
 }
 
 .btn-add-employee {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  padding: 6px 8px;
-  border-radius: 50px;
-  font-size: 0.8rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  min-width: auto;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  background: linear-gradient(135deg, rgba(47, 125, 90, 0.95), rgba(22, 163, 74, 0.85));
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  box-shadow: 0 12px 24px rgba(34, 97, 62, 0.35);
 }
 
 .btn-add-employee:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 16px 32px rgba(27, 94, 62, 0.45);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(47, 125, 90, 0.4);
+}
+
+.btn-add-employee span {
+  font-size: 0.9rem;
+}
+
+.btn-add-employee i {
+  font-size: 0.95rem;
 }
 
 .header-actions {
   display: flex;
-  gap: 10px;
+  gap: 12px;
   align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.header-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 20px;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 2px solid transparent;
+  letter-spacing: 0.2px;
+}
+
+.header-button i {
+  font-size: 0.95rem;
+}
+
+.header-button span {
+  white-space: nowrap;
 }
 
 .btn-export-excel {
-  background: rgba(255, 255, 255, 0.2);
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  color: white;
-  padding: 8px 16px;
-  border-radius: 50px;
-  font-size: 0.9rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  display: flex;
-  align-items: center;
-  gap: 5px;
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.28);
+  color: #f8fafc;
+  backdrop-filter: blur(12px);
 }
 
 .btn-export-excel:hover {
-  background: rgba(255, 255, 255, 0.3);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.28);
+  border-color: rgba(255, 255, 255, 0.45);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(47, 125, 90, 0.4);
+  box-shadow: 0 10px 25px rgba(47, 125, 90, 0.35);
+}
+
+.export-attendance-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.16);
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 999px;
+  backdrop-filter: blur(12px);
+}
+
+.month-picker-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #f8fafc;
+  font-size: 0.85rem;
+  letter-spacing: 0.3px;
+}
+
+.month-picker-wrapper i {
+  opacity: 0.8;
+}
+
+.month-picker-wrapper input[type="month"] {
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  min-width: 120px;
+}
+
+.month-picker-wrapper input[type="month"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+}
+
+.month-picker-wrapper input[type="month"]:focus {
+  outline: none;
+}
+
+.attendance-month-chip {
+  background: rgba(15, 118, 110, 0.2);
+  color: #ecfdf5;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.btn-export-attendance {
+  padding: 10px 20px;
 }
 
 /* Stats Grid */
@@ -569,6 +637,30 @@
     gap: 15px;
   }
   
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .export-attendance-group {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .month-picker-wrapper {
+    justify-content: space-between;
+  }
+  
+  .month-picker-wrapper input[type="month"] {
+    min-width: auto;
+    text-align: right;
+  }
+  
+  .attendance-month-chip {
+    text-align: center;
+  }
+  
   .stats-grid {
     grid-template-columns: 1fr;
   }
@@ -593,11 +685,28 @@
       <h2>Quản lý Nhân viên</h2>
     </div>
     <div class="header-actions">
-      <button class="btn-export-excel" onclick="exportAllSalary()">
-        <i class="fas fa-file-excel"></i> Xuất lương tổng
+      <form id="attendanceExportForm" class="export-attendance-group" method="get" action="{{ url_for('export_attendance_overview') }}">
+        <div class="month-picker-wrapper">
+          <i class="fas fa-calendar-alt"></i>
+          <input type="month"
+                 id="attendanceMonthPicker"
+                 name="month"
+                 value="{{ attendance_month_default }}"
+                 aria-label="Chọn tháng chấm công">
+        </div>
+        <span class="attendance-month-chip" id="attendanceMonthLabel">Tháng {{ start_month.strftime('%m/%Y') }}</span>
+        <button type="submit" class="header-button btn-export-excel btn-export-attendance">
+          <i class="fas fa-calendar-check"></i>
+          <span>Xuất chấm công</span>
+        </button>
+      </form>
+      <button class="header-button btn-export-excel" onclick="exportAllSalary()">
+        <i class="fas fa-file-excel"></i>
+        <span>Xuất lương tổng</span>
       </button>
-      <button class="btn-add-employee" onclick="openAddModal()">
+      <button class="header-button btn-add-employee" onclick="openAddModal()">
         <i class="fas fa-plus"></i>
+        <span>Thêm nhân viên</span>
       </button>
     </div>
   </div>
@@ -914,6 +1023,22 @@ function sortEmployees() {
   });
 
   cards.forEach(card => grid.appendChild(card));
+}
+
+const attendanceMonthPicker = document.getElementById('attendanceMonthPicker');
+const attendanceMonthLabel = document.getElementById('attendanceMonthLabel');
+if (attendanceMonthPicker && attendanceMonthLabel) {
+  const updateAttendanceLabel = () => {
+    const value = attendanceMonthPicker.value;
+    if (!value) {
+      attendanceMonthLabel.textContent = 'Tháng hiện tại';
+      return;
+    }
+    const [year, month] = value.split('-');
+    attendanceMonthLabel.textContent = `Tháng ${month}/${year}`;
+  };
+  updateAttendanceLabel();
+  attendanceMonthPicker.addEventListener('change', updateAttendanceLabel);
 }
 
 function exportEmployeeSalary(id, name) {

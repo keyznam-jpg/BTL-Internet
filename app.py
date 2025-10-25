@@ -96,7 +96,7 @@ VIETQR_ACCOUNT_NO = os.getenv('VIETQR_ACCOUNT_NO', '99992162001')
 VIETQR_BANK_NAME = os.getenv('VIETQR_BANK_NAME', 'TPBank')
 VIETQR_ACCOUNT_NAME = os.getenv('VIETQR_ACCOUNT_NAME', 'Khách sạn PTIT')
 DEPOSIT_PERCENT = float(os.getenv('DEPOSIT_PERCENT', '0.3'))
-BOOKING_BLOCKING_STATUSES = ('dat', 'nhan', 'cho_xac_nhan')
+BOOKING_BLOCKING_STATUSES = ('dat', 'nhan', 'cho_xac_nhan', 'waiting')
 BOOKING_STATUS_USER_MESSAGES = {
     'cho_xac_nhan': {
         'title': 'Đang chờ xác nhận',
@@ -1936,56 +1936,77 @@ def build_invoice_context(dp):
 
     return template_ctx, calc_values
 
+def cancel_booking_for_no_show(dp, auto_cancel_minutes=None):
+    """Mark a booking as cancelled due to no-show if it is past the configured deadline."""
+    if not dp or dp.trang_thai != 'dat' or dp.thuc_te_nhan is not None:
+        return False
+
+    minutes = auto_cancel_minutes if auto_cancel_minutes is not None else get_config_int('auto_cancel_minutes', 5)
+    if minutes <= 0:
+        return False
+
+    reference_time = dp.auto_confirmed_at or dp.created_at or dp.ngay_nhan
+    if not reference_time:
+        return False
+
+    deadline = reference_time + timedelta(minutes=minutes)
+    if datetime.now() < deadline:
+        return False
+
+    now = datetime.now()
+    dp.trang_thai = 'huy'
+    dp.tong_thanh_toan = dp.tien_coc
+    dp.tien_phat = dp.tien_coc
+    dp.tien_phong = 0
+    dp.tien_coc = 0
+    dp.thuc_te_tra = now
+    dp.phuong_thuc_thanh_toan = 'qr'
+    dp.coc_da_thanh_toan = True
+
+    other_booking = DatPhong.query.filter(
+        DatPhong.phong_id == dp.phong_id,
+        DatPhong.id != dp.id,
+        DatPhong.trang_thai.in_(BOOKING_BLOCKING_STATUSES),
+        ~db.or_(DatPhong.ngay_tra <= dp.ngay_nhan, DatPhong.ngay_nhan >= dp.ngay_tra)
+    ).first()
+
+    dp.phong.trang_thai = 'trong' if not other_booking else 'da_dat'
+    return True
+
+
 def huy_dat_phong_khong_den():
     with app.app_context():
-        # Lấy thời gian tự động hủy từ cấu hình
-        setting = HeThongCauHinh.query.filter_by(key='auto_cancel_minutes').first()
-        minutes = int(setting.value) if setting and setting.value else 5
-        now = datetime.now()
-        cutoff_time = now - timedelta(minutes=minutes)
-        # Tìm các booking đặt phòng sau X phút mà chưa check-in
-        cac_dat_phong_khong_den = DatPhong.query.filter(
+        minutes = get_config_int('auto_cancel_minutes', 5)
+        bookings = DatPhong.query.filter(
             DatPhong.trang_thai == 'dat',
-            DatPhong.thuc_te_nhan.is_(None),
-            DatPhong.created_at < cutoff_time
+            DatPhong.thuc_te_nhan.is_(None)
         ).all()
-        app.logger.info(f"Checking for expired bookings: found {len(cac_dat_phong_khong_den)} at {now}, cutoff {cutoff_time} (after {minutes} minutes)")
-        for dp in cac_dat_phong_khong_den:
-            app.logger.info(f"Found expired booking ID {dp.id}, created {dp.created_at}, trang_thai {dp.trang_thai}, thuc_te_nhan {dp.thuc_te_nhan}")
-        if not cac_dat_phong_khong_den: return
+        if not bookings:
+            return
         count = 0
-        for dp in cac_dat_phong_khong_den:
-            app.logger.info(f"Cancelling booking {dp.id} created at {dp.created_at}")
-            dp.trang_thai = 'huy'
-            dp.tong_thanh_toan = dp.tien_coc  # Tổng thanh toán là tiền cọc mất
-            dp.tien_phat = dp.tien_coc  # Phí phạt bằng tiền cọc
-            dp.tien_phong = 0
-            dp.tien_coc = 0  # Cọc đã mất, không còn tiền cọc
-            dp.thuc_te_tra = now
-            dp.phuong_thuc_thanh_toan = 'qr'  # Chuyển khoản cho mất cọc
-            dp.coc_da_thanh_toan = True
-            # Commit ngay để tránh autoflush
-            db.session.commit()
-            # Kiểm tra xem còn booking nào khác đang block phòng không
-            other_booking = DatPhong.query.filter(
-                DatPhong.phong_id == dp.phong_id,
-                DatPhong.id != dp.id,
-                DatPhong.trang_thai.in_(BOOKING_BLOCKING_STATUSES),
-                ~db.or_(DatPhong.ngay_tra <= dp.ngay_nhan, DatPhong.ngay_nhan >= dp.ngay_tra)
-            ).first()
-            if not other_booking:
-                dp.phong.trang_thai = 'trong'
-            # Nếu có booking khác, để phòng ở trạng thái 'da_dat'
-            else:
-                dp.phong.trang_thai = 'da_dat'
-            db.session.commit()  # Commit trạng thái phòng
-            count += 1
+        for dp in bookings:
+            if cancel_booking_for_no_show(dp, minutes):
+                db.session.commit()
+                count += 1
         if count > 0:
             app.logger.info(
                 f'Đã tự động hủy {count} đặt phòng không đến trong {minutes} phút. '
                 'Doanh thu từ tiền cọc đã được ghi nhận.'
             )
             # flash(f'Đã tự động hủy {count} đặt phòng không đến trong 5 phút. Doanh thu từ tiền cọc đã được ghi nhận.', 'success')
+
+
+@app.route('/api/bookings/<int:dat_id>/auto-cancel', methods=['POST'])
+@login_required
+def api_auto_cancel_booking(dat_id):
+    dp = DatPhong.query.get_or_404(dat_id)
+    minutes = get_config_int('auto_cancel_minutes', 5)
+    if cancel_booking_for_no_show(dp, minutes):
+        db.session.commit()
+        socketio.emit('booking_auto_cancelled', {'booking_id': dp.id})
+        return jsonify({'status': 'cancelled'})
+    return jsonify({'status': 'pending'})
+
 
 def clean_expired_payment_sessions():
     with app.app_context():
@@ -2733,6 +2754,7 @@ def quan_ly_dat_phong_online_xac_nhan(dat_id):
         dp.auto_confirmed_at = None
     else:
         dp.trang_thai = 'dat'
+        dp.auto_confirmed_at = datetime.now()
         if dp.phong.trang_thai == 'trong':
             dp.phong.trang_thai = 'da_dat'
     tn = TinNhan(datphong_id=dp.id, nguoi_gui='he_thong',
@@ -2881,6 +2903,11 @@ def nhan_phong():
             flash('Không tìm thấy thông tin đặt phòng.', 'danger')
         return redirect(url_for('nhan_phong'))
     discount_percent, _ = get_voucher_config()
+    cancel_setting = HeThongCauHinh.query.filter_by(key='auto_cancel_minutes').first()
+    try:
+        auto_cancel_minutes = int(cancel_setting.value) if cancel_setting and cancel_setting.value else 5
+    except ValueError:
+        auto_cancel_minutes = 5
     # Use raw SQL to avoid SQLAlchemy model attribute issues after schema changes
     ds_nhan_query = db.text("""
         SELECT * FROM datphong 
@@ -2892,11 +2919,36 @@ def nhan_phong():
     # Convert to objects for template compatibility
     ds_nhan_ids = [row.id for row in ds_nhan]
     if ds_nhan_ids:
-        ds_nhan = DatPhong.query.filter(DatPhong.id.in_(ds_nhan_ids)).all()
+        ds_nhan = (
+            DatPhong.query
+            .filter(DatPhong.id.in_(ds_nhan_ids))
+            .order_by(DatPhong.ngay_nhan.asc())
+            .all()
+        )
     else:
         ds_nhan = []
+    cancel_data = {}
+    for booking in ds_nhan:
+        confirmed_at = booking.auto_confirmed_at or booking.created_at or booking.ngay_nhan
+        if not confirmed_at:
+            confirmed_at = datetime.now()
+        deadline = confirmed_at + timedelta(minutes=auto_cancel_minutes)
+        cancel_data[booking.id] = {
+            'confirmed_at': confirmed_at.strftime('%Y-%m-%dT%H:%M:%S'),
+            'deadline': deadline.strftime('%Y-%m-%dT%H:%M:%S'),
+            'confirmed_display': confirmed_at.strftime('%H:%M %d/%m/%Y'),
+            'deadline_display': deadline.strftime('%H:%M %d/%m/%Y'),
+            'minutes': auto_cancel_minutes,
+        }
     ds_thue = DatPhong.query.filter_by(trang_thai='nhan').order_by(DatPhong.ngay_nhan.desc()).all()
-    return render_template('nhan_phong.html', ds_nhan=ds_nhan, ds_thue=ds_thue, voucher_discount=discount_percent)
+    return render_template(
+        'nhan_phong.html',
+        ds_nhan=ds_nhan,
+        ds_thue=ds_thue,
+        voucher_discount=discount_percent,
+        auto_cancel_minutes=auto_cancel_minutes,
+        cancel_data=cancel_data
+    )
 
 
 def build_service_booking_payload(dat_phong):
@@ -3126,6 +3178,7 @@ def thanh_toan_coc(dat_id):
                 dp.auto_confirmed_at = None
             else:
                 dp.trang_thai = 'dat'
+                dp.auto_confirmed_at = datetime.now()
                 if dp.phong.trang_thai == 'trong':
                     dp.phong.trang_thai = 'da_dat'
             db.session.commit()
@@ -3542,6 +3595,7 @@ def api_confirm_payment(token):
                 dp.auto_confirmed_at = None
             else:
                 dp.trang_thai = 'dat'
+                dp.auto_confirmed_at = datetime.now()
                 if dp.phong.trang_thai == 'trong':
                     dp.phong.trang_thai = 'da_dat'
             session_model.payload = json.dumps(data)
@@ -4462,7 +4516,174 @@ def nhan_vien():
         salary_preview=salary_preview,
         salary_records=salary_records,
         work_days_map=work_days_map,
-        min_days=min_days
+        min_days=min_days,
+        attendance_month_default=start_month.strftime('%Y-%m')
+    )
+
+
+@app.route('/nhan-vien/export-cham-cong')
+@login_required
+@roles_required('admin')
+def export_attendance_overview():
+    month_str = request.args.get('month', '').strip()
+    try:
+        if month_str:
+            target_month = datetime.strptime(month_str, '%Y-%m')
+        else:
+            now = datetime.now()
+            target_month = datetime(now.year, now.month, 1)
+    except ValueError:
+        now = datetime.now()
+        target_month = datetime(now.year, now.month, 1)
+
+    start_date = target_month.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    end_date = (start_date + timedelta(days=32)).replace(day=1)
+
+    staffs = NguoiDung.query.order_by(NguoiDung.ten.asc()).all()
+    if not staffs:
+        flash('Chưa có dữ liệu nhân viên để xuất chấm công.', 'warning')
+        return redirect(url_for('nhan_vien'))
+
+    days = []
+    cursor = start_date
+    while cursor < end_date:
+        days.append(cursor.date())
+        cursor += timedelta(days=1)
+
+    attendance_rows = Attendance.query.filter(
+        Attendance.checkin_time >= start_date,
+        Attendance.checkin_time < end_date
+    ).all()
+
+    status_priority = {'approved': 3, 'pending': 2, 'rejected': 1}
+    status_symbols = {'approved': '✓', 'pending': '•', 'rejected': '✘'}
+    status_fills = {
+        'approved': ('16A34A', 'FFFFFF'),
+        'pending': ('F59E0B', '1F2937'),
+        'rejected': ('EF4444', 'FFFFFF')
+    }
+
+    attendance_map = {staff.id: {} for staff in staffs}
+    for record in attendance_rows:
+        day = record.checkin_time.date()
+        status = record.status or 'pending'
+        if status not in status_priority:
+            continue
+        user_map = attendance_map.setdefault(record.user_id, {})
+        current_status = user_map.get(day)
+        if not current_status or status_priority[status] > status_priority.get(current_status, 0):
+            user_map[day] = status
+
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, Alignment, PatternFill, Border, Side, GradientFill
+    from openpyxl.utils import get_column_letter
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Cham cong'
+
+    total_columns = 3 + len(days) + 1
+
+    title = f"Tổng hợp chấm công - Tháng {start_date.strftime('%m/%Y')}"
+    ws.merge_cells(start_row=1, start_column=1, end_row=1, end_column=total_columns)
+    title_cell = ws.cell(row=1, column=1, value=title)
+    title_cell.font = Font(size=16, bold=True, color='FFFFFF')
+    title_cell.alignment = Alignment(horizontal='center', vertical='center')
+    title_cell.fill = GradientFill(stop=("16A34A", "2F7D5A"))
+
+    subtitle = f"Xuất lúc: {datetime.now().strftime('%d/%m/%Y %H:%M')}  •  Người xuất: {current_user.ten}"
+    ws.merge_cells(start_row=2, start_column=1, end_row=2, end_column=total_columns)
+    subtitle_cell = ws.cell(row=2, column=1, value=subtitle)
+    subtitle_cell.font = Font(size=11, color='2F4F4F')
+    subtitle_cell.alignment = Alignment(horizontal='center', vertical='center')
+    subtitle_cell.fill = PatternFill('solid', fgColor='E8F5E9')
+
+    headers = ["STT", "Họ tên", "Chức vụ"] + [day.strftime('%d') for day in days] + ["Ngày công"]
+    header_row = 3
+    header_fill = PatternFill('solid', fgColor='DCFCE7')
+    header_font = Font(bold=True, color='14532D')
+    thin_border = Border(
+        left=Side(style='thin', color='D1D5DB'),
+        right=Side(style='thin', color='D1D5DB'),
+        top=Side(style='thin', color='D1D5DB'),
+        bottom=Side(style='thin', color='D1D5DB')
+    )
+
+    for col_index, header in enumerate(headers, start=1):
+        cell = ws.cell(row=header_row, column=col_index, value=header)
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal='center', vertical='center')
+        cell.fill = header_fill
+        cell.border = thin_border
+
+    for idx, staff in enumerate(staffs, start=1):
+        row_index = header_row + idx
+        ws.cell(row=row_index, column=1, value=idx).alignment = Alignment(horizontal='center')
+        ws.cell(row=row_index, column=1).border = thin_border
+
+        name_cell = ws.cell(row=row_index, column=2, value=staff.ten)
+        name_cell.font = Font(bold=True, color='1F2937')
+        name_cell.border = thin_border
+        name_cell.alignment = Alignment(vertical='center')
+
+        role_display = 'Quản trị viên' if staff.loai == 'admin' else 'Nhân viên'
+        role_cell = ws.cell(row=row_index, column=3, value=role_display)
+        role_cell.alignment = Alignment(horizontal='center')
+        role_cell.border = thin_border
+
+        approvals = 0
+        for day_idx, day in enumerate(days, start=1):
+            status = attendance_map.get(staff.id, {}).get(day)
+            col = 3 + day_idx
+            cell = ws.cell(row=row_index, column=col)
+            if status:
+                symbol = status_symbols.get(status, '')
+                cell.value = symbol
+                fill_color, font_color = status_fills.get(status, ('E2E8F0', '1F2937'))
+                cell.fill = PatternFill('solid', fgColor=fill_color)
+                cell.font = Font(color=font_color, bold=True)
+                if status == 'approved':
+                    approvals += 1
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = thin_border
+
+        total_cell = ws.cell(row=row_index, column=total_columns, value=approvals)
+        total_cell.font = Font(bold=True, color='14532D')
+        total_cell.alignment = Alignment(horizontal='center')
+        total_cell.fill = PatternFill('solid', fgColor='F0FDF4')
+        total_cell.border = thin_border
+
+    legend_row = header_row + len(staffs) + 2
+    legend_text = "Ký hiệu: ✓ Đã duyệt | • Chờ duyệt | ✘ Từ chối"
+    ws.merge_cells(start_row=legend_row, start_column=1, end_row=legend_row, end_column=total_columns)
+    legend_cell = ws.cell(row=legend_row, column=1, value=legend_text)
+    legend_cell.font = Font(italic=True, color='374151')
+    legend_cell.alignment = Alignment(horizontal='left', vertical='center')
+
+    column_widths = {
+        1: 6,
+        2: 26,
+        3: 16,
+        total_columns: 12
+    }
+    for idx_day in range(len(days)):
+        column_widths[4 + idx_day] = 4.5
+    for col_idx in range(1, total_columns + 1):
+        width = column_widths.get(col_idx, 10)
+        ws.column_dimensions[get_column_letter(col_idx)].width = width
+
+    ws.freeze_panes = ws.cell(row=4, column=4)
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f"Cham-cong_{start_date.strftime('%Y-%m')}.xlsx"
+    return send_file(
+        output,
+        as_attachment=True,
+        download_name=filename,
+        mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
 
 

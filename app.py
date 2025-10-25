@@ -254,6 +254,7 @@ class DatPhong(db.Model):
     phuong_thuc_coc = db.Column(db.String(20))
     coc_da_thanh_toan = db.Column(db.Boolean, default=False)
     voucher_id = db.Column(db.Integer, db.ForeignKey("voucher.id"), nullable=True)
+    auto_confirmed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.now)
     voucher = db.relationship("Voucher")
     khachhang = db.relationship("KhachHang")
@@ -2372,6 +2373,13 @@ def dat_phong():
         ).first()
         
         is_waiting = overlap is not None
+        if not is_waiting:
+            current_stay = DatPhong.query.filter(
+                DatPhong.phong_id == phong_id,
+                DatPhong.trang_thai == 'nhan'
+            ).order_by(DatPhong.ngay_nhan.desc()).first()
+            if current_stay:
+                is_waiting = True
         
         hinh_thuc = request.form.get('hinh_thuc_thue', 'ngay')
         duration_seconds = (ngay_tra - ngay_nhan).total_seconds()
@@ -2505,6 +2513,12 @@ def dat_phong_online():
             )
             return redirect(url_for('dat_phong_online'))
 
+        current_stay = DatPhong.query.filter(
+            DatPhong.phong_id == phong_id,
+            DatPhong.trang_thai == 'nhan'
+        ).first()
+        requires_waiting_after_confirm = current_stay is not None
+
         duration_seconds = (ngay_tra - ngay_nhan).total_seconds()
         nights = max(1, math.ceil(duration_seconds / (24 * 60 * 60)))
         hours = max(1, math.ceil(duration_seconds / 3600))
@@ -2569,7 +2583,10 @@ def dat_phong_online():
         db.session.add(dp)
         db.session.commit()
 
-        flash('Đặt phòng thành công! Vui lòng chuyển khoản tiền cọc để giữ phòng.', 'success')
+        if requires_waiting_after_confirm:
+            flash('Đặt phòng thành công! Khi nhân viên xác nhận cọc, yêu cầu sẽ chuyển sang Booking chờ cho đến khi phòng trống.', 'info')
+        else:
+            flash('Đặt phòng thành công! Vui lòng chuyển khoản tiền cọc để giữ phòng.', 'success')
         return redirect(url_for('dat_phong_online_dat_coc', token=dp.chat_token))
 
     return render_template(
@@ -2704,11 +2721,20 @@ def quan_ly_dat_phong_online_xac_nhan(dat_id):
     if dp.trang_thai != 'cho_xac_nhan':
         flash('Đơn đặt phòng đã được xử lý.', 'info')
         return redirect(url_for('quan_ly_dat_phong_online'))
-    dp.trang_thai = 'dat'
     dp.coc_da_thanh_toan = True
     dp.phuong_thuc_coc = 'qr'
-    if dp.phong.trang_thai == 'trong':
-        dp.phong.trang_thai = 'da_dat'
+    active_stay = DatPhong.query.filter(
+        DatPhong.phong_id == dp.phong_id,
+        DatPhong.id != dp.id,
+        DatPhong.trang_thai == 'nhan'
+    ).first()
+    if active_stay:
+        dp.trang_thai = 'waiting'
+        dp.auto_confirmed_at = None
+    else:
+        dp.trang_thai = 'dat'
+        if dp.phong.trang_thai == 'trong':
+            dp.phong.trang_thai = 'da_dat'
     tn = TinNhan(datphong_id=dp.id, nguoi_gui='he_thong',
                  noi_dung='Đã xác nhận tiền cọc đặt phòng online.',
                  thoi_gian=datetime.now(), trang_thai='chua_doc')
@@ -2983,10 +3009,12 @@ def dich_vu_thanh_toan():
     overdue_phong_ids = {booking.phong_id for booking in overdue_bookings}
 
     for p in phongs:
+        base_status = p.trang_thai or 'trong'
         if p.id in overdue_phong_ids:
             p.calculated_status = 'qua_gio'
         else:
-            p.calculated_status = p.trang_thai
+            p.calculated_status = base_status
+        p.effective_status = 'dang_o' if p.calculated_status == 'qua_gio' else p.calculated_status
             
     return render_template(
         'dichvu_thanhtoan.html',
@@ -3088,8 +3116,18 @@ def thanh_toan_coc(dat_id):
         if payment_method == 'cash':
             dp.phuong_thuc_coc = 'cash'
             dp.coc_da_thanh_toan = True
-            dp.trang_thai = 'dat'  # Thêm: thanh toán cash cũng hoàn tất đặt phòng
-            dp.phong.trang_thai = 'da_dat'  # Thêm: cập nhật trạng thái phòng
+            active_stay = DatPhong.query.filter(
+                DatPhong.phong_id == dp.phong_id,
+                DatPhong.id != dp.id,
+                DatPhong.trang_thai == 'nhan'
+            ).first()
+            if active_stay:
+                dp.trang_thai = 'waiting'
+                dp.auto_confirmed_at = None
+            else:
+                dp.trang_thai = 'dat'
+                if dp.phong.trang_thai == 'trong':
+                    dp.phong.trang_thai = 'da_dat'
             db.session.commit()
             flash('Da ghi nhan thanh toan tien coc bang tien mat.', 'success')
             return redirect(url_for('in_hoa_don_coc', dat_id=dat_id))
@@ -3114,54 +3152,60 @@ def thanh_toan_coc(dat_id):
     return render_template('thanh_toan_coc.html', dp=dp, voucher_discount=discount_percent)
 
 def process_waiting_bookings(phong_id, previous_checkout_time=None):
-    """Chuyển waiting bookings thành confirmed nếu không overlap, và điều chỉnh thời gian nếu cần"""
+    """Finalize waiting bookings when the room becomes available."""
     waiting_bookings = DatPhong.query.filter(
         DatPhong.phong_id == phong_id,
         DatPhong.trang_thai == 'waiting'
     ).order_by(DatPhong.created_at.asc()).all()
-    
+    updated = False
+
     for wb in waiting_bookings:
-        # Kiểm tra overlap với các booking đã confirmed
         overlap = DatPhong.query.filter(
             DatPhong.phong_id == phong_id,
             DatPhong.trang_thai.in_(BOOKING_BLOCKING_STATUSES),
             DatPhong.id != wb.id,
             ~db.or_(DatPhong.ngay_tra <= wb.ngay_nhan, DatPhong.ngay_nhan >= wb.ngay_tra)
         ).first()
-        
+
         if not overlap:
-            # Đánh dấu đã được confirm tự động, cập nhật thời gian
-            # Use raw SQL to set auto_confirmed_at since SQLAlchemy metadata isn't refreshed
             update_query = db.text('UPDATE datphong SET auto_confirmed_at = :timestamp, nhanvien_id = :nhanvien_id WHERE id = :id')
             db.session.execute(update_query, {
                 'timestamp': datetime.now(),
                 'nhanvien_id': current_user.id if current_user and hasattr(current_user, 'id') else None,
                 'id': wb.id
             })
-            
-            # Điều chỉnh thời gian nếu có chậm trễ từ booking trước
+            updated = True
+
             if previous_checkout_time and previous_checkout_time > wb.ngay_nhan:
                 delay = previous_checkout_time - wb.ngay_nhan
                 wb.ngay_tra = wb.ngay_tra + delay
                 wb.ngay_nhan = previous_checkout_time
-            
-            # Gửi tin nhắn
+                updated = True
+
             if previous_checkout_time and previous_checkout_time > wb.ngay_nhan:
-                msg = f'Booking chờ của bạn đã được tự động xác nhận. Do phòng trống muộn, thời gian nhận phòng được điều chỉnh thành {wb.ngay_nhan.strftime("%d/%m/%Y %H:%M")} và trả phòng {wb.ngay_tra.strftime("%d/%m/%Y %H:%M")}.'
+                msg = (
+                    "Booking cho cua ban da duoc tu dong xac nhan. "
+                    f"Do phong trong muon, thoi gian nhan phong duoc dieu chinh thanh "
+                    f"{wb.ngay_nhan.strftime('%d/%m/%Y %H:%M')} va tra phong {wb.ngay_tra.strftime('%d/%m/%Y %H:%M')}."
+                )
             else:
-                msg = 'Booking chờ của bạn đã được tự động xác nhận và sẽ xuất hiện trong check-in khi đến ngày nhận phòng.'
-            
+                msg = 'Booking cho cua ban da duoc tu dong xac nhan va se xuat hien trong check-in khi den ngay nhan phong.'
+
             tn = TinNhan(datphong_id=wb.id, nguoi_gui='he_thong',
                          noi_dung=msg,
                          thoi_gian=datetime.now(), trang_thai='chua_doc')
             db.session.add(tn)
-            
+            updated = True
+
             socketio.emit('booking_confirmed', {
                 'booking_id': wb.id,
                 'phong': wb.phong.ten,
                 'khach': wb.khachhang.ho_ten
             })
-            break  # Chỉ confirm một cái đầu tiên
+            break
+
+    if updated:
+        db.session.commit()
 
 
 @app.route('/thanh-toan/<int:dat_id>', methods=['GET', 'POST'])
@@ -3488,8 +3532,18 @@ def api_confirm_payment(token):
             dp.coc_da_thanh_toan = True
             dp.phuong_thuc_coc = 'qr'
             dp.payment_token = None
-            dp.trang_thai = 'dat'  # Thêm: chỉ khi thanh toán cọc thành công thì đặt phòng mới thành công
-            dp.phong.trang_thai = 'da_dat'  # Thêm: cập nhật trạng thái phòng
+            active_stay = DatPhong.query.filter(
+                DatPhong.phong_id == dp.phong_id,
+                DatPhong.id != dp.id,
+                DatPhong.trang_thai == 'nhan'
+            ).first()
+            if active_stay:
+                dp.trang_thai = 'waiting'
+                dp.auto_confirmed_at = None
+            else:
+                dp.trang_thai = 'dat'
+                if dp.phong.trang_thai == 'trong':
+                    dp.phong.trang_thai = 'da_dat'
             session_model.payload = json.dumps(data)
             db.session.commit()
             socketio.emit('deposit_payment_confirmed', {'dat_id': dat_id})

@@ -65,12 +65,17 @@
         data-selected-phong="{{ chon_dat.phong.id if chon_dat and chon_dat.phong else '' }}"
       >
         {% for p in phongs %}
+        {% set raw_status = p.calculated_status if p.calculated_status is defined else (p.trang_thai or 'trong') %}
+        {% set status = p.effective_status if p.effective_status is defined else raw_status %}
         {% set room_class = 'available' %}
         {% set room_title = 'Phòng trống' %}
-        {% if p.trang_thai == 'dang_o' %}
+        {% if raw_status == 'qua_gio' %}
+          {% set room_class = 'occupied overdue' %}
+          {% set room_title = 'Phong qua gio tra - Click de xu ly dich vu' %}
+        {% elif status == 'dang_o' %}
           {% set room_class = 'occupied' %}
           {% set room_title = 'Phòng đang ở - Click để chọn' %}
-        {% elif p.trang_thai == 'da_dat' %}
+        {% elif status == 'da_dat' %}
           {% set room_class = 'booked' %}
           {% set room_title = 'Phòng đã đặt (chưa nhận)' %}
         {% endif %}
@@ -78,7 +83,8 @@
           type="button"
           class="room-btn {{ room_class }}"
           data-phong-id="{{ p.id }}"
-          data-trang-thai="{{ p.trang_thai }}"
+          data-trang-thai="{{ status }}"
+          data-raw-status="{{ raw_status }}"
           title="{{ room_title }}"
         >
           {{ p.ten }}
@@ -276,6 +282,7 @@ const paymentButton = document.getElementById('btn-payment');
 const paymentBaseAction = paymentFooter ? paymentFooter.dataset.baseAction || '' : '';
 
 let currentBooking = initialBooking;
+let selectedRoomRawStatus = null;
 let SERVICES_CACHE = [];
 let SERVICES_VIEW = [];
 
@@ -302,6 +309,12 @@ function renderSelectedRoom() {
     roomLine.insertAdjacentText('beforeend', ' ' + (currentBooking.phong_ten || ''));
     selectedDetail.appendChild(nameLine);
     selectedDetail.appendChild(roomLine);
+    if (selectedRoomRawStatus === 'qua_gio') {
+      const warnLine = document.createElement('div');
+      warnLine.className = 'room-warning';
+      warnLine.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Phong da qua gio tra, vui long uu tien thanh toan.';
+      selectedDetail.appendChild(warnLine);
+    }
   } else {
     selectedInfoBox.dataset.hasRoom = '0';
     if (selectedLabel) selectedLabel.style.display = 'none';
@@ -316,11 +329,17 @@ function renderSelectedRoom() {
 
 function highlightSelectedRoom() {
   const currentPhongId = currentBooking ? String(currentBooking.phong_id) : '';
+  selectedRoomRawStatus = null;
   roomButtons.forEach(btn => {
-    btn.classList.toggle('selected', btn.dataset.phongId === currentPhongId);
+    const isSelected = btn.dataset.phongId === currentPhongId;
+    btn.classList.toggle('selected', isSelected);
+    if (isSelected) {
+      selectedRoomRawStatus = btn.dataset.rawStatus || btn.dataset.trangThai || null;
+    }
   });
   if (roomsGrid) {
     roomsGrid.dataset.selectedPhong = currentPhongId;
+    roomsGrid.dataset.selectedStatus = selectedRoomRawStatus || '';
   }
 }
 
@@ -409,9 +428,9 @@ function setCurrentBooking(booking) {
   if (datIdInp) {
     datIdInp.value = currentBooking ? currentBooking.id : '';
   }
+  highlightSelectedRoom();
   renderSelectedRoom();
   renderServices();
-  highlightSelectedRoom();
   updateAddEnabled();
   updatePaymentState();
 }
@@ -488,16 +507,21 @@ function filterRooms() {
 
   roomButtons.forEach(btn => {
     const roomName = btn.textContent.trim().toLowerCase();
-    const roomStatus = btn.dataset.trangThai;
+    const roomStatus = btn.dataset.trangThai || 'trong';
+    const rawStatus = btn.dataset.rawStatus || roomStatus;
     const matchesSearch = !searchText || roomName.includes(searchText);
 
     let matchesStatus = false;
     if (statusFilter === 'all') {
       matchesStatus = true;
     } else if (statusFilter === 'trong') {
-      matchesStatus = roomStatus !== 'dang_o' && roomStatus !== 'da_dat';
+      matchesStatus = roomStatus === 'trong';
+    } else if (statusFilter === 'dang_o') {
+      matchesStatus = roomStatus === 'dang_o';
+    } else if (statusFilter === 'da_dat') {
+      matchesStatus = roomStatus === 'da_dat';
     } else {
-      matchesStatus = roomStatus === statusFilter;
+      matchesStatus = roomStatus === statusFilter || rawStatus === statusFilter;
     }
 
     if (matchesSearch && matchesStatus) {
@@ -615,7 +639,12 @@ document.addEventListener('DOMContentLoaded', () => {
   roomButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       const status = btn.dataset.trangThai;
+      const rawStatus = btn.dataset.rawStatus || status;
       if (status === 'dang_o') {
+        selectedRoomRawStatus = rawStatus || null;
+        if (roomsGrid) {
+          roomsGrid.dataset.selectedStatus = selectedRoomRawStatus || '';
+        }
         selectPhong(btn.dataset.phongId);
       } else if (status === 'da_dat') {
         alert('Phòng đã được đặt nhưng chưa nhận. Không thể thêm dịch vụ.');

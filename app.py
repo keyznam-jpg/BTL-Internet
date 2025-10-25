@@ -2448,7 +2448,7 @@ def dat_phong():
         })
         
         if is_waiting:
-            flash('Phòng đã có khách trong thời gian này. Đặt phòng của bạn đã được chuyển sang trạng thái "Đang chờ" và sẽ được xử lý khi phòng trống.', 'warning')
+            flash('Đặt phòng của bạn đã được chuyển sang trạng thái "Đang chờ" và sẽ được xử lý khi phòng trống.', 'warning')
         else:
             flash('Yêu cầu đặt phòng đã được gửi. Vui lòng thanh toán tiền cọc để hoàn tất đặt phòng.', 'info')
         

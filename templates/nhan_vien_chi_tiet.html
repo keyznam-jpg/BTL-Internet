@@ -101,14 +101,18 @@
       <div>
         <span>Lương cơ bản</span>
         <strong>{{ salary_info.luong_co_ban|vnd }}</strong>
+        {% if salary_info.salary_mode == 'daily' %}
+        <small>{{ salary_info.work_days }} ngày × {{ salary_info.daily_rate|vnd }} (chia {{ salary_info.daily_divisor }})</small>
+        {% else %}
+        <small>Giá trị tháng cố định</small>
+        {% endif %}
       </div>
       <div>
         <span>Phụ cấp</span>
-  <strong>{{ salary_info.phu_cap|vnd }}</strong>
-  <br>
-  {% if salary_info.phu_cap == 0 and salary_info.work_days < salary_info.min_days %}
-  <small style="color:#d9534f; display:block; margin-top:2px;">Chưa đạt chuyên cần ({{ salary_info.work_days }}/{{ salary_info.min_days }} ngày)</small>
-  {% endif %}
+        <strong>{{ salary_info.phu_cap|vnd }}</strong>
+        {% if salary_info.phu_cap == 0 and salary_info.work_days < salary_info.min_days %}
+        <small style="color:#d9534f; display:block;">Chưa đạt chuyên cần ({{ salary_info.work_days }}/{{ salary_info.min_days }} ngày)</small>
+        {% endif %}
       </div>
       <div>
         <span>Thưởng doanh thu</span>

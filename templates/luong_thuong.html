@@ -20,10 +20,22 @@
           <div class="modern-salary-box">
             <span>Lương cơ bản</span>
             <strong>{{ salary_info.luong_co_ban|vnd }}</strong>
+            {% if salary_info.salary_mode == 'daily' %}
+              <small>{{ salary_info.work_days }} ngày × {{ salary_info.daily_rate|vnd }} (chia {{ salary_info.daily_divisor }})</small>
+            {% else %}
+              <small>Giá trị tháng cố định</small>
+            {% endif %}
           </div>
           <div class="modern-salary-box">
             <span>Phụ cấp</span>
             <strong>{{ salary_info.phu_cap|vnd }}</strong>
+            {% if salary_info.phu_cap == 0 and salary_info.work_days < salary_info.min_days %}
+              <small>Chưa đạt tối thiểu {{ salary_info.min_days }} ngày</small>
+            {% endif %}
+          </div>
+          <div class="modern-salary-box">
+            <span>Số ngày công</span>
+            <strong>{{ salary_info.work_days }}/{{ salary_info.min_days }}</strong>
           </div>
           <div class="modern-salary-box">
             <span>Doanh thu tháng</span>
@@ -176,6 +188,12 @@
     box-shadow: 0 2px 8px rgba(47,125,90,0.06);
     font-size: 1.08em;
     transition: box-shadow .2s, transform .2s;
+  }
+  .modern-salary-box small {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.85em;
+    color: #6b8a7a;
   }
   .modern-salary-box strong {
     display: block;

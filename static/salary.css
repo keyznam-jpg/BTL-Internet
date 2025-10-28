@@ -123,6 +123,21 @@
   margin-top: 12px;
 }
 
+.mode-option {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  color: #1b5e20;
+  padding: 6px 10px;
+  background: #ffffff;
+  border-radius: 8px;
+}
+
+.mode-option input[type="radio"] {
+  accent-color: #2e7d32;
+}
+
 .config-input {
   width: 100px;
   padding: 10px 14px;

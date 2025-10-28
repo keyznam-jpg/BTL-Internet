@@ -1,4 +1,4 @@
-﻿from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta
 import os
 import math
 import json
@@ -878,6 +878,43 @@ def get_min_work_days():
 
 def set_min_work_days(val):
     set_config_int(MIN_WORK_DAYS_KEY, val)
+
+SALARY_MODE_KEY = 'SALARY_CALC_MODE'
+SALARY_MODE_MONTHLY = 'monthly'
+SALARY_MODE_DAILY = 'daily'
+SALARY_DAILY_DIVISOR = 28
+
+def _round_divide(numerator, denominator):
+    if denominator == 0:
+        return 0
+    quotient, remainder = divmod(numerator, denominator)
+    if remainder * 2 >= denominator:
+        quotient += 1
+    return quotient
+
+def get_salary_mode():
+    value = (get_config_value(SALARY_MODE_KEY, SALARY_MODE_MONTHLY) or SALARY_MODE_MONTHLY).strip().lower()
+    return SALARY_MODE_DAILY if value == SALARY_MODE_DAILY else SALARY_MODE_MONTHLY
+
+def set_salary_mode(mode):
+    normalized = (mode or '').strip().lower()
+    if normalized not in {SALARY_MODE_MONTHLY, SALARY_MODE_DAILY}:
+        raise ValueError('invalid salary mode')
+    set_config_values({SALARY_MODE_KEY: normalized})
+
+def compute_daily_rate(base_salary):
+    base_salary = max(0, int(base_salary or 0))
+    if base_salary <= 0:
+        return 0
+    return _round_divide(base_salary, SALARY_DAILY_DIVISOR)
+
+def compute_effective_base_salary(base_salary, work_days, mode=None):
+    mode = (mode or get_salary_mode()).strip().lower()
+    base_salary = max(0, int(base_salary or 0))
+    work_days = max(0, int(work_days or 0))
+    if mode == SALARY_MODE_DAILY and base_salary > 0 and work_days > 0:
+        return _round_divide(base_salary * work_days, SALARY_DAILY_DIVISOR)
+    return base_salary
 
 
 DEFAULT_SMTP_CONFIG = {
@@ -1941,6 +1978,16 @@ def cancel_booking_for_no_show(dp, auto_cancel_minutes=None):
     if not dp or dp.trang_thai != 'dat' or dp.thuc_te_nhan is not None:
         return False
 
+    # Nếu phòng vẫn đang có khách ở (quá hạn trả), không tự động hủy
+    if dp.phong and dp.phong.trang_thai == 'dang_o':
+        active_stay = DatPhong.query.filter(
+            DatPhong.phong_id == dp.phong_id,
+            DatPhong.trang_thai == 'nhan',
+            DatPhong.id != dp.id
+        ).first()
+        if active_stay:
+            return False
+
     minutes = auto_cancel_minutes if auto_cancel_minutes is not None else get_config_int('auto_cancel_minutes', 5)
     if minutes <= 0:
         return False
@@ -2006,6 +2053,68 @@ def api_auto_cancel_booking(dat_id):
         socketio.emit('booking_auto_cancelled', {'booking_id': dp.id})
         return jsonify({'status': 'cancelled'})
     return jsonify({'status': 'pending'})
+
+
+@app.route('/api/bookings/<int:dat_id>/mark-waiting', methods=['POST'])
+@login_required
+def api_mark_booking_waiting(dat_id):
+    dp = DatPhong.query.get_or_404(dat_id)
+    if dp.trang_thai not in {'dat', 'waiting'}:
+        return jsonify({'status': 'invalid'}), 400
+
+    dp.trang_thai = 'waiting'
+    dp.auto_confirmed_at = None
+    reason_note = 'Chuyển sang booking chờ do phòng chưa sẵn sàng.'
+    dp.ghi_chu = ((dp.ghi_chu or '') + ' ' + reason_note).strip()
+
+    if dp.khachhang:
+        tn = TinNhan(
+            datphong_id=dp.id,
+            nguoi_gui='he_thong',
+            noi_dung='Booking được chuyển sang danh sách chờ vì phòng chưa sẵn sàng. Bộ phận lễ tân sẽ liên hệ lại.',
+            thoi_gian=datetime.now(),
+            trang_thai='chua_doc'
+        )
+        db.session.add(tn)
+
+    db.session.commit()
+    return jsonify({'status': 'ok'})
+
+
+@app.route('/api/bookings/<int:dat_id>/refund-overstay', methods=['POST'])
+@login_required
+def api_refund_overstay_booking(dat_id):
+    dp = DatPhong.query.get_or_404(dat_id)
+    if dp.trang_thai not in {'dat', 'waiting'}:
+        return jsonify({'status': 'invalid'}), 400
+
+    refund_amount = dp.tien_coc or 0
+    dp.trang_thai = 'huy'
+    dp.tien_phong = 0
+    dp.tien_dv = 0
+    dp.tien_phat = 0
+    dp.tong_thanh_toan = 0
+    dp.phuong_thuc_thanh_toan = None
+    dp.phuong_thuc_coc = None
+    dp.coc_da_thanh_toan = False
+    dp.tien_coc = 0
+    dp.thuc_te_nhan = None
+    dp.thuc_te_tra = datetime.now()
+    refund_note = f'Hoàn tiền do phòng bị chiếm dụng, hoàn {vnd(refund_amount)}.'
+    dp.ghi_chu = ((dp.ghi_chu or '') + ' ' + refund_note).strip()
+
+    if dp.khachhang:
+        tn = TinNhan(
+            datphong_id=dp.id,
+            nguoi_gui='he_thong',
+            noi_dung='Đơn đặt phòng được hoàn tiền vì phòng chưa sẵn sàng. Chúng tôi xin lỗi về sự bất tiện.',
+            thoi_gian=datetime.now(),
+            trang_thai='chua_doc'
+        )
+        db.session.add(tn)
+
+    db.session.commit()
+    return jsonify({'status': 'ok'})
 
 
 def clean_expired_payment_sessions():
@@ -2927,13 +3036,42 @@ def nhan_phong():
         )
     else:
         ds_nhan = []
+    active_stays = DatPhong.query.filter(DatPhong.trang_thai == 'nhan').all()
+    active_by_room = {}
+    for stay in active_stays:
+        active_by_room.setdefault(stay.phong_id, []).append(stay)
+
     cancel_data = {}
     for booking in ds_nhan:
+        blockers = [
+            stay for stay in active_by_room.get(booking.phong_id, [])
+            if stay.id != booking.id
+        ]
+        blocked = bool(blockers)
+        booking.blocked_by_overstay = blocked
+        booking.overstay_blockers = blockers
+
+        if blocked:
+            blocker = sorted(
+                blockers,
+                key=lambda x: x.ngay_nhan or datetime.min,
+                reverse=True
+            )[0]
+            blocker_checkout = blocker.thuc_te_tra or blocker.ngay_tra
+            cancel_data[booking.id] = {
+                'blocked': True,
+                'blocker_name': blocker.khachhang.ho_ten if blocker.khachhang else 'Khách đang ở',
+                'blocker_checkout': fmt_dt(blocker_checkout) if blocker_checkout else '---',
+                'blocker_booking_id': blocker.id
+            }
+            continue
+
         confirmed_at = booking.auto_confirmed_at or booking.created_at or booking.ngay_nhan
         if not confirmed_at:
             confirmed_at = datetime.now()
         deadline = confirmed_at + timedelta(minutes=auto_cancel_minutes)
         cancel_data[booking.id] = {
+            'blocked': False,
             'confirmed_at': confirmed_at.strftime('%Y-%m-%dT%H:%M:%S'),
             'deadline': deadline.strftime('%Y-%m-%dT%H:%M:%S'),
             'confirmed_display': confirmed_at.strftime('%H:%M %d/%m/%Y'),
@@ -3000,6 +3138,8 @@ def build_salary_settings_context(selected_id=None):
         staffs = all_staffs
 
     bonus_amount = get_top_bonus()
+    salary_mode = get_salary_mode()
+    salary_mode = get_salary_mode()
 
     now = datetime.now()
     start_month = datetime(now.year, now.month, 1)
@@ -3020,8 +3160,29 @@ def build_salary_settings_context(selected_id=None):
 
     salary_records = {item.nguoidung_id: item for item in LuongNhanVien.query.all()}
     tiers = LuongThuongCauHinh.query.order_by(LuongThuongCauHinh.moc_duoi.asc()).all()
+    salary_mode = get_salary_mode()
 
-    total_base = sum((record.luong_co_ban or 0) for record in salary_records.values())
+    work_days_map = {}
+    if all_staffs:
+        if salary_mode == SALARY_MODE_DAILY:
+            for staff in all_staffs:
+                work_days = db.session.query(func.count()).filter(
+                    Attendance.user_id == staff.id,
+                    Attendance.status == 'approved',
+                    Attendance.checkin_time >= start_month,
+                    Attendance.checkin_time < next_month
+                ).scalar() or 0
+                work_days_map[staff.id] = int(work_days or 0)
+        else:
+            work_days_map = {staff.id: 0 for staff in all_staffs}
+
+    total_base = 0
+    for record in salary_records.values():
+        work_days = work_days_map.get(record.nguoidung_id, 0)
+        if salary_mode == SALARY_MODE_DAILY:
+            total_base += compute_effective_base_salary(record.luong_co_ban, work_days, salary_mode)
+        else:
+            total_base += record.luong_co_ban or 0
     total_allowance = sum((record.phu_cap or 0) for record in salary_records.values())
     configured_count = len(salary_records)
 
@@ -3042,6 +3203,8 @@ def build_salary_settings_context(selected_id=None):
         'configured_count': configured_count,
         'min_days': min_days,
         'auto_cancel_minutes': auto_cancel_minutes,
+        'salary_mode': salary_mode,
+        'salary_daily_divisor': SALARY_DAILY_DIVISOR,
     }
 
 @app.route('/dich-vu-thanh-toan')
@@ -3963,6 +4126,7 @@ def luong_thuong():
     luong_record = LuongNhanVien.query.filter_by(nguoidung_id=current_user.id).first()
     luong_co_ban = luong_record.luong_co_ban if luong_record else 0
     phu_cap = luong_record.phu_cap if luong_record else 0
+    salary_mode = get_salary_mode()
 
     # Kiểm tra số ngày công trong tháng
     now = datetime.now()
@@ -3973,10 +4137,13 @@ def luong_thuong():
         Attendance.status == 'approved',
         Attendance.checkin_time >= first_day,
         Attendance.checkin_time <= last_day
-    ).scalar()
+    ).scalar() or 0
+    work_days = int(work_days or 0)
     min_days = get_min_work_days()
     if work_days < min_days:
         phu_cap = 0
+    base_effective = compute_effective_base_salary(luong_co_ban, work_days, salary_mode)
+    daily_rate = compute_daily_rate(luong_co_ban) if salary_mode == SALARY_MODE_DAILY else 0
 
     now = datetime.now()
     start_month = datetime(now.year, now.month, 1)
@@ -3994,6 +4161,10 @@ def luong_thuong():
     thuong, ty_le = tinh_thuong_doanh_thu(doanh_thu, tiers)
     bonus_amount = get_top_bonus()
 
+    bonus_amount = get_top_bonus()
+
+    bonus_amount = get_top_bonus()
+
     top_rows = db.session.query(
         DatPhong.nhanvien_id.label('nv_id'),
         func.coalesce(func.sum(DatPhong.tong_thanh_toan), 0).label('doanh_thu')
@@ -4009,13 +4180,19 @@ def luong_thuong():
             top_bonus = bonus_amount
 
     salary_info = {
-        'luong_co_ban': luong_co_ban,
+        'luong_co_ban': base_effective,
+        'base_monthly': luong_co_ban,
+        'salary_mode': salary_mode,
+        'daily_rate': daily_rate,
+        'daily_divisor': SALARY_DAILY_DIVISOR,
+        'work_days': work_days,
+        'min_days': min_days,
         'phu_cap': phu_cap,
         'thuong_thang': thuong,
         'ty_le': ty_le,
         'top_bonus': top_bonus,
         'is_top': bool(top_bonus),
-        'tong': luong_co_ban + phu_cap + thuong + top_bonus,
+        'tong': base_effective + phu_cap + thuong + top_bonus,
         'doanh_thu': doanh_thu,
         'configured_top_bonus': bonus_amount
     }
@@ -4039,6 +4216,7 @@ def tai_xuong_luong_excel():
     luong_record = LuongNhanVien.query.filter_by(nguoidung_id=current_user.id).first()
     luong_co_ban = luong_record.luong_co_ban if luong_record else 0
     phu_cap = luong_record.phu_cap if luong_record else 0
+    salary_mode = get_salary_mode()
 
     # Kiểm tra số ngày công trong tháng
     now = datetime.now()
@@ -4049,10 +4227,13 @@ def tai_xuong_luong_excel():
         Attendance.status == 'approved',
         Attendance.checkin_time >= first_day,
         Attendance.checkin_time <= last_day
-    ).scalar()
+    ).scalar() or 0
+    work_days = int(work_days or 0)
     min_days = get_min_work_days()
     if work_days < min_days:
         phu_cap = 0
+    base_effective = compute_effective_base_salary(luong_co_ban, work_days, salary_mode)
+    daily_rate = compute_daily_rate(luong_co_ban) if salary_mode == SALARY_MODE_DAILY else 0
 
     start_month = datetime(now.year, now.month, 1)
     next_month = (start_month + timedelta(days=32)).replace(day=1)
@@ -4083,7 +4264,7 @@ def tai_xuong_luong_excel():
         if top_max > 0 and any(int(row.nv_id) == current_user.id and int(row.doanh_thu or 0) == top_max for row in top_rows):
             top_bonus = bonus_amount
 
-    tong_luong = luong_co_ban + phu_cap + thuong + top_bonus
+    tong_luong = base_effective + phu_cap + thuong + top_bonus
 
     # Tạo workbook Excel
     wb = Workbook()
@@ -4130,8 +4311,11 @@ def tai_xuong_luong_excel():
         cell.border = thin_border
 
     # Dữ liệu lương
+    base_note = f'Lương tháng {now.month}/{now.year}'
+    if salary_mode == SALARY_MODE_DAILY and work_days > 0:
+        base_note += f' | {work_days} ngày x {daily_rate:,.0f} VNĐ (chia {SALARY_DAILY_DIVISOR})'
     data = [
-        (1, 'Lương cơ bản', f"{luong_co_ban:,.0f} VNĐ", ''),
+        (1, 'Lương cơ bản', f"{base_effective:,.0f} VNĐ", base_note),
         (2, 'Phụ cấp', f"{phu_cap:,.0f} VNĐ", f'Ngày công: {work_days}/{min_days}'),
         (3, 'Doanh thu tháng', f"{doanh_thu:,.0f} VNĐ", ''),
         (4, 'Thưởng doanh thu', f"{thuong:,.0f} VNĐ", f'Tỷ lệ: {ty_le:.1f}%' if ty_le else ''),
@@ -4380,6 +4564,8 @@ def nhan_vien():
     start_month = datetime(now.year, now.month, 1)
     next_month = (start_month + timedelta(days=32)).replace(day=1)
 
+    salary_mode = get_salary_mode()
+
     base_stats = {
         'tong_hoa_don': 0,
         'tong_doanh_thu': 0,
@@ -4453,27 +4639,33 @@ def nhan_vien():
             Attendance.status == 'approved',
             Attendance.checkin_time >= first_day,
             Attendance.checkin_time <= last_day
-        ).scalar()
-        work_days_map[staff.id] = work_days or 0
+        ).scalar() or 0
+        work_days_map[staff.id] = int(work_days or 0)
 
     min_days = get_min_work_days()
     for staff in staffs:
         record = salary_records.get(staff.id)
-        base = record.luong_co_ban if record else 0
-        work_days = work_days_map.get(staff.id, 0)
+        base_monthly = record.luong_co_ban if record else 0
+        work_days = int(work_days_map.get(staff.id, 0) or 0)
         # Nếu chưa đủ ngày công thì phụ cấp = 0
         allowance = (record.phu_cap if record and work_days >= min_days else 0)
         doanh_thu = month_stats.get(staff.id, {}).get('doanh_thu', 0)
         thuong, rate = tinh_thuong_doanh_thu(doanh_thu, tiers)
         top_bonus = bonus_amount if (top_staff_ids and staff.id in top_staff_ids) else 0
+        base_effective = compute_effective_base_salary(base_monthly, work_days, salary_mode)
+        daily_rate = compute_daily_rate(base_monthly) if salary_mode == SALARY_MODE_DAILY else 0
         salary_preview[staff.id] = {
-            'luong_co_ban': base,
+            'luong_co_ban': base_effective,
+            'base_monthly': base_monthly,
+            'salary_mode': salary_mode,
+            'daily_rate': daily_rate,
+            'daily_divisor': SALARY_DAILY_DIVISOR,
             'phu_cap': allowance,
             'thuong': thuong,
             'ty_le': rate,
             'top_bonus': top_bonus,
             'is_top': staff.id in top_staff_ids,
-            'tong': base + allowance + thuong + top_bonus,
+            'tong': base_effective + allowance + thuong + top_bonus,
             'doanh_thu': doanh_thu,
             'work_days': work_days,
             'min_days': min_days
@@ -4491,8 +4683,8 @@ def nhan_vien():
             Attendance.status == 'approved',
             Attendance.checkin_time >= first_day,
             Attendance.checkin_time <= last_day
-        ).scalar()
-        work_days_map[staff.id] = work_days or 0
+        ).scalar() or 0
+        work_days_map[staff.id] = int(work_days or 0)
 
     min_days = get_min_work_days()
     summary = {
@@ -4517,7 +4709,8 @@ def nhan_vien():
         salary_records=salary_records,
         work_days_map=work_days_map,
         min_days=min_days,
-        attendance_month_default=start_month.strftime('%Y-%m')
+        attendance_month_default=start_month.strftime('%Y-%m'),
+        salary_mode=salary_mode
     )
 
 
@@ -4739,6 +4932,8 @@ def nhan_vien_chi_tiet(nhanvien_id):
         'tong_tien_phat': int(month_totals.tong_tien_phat or 0)
     }
 
+    bonus_amount = get_top_bonus()
+
     top_rows = db.session.query(
         DatPhong.nhanvien_id.label('nv_id'),
         func.coalesce(func.sum(DatPhong.tong_thanh_toan), 0).label('doanh_thu')
@@ -4753,6 +4948,7 @@ def nhan_vien_chi_tiet(nhanvien_id):
         if top_max > 0 and any(int(row.nv_id) == nv.id and int(row.doanh_thu or 0) == top_max for row in top_rows):
             top_bonus = bonus_amount
 
+    salary_mode = get_salary_mode()
     luong_record = LuongNhanVien.query.filter_by(nguoidung_id=nv.id).first()
     luong_co_ban = luong_record.luong_co_ban if luong_record else 0
     phu_cap = luong_record.phu_cap if luong_record else 0
@@ -4767,17 +4963,24 @@ def nhan_vien_chi_tiet(nhanvien_id):
         Attendance.checkin_time >= first_day,
         Attendance.checkin_time <= last_day
     ).scalar() or 0
+    work_days = int(work_days or 0)
     min_days = get_min_work_days()
     # Nếu chưa đủ ngày công thì phụ cấp = 0
     phu_cap_display = phu_cap if work_days >= min_days else 0
+    base_effective = compute_effective_base_salary(luong_co_ban, work_days, salary_mode)
+    daily_rate = compute_daily_rate(luong_co_ban) if salary_mode == SALARY_MODE_DAILY else 0
     salary_info = {
-        'luong_co_ban': luong_co_ban,
+        'luong_co_ban': base_effective,
+        'base_monthly': luong_co_ban,
+        'salary_mode': salary_mode,
+        'daily_rate': daily_rate,
+        'daily_divisor': SALARY_DAILY_DIVISOR,
         'phu_cap': phu_cap_display,
         'thuong_thang': thuong_thang,
         'ty_le': ty_le_thuong,
         'top_bonus': top_bonus,
         'is_top': bool(top_bonus),
-        'tong': luong_co_ban + phu_cap_display + thuong_thang + top_bonus,
+        'tong': base_effective + phu_cap_display + thuong_thang + top_bonus,
         'doanh_thu': month_stats['tong_doanh_thu'],
         'work_days': work_days,
         'min_days': min_days
@@ -4984,6 +5187,14 @@ def cai_dat_luong_thuong():
                 status = 'danger'
                 http_status = 400
                 message = 'Giá trị không hợp lệ.'
+        elif form_name == 'set_salary_mode':
+            try:
+                set_salary_mode(request.form.get('salary_mode'))
+                message = 'Đã cập nhật chế độ tính lương.'
+            except ValueError:
+                status = 'danger'
+                http_status = 400
+                message = 'Chế độ tính lương không hợp lệ.'
         elif form_name == 'save_auto_cancel':
             try:
                 minutes = int(request.form.get('auto_cancel_minutes', 5) or 5)
@@ -7348,6 +7559,7 @@ def export_luong_nhan_vien(nhanvien_id):
     salary_record = LuongNhanVien.query.filter_by(nguoidung_id=nhanvien_id).first()
     base_salary = salary_record.luong_co_ban if salary_record else 0
     allowance = salary_record.phu_cap if salary_record else 0
+    salary_mode = get_salary_mode()
     
     # Tính số ngày công
     work_days = db.session.query(func.count()).filter(
@@ -7356,9 +7568,12 @@ def export_luong_nhan_vien(nhanvien_id):
         Attendance.checkin_time >= start_month,
         Attendance.checkin_time < next_month
     ).scalar() or 0
-    
+    work_days = int(work_days or 0)
+
     min_days = get_min_work_days()
     actual_allowance = allowance if work_days >= min_days else 0
+    base_effective = compute_effective_base_salary(base_salary, work_days, salary_mode)
+    daily_rate = compute_daily_rate(base_salary) if salary_mode == SALARY_MODE_DAILY else 0
     
     # Tính doanh thu tháng
     month_revenue = db.session.query(func.coalesce(func.sum(DatPhong.tong_thanh_toan), 0)).filter(
@@ -7389,14 +7604,17 @@ def export_luong_nhan_vien(nhanvien_id):
     if top_revenue and month_revenue == top_revenue:
         top_bonus = get_top_bonus()
     
-    total_salary = base_salary + actual_allowance + bonus + top_bonus
-    
+    total_salary = base_effective + actual_allowance + bonus + top_bonus
+
     # Tạo DataFrame
+    base_note = f'Lương tháng {now.month}/{now.year}'
+    if salary_mode == SALARY_MODE_DAILY and work_days > 0:
+        base_note += f' | {work_days} ngày x {daily_rate:,.0f} VNĐ (chia {SALARY_DAILY_DIVISOR})'
     data = {
         'Mục': ['Lương cơ bản', 'Phụ cấp', 'Thưởng doanh thu', 'Thưởng top', 'Tổng lương'],
-        'Số tiền (VNĐ)': [base_salary, actual_allowance, bonus, top_bonus, total_salary],
+        'Số tiền (VNĐ)': [base_effective, actual_allowance, bonus, top_bonus, total_salary],
         'Ghi chú': [
-            f'Lương tháng {now.month}/{now.year}',
+            base_note,
             f'Ngày công: {work_days}/{min_days}',
             f'Doanh thu: {vnd(month_revenue)} ({rate*1:.1f}%)',
             'Top doanh thu' if top_bonus > 0 else '',
@@ -7522,7 +7740,8 @@ def export_luong_all():
     # Lấy dữ liệu lương
     salary_records = {item.nguoidung_id: item for item in LuongNhanVien.query.all()}
     tiers = LuongThuongCauHinh.query.order_by(LuongThuongCauHinh.moc_duoi.asc()).all()
-    
+    salary_mode = get_salary_mode()
+
     # Tính doanh thu cho tất cả nhân viên
     revenues = {}
     revenue_rows = db.session.query(
@@ -7552,25 +7771,26 @@ def export_luong_all():
             Attendance.checkin_time >= start_month,
             Attendance.checkin_time < next_month
         ).scalar() or 0
-        work_days_map[staff.id] = work_days
+        work_days_map[staff.id] = int(work_days or 0)
     
     # Tạo data cho tất cả nhân viên
     data = []
     for staff in staffs:
         record = salary_records.get(staff.id)
-        base = record.luong_co_ban if record else 0
+        base_monthly = record.luong_co_ban if record else 0
         allowance_base = record.phu_cap if record else 0
-        work_days = work_days_map.get(staff.id, 0)
+        work_days = int(work_days_map.get(staff.id, 0) or 0)
         allowance = allowance_base if work_days >= min_days else 0
-        
+
         revenue = revenues.get(staff.id, 0)
         bonus, rate = tinh_thuong_doanh_thu(revenue, tiers)
         staff_top_bonus = top_bonus if revenue == top_revenue and top_revenue > 0 else 0
-        total = base + allowance + bonus + staff_top_bonus
-        
+        base_effective = compute_effective_base_salary(base_monthly, work_days, salary_mode)
+        total = base_effective + allowance + bonus + staff_top_bonus
+
         data.append({
             'Tên nhân viên': staff.ten,
-            'Lương cơ bản (VNĐ)': base,
+            'Lương cơ bản (VNĐ)': base_effective,
             'Phụ cấp (VNĐ)': allowance,
             'Thưởng doanh thu (VNĐ)': bonus,
             'Thưởng top (VNĐ)': staff_top_bonus,
@@ -7754,3 +7974,4 @@ if __name__ == "__main__":
         socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True, allow_unsafe_werkzeug=True)
     finally:
         scheduler.shutdown()
+

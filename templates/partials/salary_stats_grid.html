@@ -12,6 +12,25 @@
   </div>
 
   <div class="stat-card config-card">
+    <div class="stat-label"><i class="fas fa-balance-scale"></i> Chế độ tính lương</div>
+    <form method="post" class="config-form">
+      <input type="hidden" name="form_name" value="set_salary_mode">
+      <div class="config-row" style="gap: 12px;">
+        <label class="mode-option">
+          <input type="radio" name="salary_mode" value="monthly" {% if salary_mode != 'daily' %}checked{% endif %}>
+          <span>Lương tháng</span>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="salary_mode" value="daily" {% if salary_mode == 'daily' %}checked{% endif %}>
+          <span>Lương theo ngày</span>
+        </label>
+        <button type="submit" class="btn-config">Cập nhật</button>
+      </div>
+      <div class="config-note">Chế độ theo ngày quy đổi lương cơ bản trên {{ salary_daily_divisor }} ngày chuẩn.</div>
+    </form>
+  </div>
+
+  <div class="stat-card config-card">
     <div class="stat-label"><i class="fas fa-clock"></i> Thời gian tự động hủy đặt phòng</div>
     <form method="post" class="config-form">
       <input type="hidden" name="form_name" value="save_auto_cancel">

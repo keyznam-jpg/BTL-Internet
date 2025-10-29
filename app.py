@@ -3085,25 +3085,23 @@ def dat_phong_online_dat_coc(token):
 def dat_phong_online_request_confirmation(token):
     dp = DatPhong.query.filter_by(chat_token=token).first_or_404()
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-    can_manage_services = current_user.has_permission('services.manage')
-    if request.method == 'POST' and not can_manage_services:
-        message = 'Ban khong co quyen quan ly dich vu.'
-        if wants_json:
-            return jsonify({'status': 'error', 'message': message}), 403
-        flash(message, 'danger')
-        return redirect(url_for('quan_li_dich_vu'))
-    can_manage_services = current_user.has_permission('services.manage')
-    if request.method == 'POST' and not can_manage_services:
-        message = 'B?n kh�ng c� quy?n qu?n l� d?ch v?.'
-        if wants_json:
-            return jsonify({'status': 'error', 'message': message}), 403
-        flash(message, 'danger')
-        return redirect(url_for('quan_li_dich_vu'))
+    can_manage_services = False
+    if current_user.is_authenticated and hasattr(current_user, 'has_permission'):
+        can_manage_services = current_user.has_permission('services.manage')
+        if request.method == 'POST' and not can_manage_services:
+            message = 'Bạn không có quyền quản lý dịch vụ.'
+            if wants_json:
+                return jsonify({'status': 'error', 'message': message}), 403
+            flash(message, 'danger')
+            return redirect(url_for('quan_li_dich_vu'))
     payload = {}
     if request.is_json:
         payload = request.get_json(silent=True) or {}
-    confirm_flag = payload.get('confirm') if request.is_json else request.form.get('confirm')
-    confirm_flag = str(confirm_flag).lower() in ('true', '1', 'yes', 'on')
+    confirm_raw = payload.get('confirm') if request.is_json else request.form.get('confirm')
+    if confirm_raw is None:
+        confirm_flag = True
+    else:
+        confirm_flag = str(confirm_raw).lower() in ('true', '1', 'yes', 'on')
     if not confirm_flag:
         message = 'Vui lòng nhấn nút "Tôi đã thanh toán cọc" sau khi chuyển khoản.'
         status = 'warning'
@@ -3137,8 +3135,6 @@ def dat_phong_online_request_confirmation(token):
         return jsonify({'message': message, 'status': status})
     flash(message, status if status in ('success', 'info', 'warning', 'danger') else 'info')
     return redirect(url_for('dat_phong_online_dat_coc', token=token))
-
-
 @app.route('/quan-ly-dat-phong-online')
 @login_required
 @permission_required('bookings.manage_online')

@@ -93,9 +93,14 @@
     <p>Chúng tôi ghi nhận tài khoản <strong>{{ current_user.ten }}</strong> chưa được cấu hình quyền truy cập cho các chức năng cần thiết.</p>
     <p>Vui lòng liên hệ quản trị viên hoặc bộ phận nhân sự để được phân quyền trước khi tiếp tục sử dụng hệ thống.</p>
     <div class="actions">
-      <a class="button primary" href="mailto:{{ contact_email if contact_email else '' }}">Liên hệ quản trị viên</a>
+      {% if contact_email %}
+      <a class="button primary" href="mailto:{{ contact_email }}">Liên hệ quản trị viên</a>
+      {% endif %}
       <a class="button secondary" href="{{ url_for('logout') }}">Đăng xuất</a>
     </div>
+    {% if not contact_email %}
+    <p>Nếu bạn chưa có thông tin liên hệ, vui lòng trao đổi trực tiếp với quản trị viên của khách sạn.</p>
+    {% endif %}
   </main>
 </body>
 </html>

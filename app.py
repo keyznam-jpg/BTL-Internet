@@ -8,7 +8,7 @@ import smtplib
 from functools import wraps
 from urllib.parse import quote, urlencode, urljoin
 import uuid # Library to create unique tokens
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
     LoginManager, login_user, login_required, logout_user, UserMixin, current_user
@@ -74,6 +74,8 @@ if public_base_url and public_base_url.strip():
     app.config["PUBLIC_BASE_URL"] = public_base_url.strip().rstrip("/")
 else:
     app.config["PUBLIC_BASE_URL"] = None
+support_email = os.getenv("SUPPORT_EMAIL", "").strip()
+app.config["SUPPORT_EMAIL"] = support_email or None
 
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
@@ -243,7 +245,12 @@ def permission_required(*permissions):
                 return fn(*args, **kwargs)
             if any(current_user.has_permission(perm) for perm in permissions):
                 return fn(*args, **kwargs)
-            abort(404)
+            support_email = app.config.get('SUPPORT_EMAIL')
+            return render_template(
+                'access_pending.html',
+                contact_email=support_email,
+                required_permissions=permissions
+            ), 403
         return wrapper
     return deco
 

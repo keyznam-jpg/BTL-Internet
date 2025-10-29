@@ -19,237 +19,263 @@
     </div>
   </div>
   <!-- Stats Grid - Statistics Cards -->
-  <div class="stats-grid">
-    <!-- Thẻ Check-in -->
-    <a href="{{ url_for('nhan_phong') }}" class="stat-card-link">
-      <div class="stat-card stat-card-blue">
-        <div class="stat-header">
-          <div class="stat-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-              <polyline points="10 17 15 12 10 7"></polyline>
-              <line x1="15" y1="12" x2="3" y2="12"></line>
-            </svg>
+  {% set can_checkin_checkout = current_user.has_permission('bookings.checkin_checkout') %}
+  {% set can_view_room_map = current_user.has_permission('bookings.view_map') %}
+  {% set can_view_chat = current_user.has_permission('communications.chat') %}
+  {% if can_checkin_checkout or can_view_room_map or can_view_chat %}
+    <div class="stats-grid">
+      {% if can_checkin_checkout %}
+      <!-- Thẻ Check-in -->
+      <a href="{{ url_for('nhan_phong') }}" class="stat-card-link">
+        <div class="stat-card stat-card-blue">
+          <div class="stat-header">
+            <div class="stat-icon-wrapper">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+                <polyline points="10 17 15 12 10 7"></polyline>
+                <line x1="15" y1="12" x2="3" y2="12"></line>
+              </svg>
+            </div>
+            <h3 class="stat-title">Check-in hôm nay</h3>
           </div>
-          <h3 class="stat-title">Check-in hôm nay</h3>
+          <div class="stat-body">
+            <p class="stat-number">{{ checkins_today }}</p>
+            <span class="stat-label">lượt khách</span>
+          </div>
+          <div class="stat-footer">
+            <span class="stat-action">Xem chi tiết</span>
+          </div>
         </div>
-        <div class="stat-body">
-          <p class="stat-number">{{ checkins_today }}</p>
-          <span class="stat-label">lượt khách</span>
-        </div>
-        <div class="stat-footer">
-          <span class="stat-action">Xem chi tiết</span>
-        </div>
-      </div>
-    </a>
+      </a>
 
-    <!-- Thẻ Check-out -->
-    <a href="{{ url_for('nhan_phong') }}" class="stat-card-link">
-      <div class="stat-card stat-card-orange">
-        <div class="stat-header">
-          <div class="stat-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
-              <polyline points="16 17 21 12 16 7"></polyline>
-              <line x1="21" y1="12" x2="9" y2="12"></line>
-            </svg>
+      <!-- Thẻ Check-out -->
+      <a href="{{ url_for('nhan_phong') }}" class="stat-card-link">
+        <div class="stat-card stat-card-orange">
+          <div class="stat-header">
+            <div class="stat-icon-wrapper">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </div>
+            <h3 class="stat-title">Check-out hôm nay</h3>
           </div>
-          <h3 class="stat-title">Check-out hôm nay</h3>
+          <div class="stat-body">
+            <p class="stat-number">{{ checkouts_today }}</p>
+            <span class="stat-label">lượt khách</span>
+          </div>
+          <div class="stat-footer">
+            <span class="stat-action">Xem chi tiết</span>
+          </div>
         </div>
-        <div class="stat-body">
-          <p class="stat-number">{{ checkouts_today }}</p>
-          <span class="stat-label">lượt khách</span>
-        </div>
-        <div class="stat-footer">
-          <span class="stat-action">Xem chi tiết</span>
-        </div>
-      </div>
-    </a>
+      </a>
+      {% endif %}
 
-    <!-- Thẻ Phòng đang ở -->
-    <a href="{{ url_for('so_do_phong', trang_thai='dang_o') }}" class="stat-card-link">
-      <div class="stat-card stat-card-green">
-        <div class="stat-header">
-          <div class="stat-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-              <polyline points="9 22 9 12 15 12 15 22"></polyline>
-            </svg>
+      {% if can_view_room_map %}
+      <!-- Thẻ Phòng đang ở -->
+      <a href="{{ url_for('so_do_phong', trang_thai='dang_o') }}" class="stat-card-link">
+        <div class="stat-card stat-card-green">
+          <div class="stat-header">
+            <div class="stat-icon-wrapper">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                <polyline points="9 22 9 12 15 12 15 22"></polyline>
+              </svg>
+            </div>
+            <h3 class="stat-title">Phòng có khách</h3>
           </div>
-          <h3 class="stat-title">Phòng có khách</h3>
+          <div class="stat-body">
+            <p class="stat-number">{{ occupied_rooms }}<span class="stat-divider">/</span>{{ total_rooms }}</p>
+            <span class="stat-label">phòng đang sử dụng</span>
+          </div>
+          <div class="stat-footer">
+            <span class="stat-action">Sơ đồ phòng</span>
+          </div>
         </div>
-        <div class="stat-body">
-          <p class="stat-number">{{ occupied_rooms }}<span class="stat-divider">/</span>{{ total_rooms }}</p>
-          <span class="stat-label">phòng đang sử dụng</span>
-        </div>
-        <div class="stat-footer">
-          <span class="stat-action">Sơ đồ phòng</span>
-        </div>
-      </div>
-    </a>
+      </a>
+      {% endif %}
 
-    <!-- Thẻ Tin nhắn mới -->
-    <a href="{{ url_for('tin_nhan') }}" class="stat-card-link">
-      <div class="stat-card stat-card-purple messages-card">
-        <div class="stat-header">
-          <div class="stat-icon-wrapper">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-            </svg>
+      {% if can_view_chat %}
+      <!-- Thẻ Tin nhắn mới -->
+      <a href="{{ url_for('tin_nhan') }}" class="stat-card-link">
+        <div class="stat-card stat-card-purple messages-card">
+          <div class="stat-header">
+            <div class="stat-icon-wrapper">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+            </div>
+            <h3 class="stat-title">Tin nhắn mới</h3>
           </div>
-          <h3 class="stat-title">Tin nhắn mới</h3>
-        </div>
-        <div class="stat-body">
-          <div class="message-list">
-            {% set recent = recent_unread_messages or [] %}
-            {% set total_unread = total_unread_messages or 0 %}
-            {% if recent %}
-              {% for msg in recent[:3] %}
-                <div class="message-item">
-                  <div class="message-header">
-                    <span class="message-room">{{ msg.datphong.phong.ten }}</span>
-                    <span class="message-time">{{ msg.thoi_gian.strftime('%H:%M') }}</span>
+          <div class="stat-body">
+            <div class="message-list">
+              {% set recent = recent_unread_messages or [] %}
+              {% set total_unread = total_unread_messages or 0 %}
+              {% if recent %}
+                {% for msg in recent[:3] %}
+                  <div class="message-item">
+                    <div class="message-header">
+                      <span class="message-room">{{ msg.datphong.phong.ten }}</span>
+                      <span class="message-time">{{ msg.thoi_gian.strftime('%H:%M') }}</span>
+                    </div>
+                    <p class="message-content">{{ msg.noi_dung|truncate(40) }}</p>
                   </div>
-                  <p class="message-content">{{ msg.noi_dung|truncate(40) }}</p>
+                {% endfor %}
+                {% set displayed = [recent|length, 3]|min %}
+                {% set remaining = total_unread - displayed %}
+                {% if remaining > 0 %}
+                  <p class="message-more">+{{ remaining }} tin nhắn khác</p>
+                {% endif %}
+              {% else %}
+                <div class="no-message">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                  </svg>
+                  <p>Không có tin nhắn mới</p>
                 </div>
-              {% endfor %}
-              {% set displayed = [recent|length, 3]|min %}
-              {% set remaining = total_unread - displayed %}
-              {% if remaining > 0 %}
-                <p class="message-more">+{{ remaining }} tin nhắn khác</p>
               {% endif %}
-            {% else %}
-              <div class="no-message">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                  <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                </svg>
-                <p>Không có tin nhắn mới</p>
-              </div>
-            {% endif %}
+            </div>
+          </div>
+          <div class="stat-footer">
+            <span class="stat-action">Xem tất cả</span>
           </div>
         </div>
-        <div class="stat-footer">
-          <span class="stat-action">Xem tất cả</span>
-        </div>
-      </div>
-    </a>
-  </div>
+      </a>
+      {% endif %}
+    </div>
+  {% endif %}
 
   <!-- Main Access Grid - Large Cards -->
-  <div class="main-access-grid">
-    <!-- Đặt Phòng - Always visible -->
-    <a href="{{ url_for('dat_phong') }}" class="access-card access-card-purple">
-      <div class="card-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-          <circle cx="12" cy="7" r="4"></circle>
-        </svg>
-      </div>
-      <div class="card-content">
-        <h3 class="card-title">Đặt Phòng</h3>
-        <p class="card-description">Tạo đặt phòng mới</p>
-      </div>
-    </a>
+  {% set can_create_booking = current_user.has_permission('bookings.create_offline') %}
+  {% set can_manage_stays = current_user.has_permission('bookings.checkin_checkout') %}
+  {% set can_view_map = current_user.has_permission('bookings.view_map') %}
+  {% set can_view_customers = current_user.has_permission('customers.view') %}
+  {% set can_manage_services = current_user.has_permission('services.manage') or current_user.has_permission('customers.vouchers') %}
+  {% set can_manage_invoices = current_user.has_permission('payments.invoices') %}
+  {% set can_view_analytics = current_user.has_permission('analytics.revenue') %}
+  {% if can_create_booking or can_manage_stays or can_view_map or can_view_customers or can_manage_services or can_manage_invoices or can_view_analytics %}
+    <div class="main-access-grid">
+      {% if can_create_booking %}
+      <!-- Đặt Phòng -->
+      <a href="{{ url_for('dat_phong') }}" class="access-card access-card-purple">
+        <div class="card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+            <circle cx="12" cy="7" r="4"></circle>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">Đặt Phòng</h3>
+          <p class="card-description">Tạo đặt phòng mới</p>
+        </div>
+      </a>
+      {% endif %}
 
-    <!-- Nhận & Trả Phòng - Always visible -->
-    <a href="{{ url_for('nhan_phong') }}" class="access-card access-card-pink">
-      <div class="card-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
-          <polyline points="10 17 15 12 10 7"></polyline>
-          <line x1="15" y1="12" x2="3" y2="12"></line>
-        </svg>
-      </div>
-      <div class="card-content">
-        <h3 class="card-title">Nhận & Trả Phòng</h3>
-        <p class="card-description">Check-in/Check-out</p>
-      </div>
-    </a>
+      {% if can_manage_stays %}
+      <!-- Nhận & Trả Phòng -->
+      <a href="{{ url_for('nhan_phong') }}" class="access-card access-card-pink">
+        <div class="card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
+            <polyline points="10 17 15 12 10 7"></polyline>
+            <line x1="15" y1="12" x2="3" y2="12"></line>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">Nhận & Trả Phòng</h3>
+          <p class="card-description">Check-in/Check-out</p>
+        </div>
+      </a>
+      {% endif %}
 
-    {% if current_user.has_permission('services.manage') %}
-    <!-- REMOVED: Card Quản Lí Phòng đã bị xóa -->
-    {% endif %}
+      {% if can_view_map %}
+      <!-- Sơ Đồ Phòng -->
+      <a href="{{ url_for('so_do_phong') }}" class="access-card access-card-green">
+        <div class="card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+            <polyline points="9 22 9 12 15 12 15 22"></polyline>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">Sơ Đồ Phòng</h3>
+          <p class="card-description">Xem tình trạng phòng</p>
+        </div>
+      </a>
+      {% endif %}
 
-    <!-- Sơ Đồ Phòng - Always visible -->
-    <a href="{{ url_for('so_do_phong') }}" class="access-card access-card-green">
-      <div class="card-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-          <polyline points="9 22 9 12 15 12 15 22"></polyline>
-        </svg>
-      </div>
-      <div class="card-content">
-        <h3 class="card-title">Sơ Đồ Phòng</h3>
-        <p class="card-description">Xem tình trạng phòng</p>
-      </div>
-    </a>
+      {% if can_view_customers %}
+      <!-- Khách Hàng -->
+      <a href="{{ url_for('khach_hang') }}" class="access-card access-card-orange">
+        <div class="card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">Khách Hàng</h3>
+          <p class="card-description">Danh sách khách hàng</p>
+        </div>
+      </a>
+      {% endif %}
 
-    <!-- Khách Hàng - Always visible -->
-    <a href="{{ url_for('khach_hang') }}" class="access-card access-card-orange">
-      <div class="card-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-          <circle cx="9" cy="7" r="4"></circle>
-          <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-          <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
-        </svg>
-      </div>
-      <div class="card-content">
-        <h3 class="card-title">Khách Hàng</h3>
-        <p class="card-description">Danh sách khách hàng</p>
-      </div>
-    </a>
+      {% if can_manage_services %}
+      <!-- Quản Lí Dịch Vụ -->
+      <a href="{{ url_for('quan_li_dich_vu') }}" class="access-card access-card-teal">
+        <div class="card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M12 1v6m0 6v6m9-9h-6M7 12H1"></path>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">Quản Lí Dịch Vụ</h3>
+          <p class="card-description">Dịch vụ &amp; giá</p>
+        </div>
+      </a>
+      {% endif %}
 
-    {% if current_user.has_permission('analytics.revenue') %}
-    <!-- Quản Lí Dịch Vụ - Admin only -->
-    <a href="{{ url_for('quan_li_dich_vu') }}" class="access-card access-card-teal">
-      <div class="card-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="12" cy="12" r="3"></circle>
-          <path d="M12 1v6m0 6v6m9-9h-6M7 12H1"></path>
-        </svg>
-      </div>
-      <div class="card-content">
-        <h3 class="card-title">Quản Lí Dịch Vụ</h3>
-        <p class="card-description">Dịch vụ & giá</p>
-      </div>
-    </a>
-    {% endif %}
+      {% if can_manage_invoices %}
+      <!-- Quản Lí Hóa Đơn -->
+      <a href="{{ url_for('quan_li_hoa_don') }}" class="access-card access-card-indigo">
+        <div class="card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">Quản Lí Hóa Đơn</h3>
+          <p class="card-description">Thanh toán &amp; hóa đơn</p>
+        </div>
+      </a>
+      {% endif %}
 
-    <!-- Quản Lí Hóa Đơn - Always visible -->
-    <a href="{{ url_for('quan_li_hoa_don') }}" class="access-card access-card-indigo">
-      <div class="card-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-          <polyline points="14 2 14 8 20 8"></polyline>
-          <line x1="16" y1="13" x2="8" y2="13"></line>
-          <line x1="16" y1="17" x2="8" y2="17"></line>
-          <polyline points="10 9 9 9 8 9"></polyline>
-        </svg>
-      </div>
-      <div class="card-content">
-        <h3 class="card-title">Quản Lí Hóa Đơn</h3>
-        <p class="card-description">Thanh toán & hóa đơn</p>
-      </div>
-    </a>
-
-    {% if current_user.has_permission('analytics.revenue') %}
-    <!-- Thống Kê - Admin only -->
-    <a href="{{ url_for('thong_ke_doanh_thu') }}" class="access-card access-card-yellow">
-      <div class="card-icon">
-        <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <line x1="12" y1="20" x2="12" y2="10"></line>
-          <line x1="18" y1="20" x2="18" y2="4"></line>
-          <line x1="6" y1="20" x2="6" y2="16"></line>
-        </svg>
-      </div>
-      <div class="card-content">
-        <h3 class="card-title">Thống Kê</h3>
-        <p class="card-description">Doanh thu & báo cáo</p>
-      </div>
-    </a>
-    {% endif %}
-  </div>
+      {% if can_view_analytics %}
+      <!-- Thống Kê -->
+      <a href="{{ url_for('thong_ke_doanh_thu') }}" class="access-card access-card-yellow">
+        <div class="card-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="12" y1="20" x2="12" y2="10"></line>
+            <line x1="18" y1="20" x2="18" y2="4"></line>
+            <line x1="6" y1="20" x2="6" y2="16"></line>
+          </svg>
+        </div>
+        <div class="card-content">
+          <h3 class="card-title">Thống Kê</h3>
+          <p class="card-description">Doanh thu &amp; báo cáo</p>
+        </div>
+      </a>
+      {% endif %}
+    </div>
+  {% endif %}
 </div>
 
 <script>

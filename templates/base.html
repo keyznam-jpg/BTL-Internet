@@ -15,10 +15,10 @@
       document.head.appendChild(link);
     }
   </script>
-  <!-- N├éNG Cß║ñP: Th├¬m th╞░ viß╗çn FullCalendar cho trang Lß╗ïch ─Éß║╖t Ph├▓ng -->
+  <!-- NÂNG CẤP: Thêm thư viện FullCalendar cho trang Lịch Đặt Phòng -->
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
 
-  <!-- CSS cho hß╗ç thß╗æng th├┤ng b├ío "toast" -->
+  <!-- CSS cho hộp thông báo "toast" -->
   <style>
     .toast-notification {
       position: fixed;
@@ -218,7 +218,7 @@
         <button type="button" class="user-menu-trigger" aria-label="Mở menu người dùng">
           <span class="user-avatar">
             <img src="{{ url_for('static', filename=current_user.avatar_path) }}"
-                 alt="ß║ónh ─æß║íi diß╗çn cß╗ºa {{ current_user.ten }}"
+                 alt="Ảnh đại diện của {{ current_user.ten }}"
                  onerror="this.onerror=null;this.src='{{ url_for('static', filename='img/ttcn.png') }}';">
           </span>
           <div class="user-details">
@@ -244,7 +244,7 @@
     {% block content %}{% endblock %}
   </main>
   
-  <!-- N├éNG Cß║ñP: HTML cho th├┤ng b├ío "toast" -->
+  <!-- NÂNG CẤP: HTML cho thông báo "toast" -->
   <div id="toast-container" class="toast-notification">
       <div class="toast-icon" id="toast-icon"></div>
       <div class="toast-body">
@@ -253,7 +253,7 @@
       </div>
   </div>
 
-  <!-- N├éNG Cß║ñP: Th╞░ viß╗çn Socket.IO v├á Script xß╗¡ l├╜ thß╗¥i gian thß╗▒c -->
+  <!-- NÂNG CẤP: Thư viện Socket.IO và Script xử lý thời gian thực -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
     const toastContainer = document.getElementById('toast-container');
@@ -294,7 +294,7 @@
       try {
         savedScroll = localStorage.getItem(storageKey);
       } catch (err) {
-        console.warn('Khong the truy cap localStorage de khoi phuc vi tri menu:', err);
+        console.warn('Không thể truy cập localStorage để khôi phục vị trí menu:', err);
         return;
       }
 
@@ -319,7 +319,7 @@
         try {
           localStorage.setItem(storageKey, String(Math.round(menuLinks.scrollTop)));
         } catch (err) {
-          console.warn('Khong the luu vi tri thanh truy cap nhanh:', err);
+          console.warn('Không thể lưu vị trí thanh truy cập nhanh:', err);
         }
       };
 
@@ -364,7 +364,7 @@
                     tinNhanLink.classList.remove('menu-link-with-badge');
                 }
             })
-            .catch(err => console.error('Kh├┤ng thß╗â cß║¡p nhß║¡t badge tin nhß║»n:', err));
+            .catch(err => console.error('Không thể cập nhật badge tin nhắn:', err));
     }
 
     function updateOnlineBookingBadge() {
@@ -391,7 +391,7 @@
                     onlineLink.classList.remove('menu-link-with-badge');
                 }
             })
-            .catch(err => console.error('Kh├┤ng thß╗â cß║¡p nhß║¡t badge ─æß║╖t ph├▓ng online:', err));
+            .catch(err => console.error('Không thể cập nhật badge đặt phòng online:', err));
     }
 
     updateMessageBadge();
@@ -404,7 +404,7 @@
     });
 
     socket.on('new_message_from_guest', function(data) {
-        showToast('&#128172;', 'Tin nhß║»n mß╗¢i', `Ph├▓ng ${data.phong}: "${data.noi_dung}"`);
+        showToast('&#128172;', 'Tin nhắn mới', `Phòng ${data.phong}: "${data.noi_dung}"`);
         updateMessageBadge();
     });
 
@@ -420,16 +420,16 @@
     });
 
     socket.on('online_booking_rejected', function(data) {
-        showToast('&#10060;', '─Éß║╖t ph├▓ng online', `─É├ú tß╗½ chß╗æi y├¬u cß║ºu cß╗ºa ${data.khach}.`);
+        showToast('&#10060;', 'Đặt phòng online', `Đã từ chối yêu cầu của ${data.khach}.`);
         updateOnlineBookingBadge();
     });
 
     socket.on('new_booking_notification', function(data) {
-        showToast('&#128276;', '─Éß║╖t ph├▓ng mß╗¢i', data.message);
+        showToast('&#128276;', 'Đặt phòng mới', data.message);
         updateOnlineBookingBadge();
     });
 
-    // Hiß╗ân thß╗ï flash messages d╞░ß╗¢i dß║íng toast
+    // Hiển thị flash messages dưới dạng toast
     document.addEventListener('DOMContentLoaded', function() {
       const alerts = document.querySelectorAll('.alert');
       alerts.forEach(function(alert) {
@@ -442,12 +442,12 @@
           title = 'Thành công';
         } else if (category === 'danger') {
           icon = '<i class="fas fa-times"></i>';
-          title = 'Lß╗ùi';
+          title = 'Lỗi';
         } else if (category === 'warning') {
           icon = '<i class="fas fa-exclamation-triangle"></i>';
           title = 'Cảnh báo';
         } else if (category === 'info') {
-          icon = 'Γä╣∩╕Å';
+          icon = '<i class="fas fa-info"></i>';
           title = 'Thông tin';
         }
         showToast(icon, title, message);

@@ -82,7 +82,7 @@
 
   <div class="action-row">
     <button type="submit" class="btn primary"><i class="fas fa-save"></i> Cập nhật</button>
-    {% if selected_role.id not in system_role_ids %}
+    {% if selected_role.id not in protected_role_ids %}
       {% if assigned_counts.get(selected_role.id, 0) == 0 %}
       <button type="submit" class="btn danger" form="delete-role-form-{{ selected_role.id }}"><i class="fas fa-trash"></i> Xoá vai trò</button>
       {% else %}
@@ -92,7 +92,7 @@
   </div>
 </form>
 
-{% if selected_role.id not in system_role_ids and assigned_counts.get(selected_role.id, 0) == 0 %}
+{% if selected_role.id not in protected_role_ids and assigned_counts.get(selected_role.id, 0) == 0 %}
 <form method="post" data-role-form="delete" id="delete-role-form-{{ selected_role.id }}" class="role-delete-form" data-confirm="Bạn chắc chắn muốn xoá vai trò này?">
   <input type="hidden" name="action" value="delete">
   <input type="hidden" name="role_id" value="{{ selected_role.id }}">

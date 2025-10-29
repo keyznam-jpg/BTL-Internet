@@ -5104,7 +5104,8 @@ def build_role_management_context(selected_id=None):
             'partially_selected': bool(0 < selected_count < total),
         })
     assigned_counts = {role.id: NguoiDung.query.filter_by(role_id=role.id).count() for role in roles}
-    system_role_ids = {role.id for role in roles if role.is_system or role.slug in ('admin', 'nhanvien')}
+    system_role_ids = {role.id for role in roles if role.is_system}
+    protected_role_ids = {role.id for role in roles if role.is_system or role.slug == 'admin'}
 
     return {
         'roles': roles,
@@ -5113,6 +5114,7 @@ def build_role_management_context(selected_id=None):
         'selected_permissions': selected_permissions,
         'assigned_counts': assigned_counts,
         'system_role_ids': system_role_ids,
+        'protected_role_ids': protected_role_ids,
         'permission_groups': PERMISSION_GROUPS,
         'permission_groups_ui': permission_groups_ui,
         'permission_meta': PERMISSION_META,
@@ -5191,10 +5193,17 @@ def process_role_action(action, form):
             role = Role.query.get(role_id)
             if not role:
                 return {'success': False, 'message': 'Không tìm thấy vai trò để xoá.', 'category': 'danger'}
-            if role.is_system or role.slug in ('admin', 'nhanvien'):
+            if role.slug == 'admin':
                 return {
                     'success': False,
-                    'message': 'Không thể xoá vai trò hệ thống.',
+                    'message': 'Khong the xoa vai tro quan tri vien.',
+                    'category': 'warning',
+                    'selected_id': role.id
+                }
+            if role.is_system:
+                return {
+                    'success': False,
+                    'message': 'Khong the xoa vai tro he thong.',
                     'category': 'warning',
                     'selected_id': role.id
                 }

@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+﻿{% extends "base.html" %}
 {% block content %}
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -20,7 +20,7 @@
   <span id="toast-message"></span>
 </div>
 
-{% if current_user.loai == 'admin' %}
+{% if current_user.has_permission('customers.vouchers') %}
 <!-- Voucher Settings Card -->
 <div class="voucher-settings-card">
   <div class="card-header-custom">
@@ -60,7 +60,8 @@
 </div>
 {% endif %}
 <!-- Service Management Grid -->
-<div class="service-grid">
+<div class="service-grid{% if not can_manage_services %} read-only{% endif %}">
+  {% if can_manage_services %}
   <!-- Add/Edit Service Card -->
   <div class="service-form-card">
     <div class="card-header-custom">
@@ -75,15 +76,15 @@
       <div class="form-group">
         <label>
           <i class="fas fa-tag"></i>
-          Tên dịch vụ
+          Ten dịch vụ
         </label>
-        <input type="text" name="ten" id="serviceName" placeholder="Ví dụ: Bữa sáng buffet" value="{% if dv_edit %}{{ dv_edit.ten }}{% endif %}" required>
+        <input type="text" name="ten" id="serviceName" placeholder="Ví dụ: Buffet sáng" value="{% if dv_edit %}{{ dv_edit.ten }}{% endif %}" required>
       </div>
 
       <div class="form-group">
         <label>
           <i class="fas fa-dollar-sign"></i>
-          Đơn giá (VNĐ)
+          Đơn giá (VND)
         </label>
         <input type="number" name="gia" id="servicePrice" placeholder="Ví dụ: 80000" value="{% if dv_edit %}{{ dv_edit.gia }}{% endif %}" required min="0">
       </div>
@@ -112,24 +113,33 @@
       </div>
     </form>
   </div>
+  {% endif %}
 
-    <!-- Service List Card -->
+  <!-- Service List Card -->
   <div class="service-list-card">
     <div class="card-header-custom">
       <div class="header-left">
         <i class="fas fa-list"></i>
-        <h3>Danh sách dịch vụ</h3>
+        <h3>Danh sach dịch vụ</h3>
       </div>
-      <div class="badge-count">
-        <i class="fas fa-database"></i>
-        <span id="serviceCount">{{ ds_dv|length }}</span> dịch vụ
+      <div class="header-right">
+        <div class="badge-count">
+          <i class="fas fa-database"></i>
+          <span id="serviceCount">{{ ds_dv|length }}</span> dịch vụ
+        </div>
+        {% if not can_manage_services %}
+        <div class="badge-info read-only-note">
+          <i class="fas fa-lock"></i>
+          Chỉ xem danh mục
+        </div>
+        {% endif %}
       </div>
     </div>
 
     <!-- Search Bar -->
     <div class="search-bar">
       <i class="fas fa-search"></i>
-      <input type="text" id="searchInput" placeholder="Tìm kiếm theo tên hoặc loại...">
+      <input type="text" id="searchInput" placeholder="Tim kiem theo ten hoac Loại...">
     </div>
 
     <!-- Service Table -->
@@ -138,10 +148,12 @@
         <thead>
           <tr>
             <th><i class="fas fa-hashtag"></i> STT</th>
-            <th><i class="fas fa-tag"></i> Tên dịch vụ</th>
+            <th><i class="fas fa-tag"></i> Ten dịch vụ</th>
             <th><i class="fas fa-list-alt"></i> Loại</th>
-            <th><i class="fas fa-dollar-sign"></i> Đơn giá</th>
+            <th><i class="fas fa-dollar-sign"></i> Don gia</th>
+            {% if can_manage_services %}
             <th><i class="fas fa-cog"></i> Thao tác</th>
+            {% endif %}
           </tr>
         </thead>
         <tbody id="serviceTableBody">
@@ -158,6 +170,7 @@
               <span class="category-badge">{{ dv.loai.ten }}</span>
             </td>
             <td class="price">{{ dv.gia|vnd }}</td>
+            {% if can_manage_services %}
             <td class="actions">
               <button class="btn-edit" onclick="editService({{ dv.id }}, '{{ dv.ten }}', {{ dv.gia }}, {{ dv.loai_id }})" title="Chỉnh sửa">
                 <i class="fas fa-edit"></i>
@@ -166,6 +179,7 @@
                 <i class="fas fa-trash-alt"></i>
               </button>
             </td>
+            {% endif %}
           </tr>
           {% endfor %}
         </tbody>
@@ -251,6 +265,12 @@
     margin-bottom: 20px;
   }
 
+  .card-header-custom .header-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
   .header-left {
     display: flex;
     align-items: center;
@@ -307,6 +327,10 @@
     display: grid;
     grid-template-columns: 400px 1fr;
     gap: 25px;
+  }
+
+  .service-grid.read-only {
+    grid-template-columns: 1fr;
   }
 
   .service-form-card,
@@ -677,126 +701,174 @@
   }
 
   // Voucher Form
-  document.getElementById('voucherForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    const btn = this.querySelector('button[type="submit"]');
-    
-    btn.classList.add('loading');
-    
-    try {
-      const response = await fetch('{{ url_for("cai_dat_voucher") }}', {
-        method: 'POST',
-        body: formData
-      });
+  const voucherForm = document.getElementById('voucherForm');
+  if (voucherForm) {
+    voucherForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const btn = this.querySelector('button[type="submit"]');
       
-      if (response.ok) {
-        showToast('Đã cập nhật cấu hình voucher thành công!', 'success');
-      } else {
+      btn.classList.add('loading');
+      
+      try {
+        const response = await fetch('{{ url_for("cai_dat_voucher") }}', {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (response.ok) {
+          showToast('Đã cập nhật cấu hình voucher thành công!', 'success');
+        } else {
+          showToast('Có lỗi xảy ra, vui lòng thử lại!', 'error');
+        }
+      } catch (error) {
         showToast('Có lỗi xảy ra, vui lòng thử lại!', 'error');
+      } finally {
+        btn.classList.remove('loading');
       }
-    } catch (error) {
-      showToast('Có lỗi xảy ra, vui lòng thử lại!', 'error');
-    } finally {
-      btn.classList.remove('loading');
-    }
-  });
+    });
+  }
 
   // Service Form
-  document.getElementById('serviceForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    const formData = new FormData(this);
-    const serviceId = document.getElementById('serviceId').value;
-    const btn = document.getElementById('submitBtn');
-    
-    btn.classList.add('loading');
-    
-    try {
-      let url = '{{ url_for("quan_li_dich_vu") }}';
-      if (serviceId) {
-        url = `/sua-dich-vu/${serviceId}`;
+  const serviceForm = document.getElementById('serviceForm');
+  const hasServiceForm = !!serviceForm;
+
+  if (serviceForm) {
+    serviceForm.addEventListener('submit', async function(e) {
+      e.preventDefault();
+      const formData = new FormData(this);
+      const serviceIdInput = document.getElementById('serviceId');
+      const serviceId = serviceIdInput ? serviceIdInput.value : '';
+      const btn = document.getElementById('submitBtn') || this.querySelector('button[type="submit"]');
+      
+      if (btn) {
+        btn.classList.add('loading');
       }
       
-      const response = await fetch(url, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'X-Requested-With': 'XMLHttpRequest',
-          'Accept': 'application/json'
-        }
-      });
-
-      let data = null;
       try {
-        data = await response.json();
-      } catch (parseError) {
-        data = null;
-      }
-
-      if (response.ok) {
-        const defaultMessage = serviceId ? 'Đã cập nhật dịch vụ thành công!' : 'Đã thêm dịch vụ mới thành công!';
-        const successMessage = data && data.message ? data.message : defaultMessage;
-        showToast(successMessage, 'success');
-
+        let url = '{{ url_for("quan_li_dich_vu") }}';
         if (serviceId) {
-          if (data) {
-            updateServiceRow(data);
+          url = `/sua-dich-vu/${serviceId}`;
+        }
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json'
+          }
+        });
+
+        let data = null;
+        try {
+          data = await response.json();
+        } catch (parseError) {
+          data = null;
+        }
+
+        if (response.ok) {
+          const defaultMessage = serviceId ? 'Đã cập nhật dịch vụ thành công!' : 'Đã thêm dịch vụ mới thành công!';
+          const successMessage = data && data.message ? data.message : defaultMessage;
+          showToast(successMessage, 'success');
+
+          if (serviceId) {
+            if (data) {
+              updateServiceRow(data);
+            }
+          } else {
+            if (data) {
+              addServiceRow(data);
+            }
+            resetForm();
           }
         } else {
-          if (data) {
-            addServiceRow(data);
+          let errorMessage = 'Có lỗi xảy ra, vui lòng thử lại!';
+          if (data && data.message) {
+            errorMessage = data.message;
           }
+          showToast(errorMessage, 'error');
         }
-
-        resetForm();
-        updateServiceCount();
-      } else {
-        const errorMessage = data && data.message ? data.message : 'Có lỗi xảy ra, vui lòng thử lại!';
-        showToast(errorMessage, 'error');
+      } catch (error) {
+        showToast('Có lỗi xảy ra, vui lòng thử lại!', 'error');
+      } finally {
+        if (btn) {
+          btn.classList.remove('loading');
+        }
       }
-    } catch (error) {
-      showToast('Có lỗi xảy ra, vui lòng thử lại!', 'error');
-    } finally {
-      btn.classList.remove('loading');
-    }
-  });
+    });
+  }
 
-  // Edit Service
+
   function editService(id, ten, gia, loai_id) {
-    document.getElementById('serviceId').value = id;
-    document.getElementById('serviceName').value = ten;
-    document.getElementById('servicePrice').value = gia;
-    document.getElementById('serviceType').value = loai_id;
+    if (!hasServiceForm) { return; }
+
+    const idInput = document.getElementById('serviceId');
+    const nameInput = document.getElementById('serviceName');
+    const priceInput = document.getElementById('servicePrice');
+    const typeSelect = document.getElementById('serviceType');
+
+    if (idInput) { idInput.value = id; }
+    if (nameInput) { nameInput.value = ten; }
+    if (priceInput) { priceInput.value = gia; }
+    if (typeSelect) { typeSelect.value = loai_id; }
     
-    document.getElementById('formTitle').textContent = 'Chỉnh sửa dịch vụ';
-    document.getElementById('formIcon').className = 'fas fa-edit';
-    document.getElementById('submitBtn').querySelector('i').className = 'fas fa-save';
-    document.getElementById('submitText').textContent = 'Cập nhật';
-    document.getElementById('cancelBtn').style.display = 'flex';
+    const formTitle = document.getElementById('formTitle');
+    const formIcon = document.getElementById('formIcon');
+    const submitBtn = document.getElementById('submitBtn');
+    const submitText = document.getElementById('submitText');
+    const cancelBtn = document.getElementById('cancelBtn');
+
+    if (formTitle) { formTitle.textContent = 'Chỉnh sửa dịch vụ'; }
+    if (formIcon) { formIcon.className = 'fas fa-edit'; }
+    if (submitBtn) {
+      const icon = submitBtn.querySelector('i');
+      if (icon) { icon.className = 'fas fa-save'; }
+    }
+    if (submitText) { submitText.textContent = 'Cập nhật'; }
+    if (cancelBtn) { cancelBtn.style.display = 'flex'; }
     
-    // Scroll to form
-    document.querySelector('.service-form-card').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    const formCard = document.querySelector('.service-form-card');
+    if (formCard) {
+      formCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
   }
 
   // Reset Form
   function resetForm() {
-    document.getElementById('serviceForm').reset();
-    document.getElementById('serviceId').value = '';
-    document.getElementById('formTitle').textContent = 'Thêm dịch vụ mới';
-    document.getElementById('formIcon').className = 'fas fa-plus-circle';
-    document.getElementById('submitBtn').querySelector('i').className = 'fas fa-plus';
-    document.getElementById('submitText').textContent = 'Thêm mới';
-    document.getElementById('cancelBtn').style.display = 'none';
+    if (!hasServiceForm) { return; }
+
+    const form = document.getElementById('serviceForm');
+    if (form) { form.reset(); }
+
+    const idInput = document.getElementById('serviceId');
+    if (idInput) { idInput.value = ''; }
+
+    const formTitle = document.getElementById('formTitle');
+    const formIcon = document.getElementById('formIcon');
+    const submitBtn = document.getElementById('submitBtn');
+    const submitText = document.getElementById('submitText');
+    const cancelBtn = document.getElementById('cancelBtn');
+
+    if (formTitle) { formTitle.textContent = 'Thêm dịch vụ mới'; }
+    if (formIcon) { formIcon.className = 'fas fa-plus-circle'; }
+    if (submitBtn) {
+      const icon = submitBtn.querySelector('i');
+      if (icon) { icon.className = 'fas fa-plus'; }
+    }
+    if (submitText) { submitText.textContent = 'Thêm mới'; }
+    if (cancelBtn) { cancelBtn.style.display = 'none'; }
   }
 
   // Delete Service
   async function deleteService(id, ten) {
+    if (!hasServiceForm) { return; }
     if (!confirm(`Bạn có chắc muốn xóa dịch vụ "${ten}"?`)) {
       return;
     }
     
     try {
-      const response = await fetch(`/xoa-dich-vu/${id}`, {
+      const response = await fetch(`/Xóa-dich-vu/${id}`, {
         method: 'POST',
         headers: {
           'X-Requested-With': 'XMLHttpRequest',
@@ -812,7 +884,7 @@
       }
 
       if (response.ok) {
-        const successMessage = data && data.message ? data.message : `Đã xóa dịch vụ "${ten}" thành công!`;
+        const successMessage = data && data.message ? data.message : `Da Xóa dịch vụ "${ten}" thanh cong!`;
         showToast(successMessage, 'success');
 
         // Remove row from table
@@ -834,6 +906,7 @@
       showToast('Có lỗi xảy ra, vui lòng thử lại!', 'error');
     }
   }
+
 
   // Update Service Row
   function updateServiceRow(data) {
@@ -930,5 +1003,9 @@
       }
     });
   });
+  }
 </script>
 {% endblock %}
+
+
+

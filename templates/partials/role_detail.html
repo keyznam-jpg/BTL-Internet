@@ -1,0 +1,108 @@
+{% if selected_role %}
+<div class="role-overview-card">
+  <div>
+    <h3>{{ selected_role.name }}</h3>
+    <p>{{ selected_role.description or 'Vai trò chưa có mô tả. Hãy thêm mô tả để người dùng hiểu rõ quyền hạn.' }}</p>
+  </div>
+  <div class="overview-meta">
+    <div>
+      <span class="label">MÃ hệ thống</span>
+      <strong>{{ selected_role.slug }}</strong>
+    </div>
+    <div>
+      <span class="label">Gán cho</span>
+      <strong>{{ assigned_counts.get(selected_role.id, 0) }} nhân viên</strong>
+    </div>
+    <div>
+      <span class="label">Loại</span>
+      <strong>{{ 'Vai trò hệ thống' if selected_role.id in system_role_ids else 'Tuỳ chỉnh' }}</strong>
+    </div>
+  </div>
+</div>
+
+<form method="post" class="role-detail-card" data-role-form="update">
+  <input type="hidden" name="action" value="update">
+  <input type="hidden" name="role_id" value="{{ selected_role.id }}">
+
+  <div class="form-grid">
+    <label class="field">
+      <span class="field-title">Tên hiển thị<span class="required-marker">*</span></span>
+      <input id="role-name-input" name="name" value="{{ selected_role.name }}" {% if selected_role.slug == 'admin' %}readonly{% endif %} required>
+    </label>
+    <label class="field">
+      <span class="field-title">Mô tả vai trò</span>
+      <textarea id="role-desc-input" name="description" rows="2" placeholder="Mô tả vai trò">{{ selected_role.description or '' }}</textarea>
+    </label>
+  </div>
+
+  <div class="permissions-wrapper">
+    <div class="perm-header">
+      <div>
+        <h4>Nhóm quyền</h4>
+        <span class="perm-tip">Bật/tắt quyền cho từng chức năng hoặc thao tác nhanh cả nhóm.</span>
+      </div>
+      {% if selected_role.slug == 'admin' %}
+      <span class="all-access"><i class="fas fa-lock"></i> Vai trò quản trị luôn có toàn quyền.</span>
+      {% endif %}
+    </div>
+    {% for group in permission_groups_ui %}
+    <div class="permission-block" data-permission-block="{{ group.key }}" data-total="{{ group.total }}">
+      <div class="permission-block-header">
+        <div class="permission-block-heading">
+          <h5>{{ group.label }}</h5>
+          <span class="count" data-permission-count>{{ group.selected_count }}/{{ group.total }} quyền</span>
+        </div>
+        <label class="permission-group-toggle{% if selected_role.slug == 'admin' %} is-disabled{% endif %}">
+          <input type="checkbox"
+                 class="permission-group-input"
+                 data-group="{{ group.key }}"
+                 {% if group.all_selected %}checked{% endif %}
+                 data-indeterminate="{{ 'true' if group.partially_selected else 'false' }}"
+                 {% if selected_role.slug == 'admin' %}disabled{% endif %}>
+          <span class="toggle-visual"></span>
+          <span class="toggle-label">{% if selected_role.slug == 'admin' %}Toàn quyền{% else %}Bật tất cả{% endif %}</span>
+        </label>
+      </div>
+      <div class="permission-list">
+        {% for key, label in group.entries %}
+        <label class="permission-pill" data-permission-key="{{ key }}">
+          <input type="checkbox"
+                 name="permissions"
+                 value="{{ key }}"
+                 {% if key in selected_permissions %}checked{% endif %}
+                 {% if selected_role.slug == 'admin' %}disabled{% endif %}>
+          <span class="switch"></span>
+          <span class="text">{{ label }}</span>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="action-row">
+    <button type="submit" class="btn primary"><i class="fas fa-save"></i> Cập nhật</button>
+    {% if selected_role.id not in system_role_ids %}
+      {% if assigned_counts.get(selected_role.id, 0) == 0 %}
+      <button type="submit" class="btn danger" form="delete-role-form-{{ selected_role.id }}"><i class="fas fa-trash"></i> Xoá vai trò</button>
+      {% else %}
+      <span class="cant-delete"><i class="fas fa-info-circle"></i> Không thể xoá vì còn {{ assigned_counts.get(selected_role.id, 0) }} người dùng đang sử dụng.</span>
+      {% endif %}
+    {% endif %}
+  </div>
+</form>
+
+{% if selected_role.id not in system_role_ids and assigned_counts.get(selected_role.id, 0) == 0 %}
+<form method="post" data-role-form="delete" id="delete-role-form-{{ selected_role.id }}" class="role-delete-form" data-confirm="Bạn chắc chắn muốn xoá vai trò này?">
+  <input type="hidden" name="action" value="delete">
+  <input type="hidden" name="role_id" value="{{ selected_role.id }}">
+</form>
+{% endif %}
+
+{% else %}
+<div class="empty-state modern">
+  <i class="fas fa-user-shield"></i>
+  <h3>Chọn một vai trò để bắt đầu</h3>
+  <p>Danh sách bên trái hiển thị toàn bộ vai trò hiện có. Hãy chọn một vai trò để xem và cập nhật quyền.</p>
+</div>
+{% endif %}

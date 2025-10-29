@@ -4,7 +4,7 @@
 <h2>Quản Lí Khách Hàng</h2>
 
 <div class="action-bar">
-  {% if current_user.loai == 'admin' %}
+  {% if current_user.has_permission('customers.export') %}
   <a href="{{ url_for('xuat_excel_khach_hang') }}" class="btn-export">
     <i class="fas fa-file-excel"></i> Xuất Excel
   </a>

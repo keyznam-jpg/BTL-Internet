@@ -4,7 +4,7 @@
 <h2>Quản Lí Hóa Đơn</h2>
 
 <div class="action-bar">
-  {% if current_user.loai == 'admin' %}
+  {% if current_user.has_permission('payments.export') %}
   <a href="{{ url_for('xuat_excel_hoa_don') }}?{{ request.query_string.decode('utf-8') }}" class="btn-export">
     <i class="fas fa-file-excel"></i> Xuất Excel
   </a>

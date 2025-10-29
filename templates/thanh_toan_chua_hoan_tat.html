@@ -310,7 +310,7 @@
                             <span>{{ timeout_minutes }} phút</span>
                         </div>
                     </div>
-                    {% if current_user.loai == 'admin' %}
+                    {% if current_user.has_permission('payments.configure_timeout') %}
                     <form method="POST" action="{{ url_for('cap_nhat_timeout_thanh_toan') }}" class="settings-form">
                         <label for="timeout_minutes">Hủy tự động sau:</label>
                         <input type="number" id="timeout_minutes" name="timeout_minutes" min="1" max="60"

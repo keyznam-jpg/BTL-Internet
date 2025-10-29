@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tài khoản cần cấp quyền</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+    }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #f0f4ff 0%, #f9fbff 100%);
+      color: #1f2937;
+    }
+    .panel {
+      width: min(520px, 94vw);
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 20px 45px rgba(15, 23, 42, 0.12);
+      padding: 36px 40px;
+      text-align: center;
+    }
+    .icon-wrap {
+      width: 84px;
+      height: 84px;
+      margin: 0 auto 20px;
+      border-radius: 50%;
+      background: rgba(59, 130, 246, 0.12);
+      display: grid;
+      place-items: center;
+      color: #2563eb;
+      font-size: 38px;
+    }
+    h1 {
+      font-size: 24px;
+      margin: 0 0 12px;
+      font-weight: 700;
+    }
+    p {
+      margin: 10px 0;
+      line-height: 1.55;
+      color: #4b5563;
+    }
+    .actions {
+      margin-top: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    a.button {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      padding: 12px 18px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-weight: 600;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    a.button.primary {
+      background: #2563eb;
+      color: #fff;
+      box-shadow: 0 14px 30px rgba(37, 99, 235, 0.25);
+    }
+    a.button.primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 30px rgba(37, 99, 235, 0.28);
+    }
+    a.button.secondary {
+      background: #e5edff;
+      color: #1d4ed8;
+    }
+    @media (max-width: 480px) {
+      .panel {
+        padding: 28px 22px;
+      }
+      h1 {
+        font-size: 21px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="panel" role="alert">
+    <div class="icon-wrap" aria-hidden="true">ℹ️</div>
+    <h1>Tài khoản của bạn chưa được cấp quyền</h1>
+    <p>Chúng tôi ghi nhận tài khoản <strong>{{ current_user.ten }}</strong> chưa được cấu hình quyền truy cập cho các chức năng cần thiết.</p>
+    <p>Vui lòng liên hệ quản trị viên hoặc bộ phận nhân sự để được phân quyền trước khi tiếp tục sử dụng hệ thống.</p>
+    <div class="actions">
+      <a class="button primary" href="mailto:{{ contact_email if contact_email else '' }}">Liên hệ quản trị viên</a>
+      <a class="button secondary" href="{{ url_for('logout') }}">Đăng xuất</a>
+    </div>
+  </main>
+</body>
+</html>

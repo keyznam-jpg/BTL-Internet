@@ -1,9 +1,9 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="vi">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Quản Lí Khách Sạn</title>
+  <title>Quản Lý Khách Sạn</title>
   <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script>
@@ -15,10 +15,10 @@
       document.head.appendChild(link);
     }
   </script>
-  <!-- NÂNG CẤP: Thêm thư viện FullCalendar cho trang Lịch Đặt Phòng -->
+  <!-- N├éNG Cß║ñP: Th├¬m th╞░ viß╗çn FullCalendar cho trang Lß╗ïch ─Éß║╖t Ph├▓ng -->
   <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js'></script>
 
-  <!-- CSS cho hệ thống thông báo "toast" -->
+  <!-- CSS cho hß╗ç thß╗æng th├┤ng b├ío "toast" -->
   <style>
     .toast-notification {
       position: fixed;
@@ -64,21 +64,55 @@
     <nav class="menu-links">
       {% if current_user.is_authenticated %}
       
-      <!-- TỔNG QUAN -->
+      {% set can_view_dashboard = current_user.has_permission('dashboard.view') %}
+      {% set can_manage_attendance = current_user.has_permission('attendance.manage') %}
+      {% set can_view_booking_map = current_user.has_permission('bookings.view_map') %}
+      {% set can_create_booking = current_user.has_permission('bookings.create_offline') %}
+      {% set can_manage_online_bookings = current_user.has_permission('bookings.manage_online') %}
+      {% set can_handle_checkins = current_user.has_permission('bookings.checkin_checkout') %}
+      {% set can_manage_waitlist = current_user.has_permission('bookings.manage_waiting') %}
+      {% set can_view_chat = current_user.has_permission('communications.chat') %}
+      {% set can_manage_customers = current_user.has_permission('customers.view') %}
+      {% set can_process_payments = current_user.has_permission('payments.process') %}
+      {% set can_manage_service_orders = current_user.has_permission('services.orders') %}
+      {% set can_manage_invoices = current_user.has_permission('payments.invoices') %}
+      {% set can_manage_staff = current_user.has_permission('staff.manage') %}
+      {% set can_configure_payroll = current_user.has_permission('payroll.configure') %}
+      {% set can_manage_roles = current_user.has_permission('roles.manage') %}
+      {% set can_configure_email = current_user.has_permission('email.settings') %}
+      {% set can_view_email_logs = current_user.has_permission('email.logs') %}
+      {% set can_manage_services_page = current_user.has_permission('services.manage') or current_user.has_permission('customers.vouchers') %}
+      {% set can_view_analytics = current_user.has_permission('analytics.revenue') %}
+      {% set can_access_pos = can_process_payments or can_manage_service_orders %}
+      {% set show_booking_group = can_view_booking_map or can_create_booking or can_manage_online_bookings or can_handle_checkins or can_manage_waitlist %}
+      {% set show_customer_group = can_view_chat or can_manage_customers %}
+      {% set show_finance_group = can_access_pos or can_manage_invoices %}
+      {% set show_staff_group = can_manage_staff or can_configure_payroll %}
+      {% set show_system_group = can_manage_roles or can_configure_email or can_view_email_logs or can_manage_services_page %}
+
+      <!-- Overview -->
       <div class="menu-group">
         <div class="menu-group-title">Tổng quan</div>
+        {% if can_view_dashboard %}
         <a href="{{ url_for('dashboard') }}" title="Bảng điều khiển"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"></rect><rect x="14" y="3" width="7" height="7"></rect><rect x="14" y="14" width="7" height="7"></rect><rect x="3" y="14" width="7" height="7"></rect></svg><span class="menu-text">Bảng điều khiển</span></a>
+        {% endif %}
         <a href="{{ url_for('attendance_checkin') }}" title="Chấm công"><i class="fas fa-calendar-check"></i><span class="menu-text">Chấm công</span></a>
-        {% if current_user.loai == 'admin' %}
+        {% if can_manage_attendance %}
         <a href="{{ url_for('attendance_admin') }}" title="Phê duyệt chấm công"><i class="fas fa-user-check"></i><span class="menu-text">Phê duyệt chấm công</span></a>
         {% endif %}
       </div>
 
-      <!-- QUẢN LÝ PHÒNG -->
+      {% if show_booking_group %}
+      <!-- Bookings -->
       <div class="menu-group">
         <div class="menu-group-title">Quản lý Phòng</div>
+        {% if can_view_booking_map %}
         <a href="{{ url_for('so_do_phong') }}" title="Sơ đồ phòng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M12.5 3H18v5.5"/><path d="M3 11.5V15l4 4h3.5"/><path d="M21 12.5V9l-4-4h-3.5"/></svg><span class="menu-text">Sơ đồ phòng</span></a>
+        {% endif %}
+        {% if can_create_booking %}
         <a href="{{ url_for('dat_phong') }}" title="Đặt phòng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg><span class="menu-text">Đặt phòng</span></a>
+        {% endif %}
+        {% if can_manage_online_bookings %}
         <a href="{{ url_for('quan_ly_dat_phong_online') }}" title="Đặt phòng online"{% if pending_online_count %} class="menu-link-with-badge"{% endif %}>
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 4h18"></path><path d="M8 4v16"></path><path d="M16 4v16"></path><rect x="3" y="8" width="18" height="12" rx="2"></rect></svg>
           <span class="menu-text">Đặt phòng online</span>
@@ -86,14 +120,21 @@
           <span class="menu-badge">{{ pending_online_count }}</span>
           {% endif %}
         </a>
-
+        {% endif %}
+        {% if can_handle_checkins %}
         <a href="{{ url_for('nhan_phong') }}" title="Nhận & Trả phòng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg><span class="menu-text">Nhận & Trả phòng</span></a>
+        {% endif %}
+        {% if can_manage_waitlist %}
         <a href="{{ url_for('quan_ly_booking_cho') }}" title="Quản lý Booking chờ"><i class="fas fa-clock"></i><span class="menu-text">Booking chờ</span></a>
+        {% endif %}
       </div>
+      {% endif %}
 
-      <!-- KHÁCH HÀNG & LIÊN LẠC -->
+      {% if show_customer_group %}
+      <!-- Customers -->
       <div class="menu-group">
         <div class="menu-group-title">Khách hàng</div>
+        {% if can_view_chat %}
         <a href="{{ url_for('tin_nhan') }}" title="Tin nhắn"{% if unread_messages and unread_messages > 0 %} class="menu-link-with-badge"{% endif %}>
           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
           <span class="menu-text">Tin nhắn</span>
@@ -101,58 +142,88 @@
           <span class="notification-badge">{{ unread_messages if unread_messages < 100 else '99+' }}</span>
           {% endif %}
         </a>
+        {% endif %}
+        {% if can_manage_customers %}
         <a href="{{ url_for('khach_hang') }}" title="Quản lý Khách hàng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg><span class="menu-text">Quản lý Khách hàng</span></a>
+        {% endif %}
       </div>
+      {% endif %}
 
-      <!-- DỊCH VỤ & THANH TOÁN -->
+      {% if show_finance_group %}
+      <!-- Finance -->
       <div class="menu-group">
         <div class="menu-group-title">Dịch vụ & Tài chính</div>
+        {% if can_access_pos %}
         <a href="{{ url_for('dich_vu_thanh_toan') }}" title="Dịch vụ & Thanh toán"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect><line x1="1" y1="10" x2="23" y2="10"></line></svg><span class="menu-text">Dịch vụ & Thanh toán</span></a>
+        {% endif %}
+        {% if can_manage_invoices %}
         <a href="{{ url_for('quan_li_hoa_don') }}" title="Quản lý Hóa đơn"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg><span class="menu-text">Quản lý Hóa đơn</span></a>
+        {% endif %}
+        {% if can_process_payments %}
         <a href="{{ url_for('thanh_toan_chua_hoan_tat') }}" title="Thanh toán chưa hoàn tất"><i class="fas fa-clock"></i><span class="menu-text">Thanh toán chưa hoàn tất</span></a>
+        {% endif %}
       </div>
-      
-      {% if current_user.loai == 'admin' %}
-      <!-- QUẢN TRỊ NHÂN SỰ (ADMIN) -->
+      {% endif %}
+
+      {% if show_staff_group %}
+      <!-- People -->
       <div class="menu-group">
         <div class="menu-group-title">Quản trị Nhân sự</div>
+        {% if can_manage_staff %}
         <a href="{{ url_for('nhan_vien') }}" title="Quản lý Nhân viên"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg><span class="menu-text">Quản lý Nhân viên</span></a>
+        {% endif %}
+        {% if can_configure_payroll %}
         <a href="{{ url_for('cai_dat_luong_thuong') }}" title="Cài đặt lương thưởng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3h12a2 2 0 0 1 2 2v14l-4-2-4 2-4-2-4 2V5a2 2 0 0 1 2-2z"></path><path d="M9 8h6"></path><path d="M9 12h6"></path></svg><span class="menu-text">Cài đặt lương thưởng</span></a>
+        {% endif %}
       </div>
+      {% endif %}
 
-      <!-- CÀI ĐẶT HỆ THỐNG (ADMIN) -->
+      {% if show_system_group %}
+      <!-- Operations -->
       <div class="menu-group">
-        <div class="menu-group-title">Cấu hình Hệ thống</div>
+        <div class="menu-group-title">Vận hành & Cấu hình</div>
+        {% if can_manage_roles %}
+        <a href="{{ url_for('quan_ly_vai_tro') }}" title="Quản lý Vai trò"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l2 3h3l-2 3 2 3h-3l-2 3-2-3H7l2-3-2-3h3z"></path></svg><span class="menu-text">Quản lý Vai trò</span></a>
+        {% endif %}
+        {% if can_configure_email %}
         <a href="{{ url_for('cai_dat_email') }}" title="Cấu hình Email"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline></svg><span class="menu-text">Cấu hình Email</span></a>
+        {% endif %}
+        {% if can_view_email_logs %}
         <a href="{{ url_for('lich_su_email') }}" title="Lịch sử Email"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z"></path><polyline points="22,6 12,13 2,6"></polyline><path d="M12 13v3"></path><circle cx="12" cy="9" r="1"></circle></svg><span class="menu-text">Lịch sử Email</span></a>
+        {% endif %}
+        {% if can_manage_services_page %}
         <a href="{{ url_for('quan_li_dich_vu') }}" title="Quản lý Dịch vụ"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg><span class="menu-text">Quản lý Dịch vụ</span></a>
+        {% endif %}
       </div>
+      {% endif %}
 
-      <!-- THỐNG KÊ & BÁO CÁO (ADMIN) -->
+      {% if can_view_analytics %}
+      <!-- Analytics -->
       <div class="menu-group">
         <div class="menu-group-title">Thống kê & Báo cáo</div>
         <a href="{{ url_for('thong_ke_doanh_thu') }}" title="Thống kê Doanh thu"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg><span class="menu-text">Thống kê Doanh thu</span></a>
       </div>
       {% endif %}
-      
+
       {% endif %}
+
     </nav>
   </aside>
 
   <main class="main">
     <header class="page-header">
-      <h1>QUẢN LÍ KHÁCH SẠN</h1>
+      <h1>Quản Lý Khách Sạn</h1>
       
       <div class="user-menu">
         <button type="button" class="user-menu-trigger" aria-label="Mở menu người dùng">
           <span class="user-avatar">
             <img src="{{ url_for('static', filename=current_user.avatar_path) }}"
-                 alt="Ảnh đại diện của {{ current_user.ten }}"
+                 alt="ß║ónh ─æß║íi diß╗çn cß╗ºa {{ current_user.ten }}"
                  onerror="this.onerror=null;this.src='{{ url_for('static', filename='img/ttcn.png') }}';">
           </span>
           <div class="user-details">
             <span class="user-name">{{ current_user.ten }}</span>
-            <span class="user-role">{{ 'Quản trị viên' if current_user.loai == 'admin' else 'Nhân viên' }}</span>
+            <span class="user-role">{{ current_user.role_name or '' }}</span>
           </div>
         </button>
         <div class="dropdown-content">
@@ -173,7 +244,7 @@
     {% block content %}{% endblock %}
   </main>
   
-  <!-- NÂNG CẤP: HTML cho thông báo "toast" -->
+  <!-- N├éNG Cß║ñP: HTML cho th├┤ng b├ío "toast" -->
   <div id="toast-container" class="toast-notification">
       <div class="toast-icon" id="toast-icon"></div>
       <div class="toast-body">
@@ -182,7 +253,7 @@
       </div>
   </div>
 
-  <!-- NÂNG CẤP: Thư viện Socket.IO và Script xử lý thời gian thực -->
+  <!-- N├éNG Cß║ñP: Th╞░ viß╗çn Socket.IO v├á Script xß╗¡ l├╜ thß╗¥i gian thß╗▒c -->
   <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
   <script>
     const toastContainer = document.getElementById('toast-container');
@@ -293,7 +364,7 @@
                     tinNhanLink.classList.remove('menu-link-with-badge');
                 }
             })
-            .catch(err => console.error('Không thể cập nhật badge tin nhắn:', err));
+            .catch(err => console.error('Kh├┤ng thß╗â cß║¡p nhß║¡t badge tin nhß║»n:', err));
     }
 
     function updateOnlineBookingBadge() {
@@ -320,7 +391,7 @@
                     onlineLink.classList.remove('menu-link-with-badge');
                 }
             })
-            .catch(err => console.error('Không thể cập nhật badge đặt phòng online:', err));
+            .catch(err => console.error('Kh├┤ng thß╗â cß║¡p nhß║¡t badge ─æß║╖t ph├▓ng online:', err));
     }
 
     updateMessageBadge();
@@ -333,7 +404,7 @@
     });
 
     socket.on('new_message_from_guest', function(data) {
-        showToast('&#128172;', 'Tin nhắn mới', `Phòng ${data.phong}: "${data.noi_dung}"`);
+        showToast('&#128172;', 'Tin nhß║»n mß╗¢i', `Ph├▓ng ${data.phong}: "${data.noi_dung}"`);
         updateMessageBadge();
     });
 
@@ -349,16 +420,16 @@
     });
 
     socket.on('online_booking_rejected', function(data) {
-        showToast('&#10060;', 'Đặt phòng online', `Đã từ chối yêu cầu của ${data.khach}.`);
+        showToast('&#10060;', '─Éß║╖t ph├▓ng online', `─É├ú tß╗½ chß╗æi y├¬u cß║ºu cß╗ºa ${data.khach}.`);
         updateOnlineBookingBadge();
     });
 
     socket.on('new_booking_notification', function(data) {
-        showToast('&#128276;', 'Đặt phòng mới', data.message);
+        showToast('&#128276;', '─Éß║╖t ph├▓ng mß╗¢i', data.message);
         updateOnlineBookingBadge();
     });
 
-    // Hiển thị flash messages dưới dạng toast
+    // Hiß╗ân thß╗ï flash messages d╞░ß╗¢i dß║íng toast
     document.addEventListener('DOMContentLoaded', function() {
       const alerts = document.querySelectorAll('.alert');
       alerts.forEach(function(alert) {
@@ -371,12 +442,12 @@
           title = 'Thành công';
         } else if (category === 'danger') {
           icon = '<i class="fas fa-times"></i>';
-          title = 'Lỗi';
+          title = 'Lß╗ùi';
         } else if (category === 'warning') {
           icon = '<i class="fas fa-exclamation-triangle"></i>';
           title = 'Cảnh báo';
         } else if (category === 'info') {
-          icon = 'ℹ️';
+          icon = 'Γä╣∩╕Å';
           title = 'Thông tin';
         }
         showToast(icon, title, message);

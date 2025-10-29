@@ -166,7 +166,7 @@
       </div>
     </a>
 
-    {% if current_user.loai == 'admin' %}
+    {% if current_user.has_permission('services.manage') %}
     <!-- REMOVED: Card Quản Lí Phòng đã bị xóa -->
     {% endif %}
 
@@ -200,7 +200,7 @@
       </div>
     </a>
 
-    {% if current_user.loai == 'admin' %}
+    {% if current_user.has_permission('analytics.revenue') %}
     <!-- Quản Lí Dịch Vụ - Admin only -->
     <a href="{{ url_for('quan_li_dich_vu') }}" class="access-card access-card-teal">
       <div class="card-icon">
@@ -233,7 +233,7 @@
       </div>
     </a>
 
-    {% if current_user.loai == 'admin' %}
+    {% if current_user.has_permission('analytics.revenue') %}
     <!-- Thống Kê - Admin only -->
     <a href="{{ url_for('thong_ke_doanh_thu') }}" class="access-card access-card-yellow">
       <div class="card-icon">

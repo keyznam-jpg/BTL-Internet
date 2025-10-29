@@ -1,0 +1,19 @@
+{% for role in roles %}
+<li class="role-tile {% if selected_role and role.id == selected_role.id %}active{% endif %}" data-name="{{ role.name|lower }}">
+  <a href="{{ url_for('quan_ly_vai_tro', role_id=role.id) }}">
+    <div class="role-title">
+      <span class="name">{{ role.name }}</span>
+      {% if role.id in system_role_ids %}
+      <span class="system-chip">System</span>
+      {% endif %}
+    </div>
+    <div class="role-meta">
+      <span class="slug">Mã: {{ role.slug }}</span>
+      <span class="count"><i class="fas fa-users"></i> {{ assigned_counts.get(role.id, 0) }}</span>
+    </div>
+  </a>
+</li>
+{% endfor %}
+{% if not roles %}
+<li class="empty-role">Ch��a cA3 vai trA� nA�o �`�����c t���o.</li>
+{% endif %}

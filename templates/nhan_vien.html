@@ -763,7 +763,7 @@
           <div class="rank-badge"><i class="fas fa-medal"></i></div>
           <div class="performer-avatar">{{ top.ten[0] }}</div>
           <div class="performer-name">{{ top.ten }}</div>
-          <div class="performer-role">{{ 'Quản trị viên' if top.loai == 'admin' else 'Nhân viên' }}</div>
+          <div class="performer-role">{{ top.role_name }}</div>
           <div class="performer-stats">
             <div class="stat-item">
               <span class="stat-label">Doanh thu</span>
@@ -788,9 +788,10 @@
     </div>
     <div class="filter-group">
       <select id="role-filter" onchange="filterEmployees()">
-        <option value="all">Tất cả vai trò</option>
-        <option value="admin">Quản trị viên</option>
-        <option value="nhanvien">Nhân viên</option>
+        <option value="all">Tất cả vai tr?</option>
+        {% for role in roles %}
+        <option value="{{ role.slug }}">{{ role.name }}</option>
+        {% endfor %}
       </select>
       <select id="sort-by" onchange="sortEmployees()">
         <option value="name">Sắp xếp: Tên</option>
@@ -809,7 +810,7 @@
       {% set preview = salary_preview.get(nv.id) or {'luong_co_ban': 0, 'phu_cap': 0, 'thuong': 0, 'top_bonus': 0, 'ty_le': 0, 'tong': 0, 'doanh_thu': 0, 'is_top': False} %}
       {% set work_day = work_days_map.get(nv.id, 0) %}
       
-      <div class="employee-card" data-name="{{ nv.ten }}" data-username="{{ nv.ten_dang_nhap }}" data-role="{{ nv.loai }}" data-revenue="{{ month.doanh_thu }}" data-orders="{{ month.so_hd }}" data-date="{{ nv.ngay_vao_lam.strftime('%Y%m%d') if nv.ngay_vao_lam else '0' }}">
+      <div class="employee-card" data-name="{{ nv.ten }}" data-username="{{ nv.ten_dang_nhap }}" data-role="{{ nv.role_slug }}" data-revenue="{{ month.doanh_thu }}" data-orders="{{ month.so_hd }}" data-date="{{ nv.ngay_vao_lam.strftime('%Y%m%d') if nv.ngay_vao_lam else '0' }}">
         <div class="employee-header">
           <div class="employee-avatar">
             {% if nv.anh_dai_dien %}
@@ -821,10 +822,10 @@
           <div class="employee-info">
             <h3>{{ nv.ten }}</h3>
             <div class="employee-role">
-              {% if nv.loai == 'admin' %}
-                <i class="fas fa-crown"></i> Quản trị viên
+              {% if nv.role_slug == 'admin' %}
+                <i class="fas fa-crown"></i> {{ nv.role_name }}
               {% else %}
-                <i class="fas fa-user"></i> Nhân viên
+                <i class="fas fa-user"></i> {{ nv.role_name }}
               {% endif %}
             </div>
           </div>
@@ -907,13 +908,13 @@
       </div>
 
       <div class="form-group">
-        <label for="loai">
-          <span class="label-icon"><i class="fas fa-user-tie"></i></span>
+                <label for="role_id">
           Vai trò <span class="required">*</span>
         </label>
-        <select id="loai" name="loai">
-          <option value="nhanvien"><i class="fas fa-user"></i> Nhân viên</option>
-          <option value="admin"><i class="fas fa-crown"></i> Quản trị viên</option>
+        <select id="role_id" name="role_id" required>
+          {% for role in roles %}
+          <option value="{{ role.id }}" {% if role.slug == 'nhanvien' %}selected{% endif %}>{{ role.name }}</option>
+          {% endfor %}
         </select>
       </div>
 

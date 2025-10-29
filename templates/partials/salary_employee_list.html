@@ -1,4 +1,4 @@
-<div class="employee-list">
+﻿<div class="employee-list">
   {% for nv in staffs %}
   {% set record = salary_records.get(nv.id) %}
   <form method="post" class="employee-salary-card">
@@ -15,11 +15,11 @@
         </h4>
         <div class="employee-username">@{{ nv.ten_dang_nhap }}</div>
       </div>
-      <span class="role-badge {{ 'admin' if nv.loai == 'admin' else 'staff' }}">
-        {% if nv.loai == 'admin' %}
-          <i class="fas fa-crown"></i> Quản trị viên
+      <span class="role-badge {{ 'admin' if nv.role_slug == 'admin' else 'staff' }}">
+        {% if nv.role_slug == 'admin' %}
+          <i class="fas fa-crown"></i> {{ nv.role_name }}
         {% else %}
-          <i class="fas fa-user"></i> Nhân viên
+          <i class="fas fa-user"></i> {{ nv.role_name }}
         {% endif %}
       </span>
     </div>

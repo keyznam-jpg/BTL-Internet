@@ -1,0 +1,915 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="role-page-header">
+  <div>
+    <h2>Quản lý vai trò &amp; Phân quyền</h2>
+  </div>
+  <div class="header-stats">
+    <div class="stat-card">
+      <h4>Tổng vai trò</h4>
+      <strong>{{ roles|length }}</strong>
+    </div>
+    <div class="stat-card">
+      <h4>Vai trò hệ thống</h4>
+      <strong>{{ system_role_ids|length }}</strong>
+    </div>
+    <div class="stat-card">
+      <h4>Người dùng</h4>
+      <strong>{{ assigned_counts.values()|sum }}</strong>
+    </div>
+  </div>
+</div>
+
+<div class="role-layout">
+  <aside class="role-sidebar">
+    <div class="role-card">
+      <div class="sidebar-header">
+        <h3><i class="fas fa-layer-group"></i> Vai trò hiện có</h3>
+        <div class="badge">{{ roles|length }}</div>
+      </div>
+      <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="role-search" placeholder="Tìm vai trò..." oninput="filterRoles()">
+      </div>
+      <ul class="role-list" id="role-list">
+        {% include 'partials/role_list_items.html' %}
+      </ul>
+    </div>
+
+    <div class="role-card create-card">
+      <div class="card-title">
+        <i class="fas fa-plus-circle"></i> Tạo vai trò mới
+      </div>
+      <form method="post" class="form vertical" data-role-form="create">
+        <input type="hidden" name="action" value="create">
+        <label>Tên vai trò<span>*</span>
+          <input id="new-role-name" name="name" required placeholder="VD: Lễ tân ca đêm">
+        </label>
+        <label>Mô tả
+          <textarea id="new-role-desc" name="description" rows="3" placeholder="Ghi chú, phạm vi trách nhiệm..."></textarea>
+        </label>
+        <button type="submit" class="btn primary full"><i class="fas fa-save"></i> Lưu vai trò</button>
+      </form>
+    </div>
+  </aside>
+
+    <section class="role-content">
+      <div id="role-detail-wrapper">
+        {% include 'partials/role_detail.html' %}
+      </div>
+    </section>
+</div>
+
+<style>
+.role-page-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.role-page-header .eyebrow {
+  text-transform: uppercase;
+  font-size: 12px;
+  letter-spacing: 2px;
+  color: #22c55e;
+  margin-bottom: 6px;
+}
+.role-page-header h2 {
+  margin: 0;
+  font-size: 28px;
+  color: #097d3b;
+}
+.role-page-header .subtitle {
+  display: block;
+  margin-top: 8px;
+  color: #64748b;
+  max-width: 520px;
+}
+.header-stats {
+  display: flex;
+  gap: 12px;
+}
+.stat-card {
+  background: linear-gradient(135deg,#f0fdf4,#e0e7ff);
+  border-radius: 16px;
+  padding: 16px 20px;
+  min-width: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  box-shadow: 0 10px 25px rgba(34,197,94,0.14);
+}
+.stat-card h4 {
+  margin: 0;
+  font-size: 13px;
+  color: #166534;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+.stat-card strong {
+  font-size: 26px;
+  margin-top: 4px;
+  color: #1e1b4b;
+}
+.role-layout {
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) 1fr;
+  gap: 24px;
+}
+.role-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.role-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 20px 45px rgba(15,23,42,0.08);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+.sidebar-header h3 {
+  margin: 0;
+  font-size: 16px;
+  color: #0f172a;
+}
+.sidebar-header .badge {
+  background: #f0fdf4;
+  color: #166534;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 13px;
+}
+.search-box {
+  position: relative;
+  margin-bottom: 16px;
+}
+.search-box i {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: #9ca3af;
+}
+.search-box input {
+  width: 100%;
+  padding: 10px 12px 10px 34px;
+  border-radius: 12px;
+  border: 1px solid #d0d7e5;
+  background: #f8fafc;
+}
+.role-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 420px;
+  overflow-y: auto;
+}
+.role-tile {
+  border-radius: 14px;
+  border: 1px solid transparent;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+.role-tile a {
+  display: block;
+  padding: 14px 16px;
+  color: inherit;
+  text-decoration: none;
+}
+.role-tile:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 20px rgba(34,197,94,0.14);
+  border-color: rgba(79,70,229,0.4);
+}
+.role-tile.active {
+  background: linear-gradient(135deg,#166534,#22c55e);
+  color: #fff;
+  box-shadow: 0 18px 32px rgba(22,163,74,0.32);
+}
+.role-tile.active .role-meta span {
+  color: rgba(255,255,255,0.8);
+}
+.role-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.role-title .name {
+  font-weight: 600;
+  font-size: 15px;
+}
+.system-chip {
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(34,197,94,0.18);
+  color: #166534;
+}
+.role-tile.active .system-chip {
+  background: rgba(255,255,255,0.25);
+  color: #fff;
+}
+.role-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: #6b7280;
+}
+.role-tile.active .role-meta {
+  color: rgba(255,255,255,0.8);
+}
+.create-card .card-title {
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+.create-card .card-tip {
+  font-size: 13px;
+  color: #64748b;
+  margin-bottom: 12px;
+}
+.form.vertical label {
+  display: block;
+  font-size: 13px;
+  color: #475569;
+  margin-bottom: 10px;
+}
+.form.vertical label span {
+  color: #dc2626;
+  margin-left: 4px;
+}
+.form.vertical input,
+.form.vertical textarea {
+  width: 100%;
+  margin-top: 4px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid #ccd5ea;
+  background: #f8fafc;
+}
+.btn.full {
+  width: 100%;
+}
+.role-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.role-overview-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 24px;
+  background: linear-gradient(135deg,#bbf7d0,#4ade80);
+  border-radius: 20px;
+  color: #1f2937;
+  box-shadow: 0 20px 35px rgba(99,102,241,0.3);
+}
+.role-overview-card h3 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  color: #1e1b4b;
+}
+.role-overview-card p {
+  margin: 0;
+  color: rgba(30,27,75,0.8);
+  max-width: 480px;
+}
+.overview-meta {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.overview-meta .label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(30,27,75,0.6);
+}
+.overview-meta strong {
+  display: block;
+  margin-top: 6px;
+  font-size: 16px;
+}
+.role-detail-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 18px 30px rgba(15,23,42,0.08);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+}
+.form-grid {
+  display: grid;
+  /* Make the display name field a bit wider than the description so visual weight
+     better matches typical content (name is usually short but should be more prominent).
+     1.6fr / 1fr gives a roughly 62% / 38% split. Keeps the layout responsive via media queries below. */
+  grid-template-columns: 1.6fr 1fr;
+  gap: 18px;
+  margin-bottom: 24px;
+  align-items: start;
+}
+.form-grid label {
+  font-size: 13px;
+  color: #475569;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+}
+.form-grid .field-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-weight: 600;
+  color: #1f2937;
+  white-space: nowrap;
+}
+.form-grid .required-marker {
+  color: #dc2626;
+  font-size: 14px;
+}
+.form-grid input,
+.form-grid textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #d4d9e6;
+  background: #f8fafc;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.form-grid label input,
+.form-grid label textarea {
+  flex: 1;
+}
+.form-grid input {
+  min-height: 48px;
+}
+.form-grid textarea {
+  /* default textarea sizing for form-grid items */
+  min-height: 68px;
+  resize: vertical;
+}
+
+/* Specific sizing for the role form fields to make them visually balanced */
+#role-name-input {
+  /* slightly taller, readable single-line input for the display name */
+  min-height: 34px;
+  font-size: 15px;
+  padding: 6px 10px;
+}
+#role-desc-input {
+  /* a bit taller textarea so short descriptions display comfortably */
+  min-height: 48px;
+  max-height: 120px;
+  resize: vertical;
+  padding: 6px 10px;
+}
+.permissions-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.perm-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.perm-header h4 {
+  margin: 0;
+}
+.perm-tip {
+  display: block;
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 4px;
+}
+.all-access {
+  font-size: 13px;
+  color: #f97316;
+  background: rgba(251,146,60,0.18);
+  border: 1px solid rgba(249,115,22,0.6);
+  padding: 10px 12px;
+  border-radius: 12px;
+}
+.permission-block {
+  border: 1px solid rgba(34,197,94,0.18);
+  border-radius: 16px;
+  padding: 16px 18px;
+  background: #f8fafc;
+}
+.permission-block-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.permission-block-heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.permission-block-header h5,
+.permission-block-heading h5 {
+  margin: 0;
+  font-size: 15px;
+  color: #166534;
+}
+.permission-block-header .count,
+.permission-block-heading .count {
+  font-size: 12px;
+  color: #22c55e;
+}
+.permission-group-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ecfdf5;
+  border: 1px solid rgba(34,197,94,0.25);
+  padding: 6px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  color: #047857;
+  font-weight: 600;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+.permission-group-toggle input {
+  display: none;
+}
+.permission-group-toggle .toggle-visual {
+  position: relative;
+  width: 34px;
+  height: 18px;
+  background: rgba(34,197,94,0.35);
+  border-radius: 999px;
+  transition: background 0.2s ease;
+}
+.permission-group-toggle .toggle-visual::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 1px 4px rgba(15,118,110,0.35);
+  transition: transform 0.2s ease;
+}
+.permission-group-toggle input:checked + .toggle-visual {
+  background: #22c55e;
+}
+.permission-group-toggle input:checked + .toggle-visual::after {
+  transform: translateX(16px);
+}
+.permission-group-toggle input:indeterminate + .toggle-visual {
+  background: rgba(34,197,94,0.55);
+}
+.permission-group-toggle input:indeterminate + .toggle-visual::after {
+  transform: translateX(8px);
+}
+.permission-group-toggle .toggle-label {
+  font-weight: 600;
+}
+.permission-group-toggle:not(.is-disabled):hover {
+  background: #d1fae5;
+  border-color: rgba(34,197,94,0.36);
+}
+.permission-group-toggle.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.permission-group-toggle.is-disabled .toggle-label {
+  opacity: 0.8;
+}
+.permission-group-toggle input:disabled + .toggle-visual {
+  opacity: 0.6;
+}
+.permission-list {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+.permission-pill {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid transparent;
+  box-shadow: 0 10px 18px rgba(59,130,246,0.08);
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease;
+}
+.permission-pill:hover {
+  border-color: rgba(22,163,74,0.32);
+}
+.permission-pill input {
+  display: none;
+}
+.permission-pill .switch {
+  width: 36px;
+  height: 18px;
+  border-radius: 999px;
+  background: #cbd5f5;
+  position: relative;
+  transition: background 0.2s ease;
+}
+.permission-pill .switch::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(15,23,42,0.15);
+  transition: transform 0.2s ease;
+}
+.permission-pill input:checked + .switch {
+  background: linear-gradient(135deg,#22c55e,#34d399);
+}
+.permission-pill input:checked + .switch::after {
+  transform: translateX(18px);
+}
+.permission-pill .text {
+  font-size: 14px;
+  color: #1f2937;
+}
+.permission-pill input:disabled + .switch {
+  background: #6b7280;
+}
+.permission-pill input:disabled ~ .text {
+  color: #6b7280;
+}
+.action-row {
+  margin-top: 24px;
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.action-row > * {
+  flex: 0 0 auto;
+}
+.action-row form {
+  display: inline-flex;
+}
+.action-row form button {
+  width: auto;
+}
+.role-delete-form {
+  display: none;
+}
+.btn {
+  border: none;
+  padding: 12px 22px;
+  border-radius: 999px;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  box-shadow: 0 8px 18px rgba(22,101,52,0.18);
+}
+.btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.06);
+}
+.btn:active {
+  transform: translateY(0);
+  filter: brightness(0.98);
+}
+.btn.primary {
+  background: linear-gradient(135deg,#15803d,#22c55e);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(22,101,52,0.32);
+}
+.btn.danger {
+  background: linear-gradient(135deg,#f97316,#ef4444);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(239,68,68,0.24);
+}
+.cant-delete {
+  font-size: 13px;
+  color: #b91c1c;
+}
+.form-grid input,
+.form-grid textarea,
+.modal-form input,
+.modal-form textarea,
+.create-card input,
+.create-card textarea {
+  background: #f1f8f2;
+  border: 1px solid rgba(34,197,94,0.28);
+  border-radius: 14px;
+  padding: 12px 16px;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+.form-grid input:focus,
+.form-grid textarea:focus,
+.modal-form input:focus,
+.modal-form textarea:focus,
+.create-card input:focus,
+.create-card textarea:focus {
+  outline: none;
+  border-color: rgba(22,163,74,0.6);
+  box-shadow: 0 0 0 3px rgba(134,239,172,0.35);
+  background: #ffffff;
+}
+.empty-state.modern {
+  background: #1e293b;
+  color: #fff;
+  border-radius: 24px;
+  padding: 60px 40px;
+  text-align: center;
+  box-shadow: 0 25px 60px rgba(30,41,59,0.55);
+}
+.empty-state.modern i {
+  font-size: 42px;
+  margin-bottom: 12px;
+  display: inline-block;
+}
+.empty-state.modern h3 {
+  margin-bottom: 10px;
+}
+
+@media (max-width: 1080px) {
+  .role-layout {
+    grid-template-columns: 1fr;
+  }
+  .role-sidebar {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  .create-card {
+    flex: 1 1 280px;
+  }
+}
+
+@media (max-width: 768px) {
+  .header-stats {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+  .role-overview-card {
+    flex-direction: column;
+  }
+  .overview-meta {
+    flex-wrap: wrap;
+  }
+  .role-sidebar {
+    flex-direction: column;
+  }
+}
+</style>
+
+<script>
+(function() {
+  const showToastFn = typeof window.showToast === 'function' ? window.showToast : function(){};
+  const successIcon = '<i class="fas fa-check-circle"></i>';
+  const warningIcon = '<i class="fas fa-exclamation-triangle"></i>';
+  const errorIcon = '<i class="fas fa-times-circle"></i>';
+
+  function setButtonLoading(button, isLoading) {
+    if (!button) { return; }
+    if (isLoading) {
+      if (!button.dataset.originalHtml) {
+        button.dataset.originalHtml = button.innerHTML;
+      }
+      button.disabled = true;
+      button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    } else {
+      if (button.dataset.originalHtml) {
+        button.innerHTML = button.dataset.originalHtml;
+        delete button.dataset.originalHtml;
+      }
+      button.disabled = false;
+    }
+  }
+
+  function setupPermissionGroupControls(root) {
+    const scope = root || document;
+    scope.querySelectorAll('[data-permission-block]').forEach(block => {
+      if (block.dataset.groupBound === '1') {
+        const groupToggle = block.querySelector('.permission-group-input');
+        if (groupToggle) {
+          groupToggle.indeterminate = groupToggle.dataset.indeterminate === 'true';
+        }
+        return;
+      }
+      block.dataset.groupBound = '1';
+      const groupToggle = block.querySelector('.permission-group-input');
+      const itemCheckboxes = Array.from(block.querySelectorAll('input[name="permissions"]'));
+      const countLabel = block.querySelector('[data-permission-count]');
+      const total = parseInt(block.dataset.total || itemCheckboxes.length, 10) || itemCheckboxes.length;
+
+      function updateGroupState() {
+        const checkedCount = itemCheckboxes.filter(cb => cb.checked).length;
+        if (countLabel) {
+          countLabel.textContent = `${checkedCount}/${total} quyền`;
+        }
+        if (!groupToggle) {
+          return;
+        }
+        const shouldCheckAll = total > 0 && checkedCount === total;
+        const isPartial = checkedCount > 0 && checkedCount < total;
+        groupToggle.checked = shouldCheckAll;
+        groupToggle.indeterminate = isPartial;
+        groupToggle.dataset.indeterminate = isPartial ? 'true' : 'false';
+      }
+
+      itemCheckboxes.forEach(cb => {
+        cb.addEventListener('change', updateGroupState);
+      });
+
+      if (groupToggle) {
+        groupToggle.indeterminate = groupToggle.dataset.indeterminate === 'true';
+        if (!groupToggle.disabled) {
+          groupToggle.addEventListener('change', () => {
+            const shouldEnable = groupToggle.checked;
+            itemCheckboxes.forEach(cb => {
+              if (!cb.disabled) {
+                cb.checked = shouldEnable;
+              }
+            });
+            updateGroupState();
+          });
+        }
+      }
+
+      updateGroupState();
+    });
+  }
+
+  function attachRoleFormHandlers(root) {
+    const scope = root || document;
+    scope.querySelectorAll('form[data-role-form]').forEach(form => {
+      if (form.dataset.roleBound === '1') { return; }
+      form.dataset.roleBound = '1';
+      form.addEventListener('submit', handleRoleFormSubmit);
+    });
+    setupPermissionGroupControls(scope);
+  }
+
+  async function handleRoleFormSubmit(event) {
+    event.preventDefault();
+    const form = event.currentTarget;
+    if (form.dataset.roleForm !== 'delete' && !form.checkValidity()) {
+      form.reportValidity();
+      return;
+    }
+    if (form.dataset.roleForm === 'delete') {
+      const confirmMessage = form.dataset.confirm || 'B?n ch?c ch?n mu?n xo? vai tr? n?y?';
+      if (!window.confirm(confirmMessage)) {
+        return;
+      }
+    }
+    const submitter = event.submitter || form.querySelector('[type="submit"]');
+    await submitRoleForm(form, submitter);
+  }
+
+  async function submitRoleForm(form, submitter) {
+    const formData = new FormData(form);
+    if (!formData.get('action')) {
+      formData.append('action', form.dataset.roleForm || '');
+    }
+    const submitButton = submitter || form.querySelector('[type="submit"]');
+    setButtonLoading(submitButton, true);
+    try {
+      const response = await fetch(form.getAttribute('action') || (window.location.pathname + window.location.search), {
+        method: 'POST',
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        },
+        body: formData
+      });
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        throw new Error('Ph?n h?i kh?ng h?p l? t? m?y ch?.');
+      }
+      if (!response.ok || !data || data.status !== 'success') {
+        const message = data && data.message ? data.message : 'Kh?ng th? x? l? y?u c?u.';
+        showToastFn(warningIcon, 'Th?t b?i', message);
+        return;
+      }
+      updateRolePage(data);
+      if (form.dataset.roleForm === 'create') {
+        form.reset();
+      }
+      const message = data.message || 'Thao t?c th?nh c?ng.';
+      showToastFn(successIcon, 'Th?nh c?ng', message);
+    } catch (error) {
+      console.error(error);
+      showToastFn(errorIcon, 'L?i', error.message || '?? x?y ra l?i kh?ng x?c ??nh.');
+    } finally {
+      setButtonLoading(submitButton, false);
+    }
+  }
+
+  async function loadRoleDetail(url) {
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        }
+      });
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        throw new Error('Ph?n h?i kh?ng h?p l? t? m?y ch?.');
+      }
+      if (!response.ok || !data || data.status !== 'success') {
+        const message = data && data.message ? data.message : 'Kh?ng th? t?i th?ng tin vai tr?.';
+        showToastFn(warningIcon, 'Th?t b?i', message);
+        return;
+      }
+      updateRolePage(data);
+    } catch (error) {
+      console.error(error);
+      showToastFn(errorIcon, 'L?i', error.message || 'Kh?ng th? k?t n?i ??n m?y ch?.');
+    }
+  }
+
+  function updateRolePage(data) {
+    if (data && data.fragments) {
+      const list = document.getElementById('role-list');
+      if (list && typeof data.fragments.roleList === 'string') {
+        list.innerHTML = data.fragments.roleList;
+      }
+      const detail = document.getElementById('role-detail-wrapper');
+      if (detail && typeof data.fragments.roleDetail === 'string') {
+        detail.innerHTML = data.fragments.roleDetail;
+      }
+    }
+    attachRoleFormHandlers();
+    setupRoleListClick();
+    if (typeof filterRoles === 'function') {
+      filterRoles();
+    }
+    const selectedId = data ? data.selectedRoleId : null;
+    const url = new URL(window.location.href);
+    if (selectedId) {
+      url.searchParams.set('role_id', selectedId);
+    } else {
+      url.searchParams.delete('role_id');
+    }
+    window.history.replaceState({}, '', url);
+  }
+
+  function setupRoleListClick() {
+    const list = document.getElementById('role-list');
+    if (!list || list.dataset.roleClickBound === '1') { return; }
+    list.dataset.roleClickBound = '1';
+    list.addEventListener('click', function(event) {
+      const link = event.target.closest('a');
+      if (!link) { return; }
+      event.preventDefault();
+      loadRoleDetail(link.href);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', function() {
+    attachRoleFormHandlers();
+    setupRoleListClick();
+  });
+})();
+
+function filterRoles() {
+  const kw = document.getElementById('role-search').value.toLowerCase().trim();
+  document.querySelectorAll('#role-list .role-tile').forEach(item => {
+    const visible = item.dataset.name.includes(kw);
+    item.style.display = visible ? '' : 'none';
+  });
+}
+</script>
+
+{% endblock %}

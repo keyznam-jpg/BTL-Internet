@@ -12,7 +12,7 @@
     <div class="detail-title">
       <h3>{{ nv.ten }}</h3>{% if salary_info.is_top %}
       <span class="top-badge">Top doanh thu tháng</span>{% endif %}
-      <span class="role-chip {{ 'chip-admin' if nv.loai == 'admin' else 'chip-staff' }}">{{ 'Quản trị viên' if nv.loai == 'admin' else 'Nhân viên' }}</span>
+      <span class="role-chip {{ 'chip-admin' if nv.role_slug == 'admin' else 'chip-staff' }}">{{ nv.role_name }}</span>
     </div>
     <dl class="detail-meta">
       <div>
@@ -38,6 +38,53 @@
         <strong>{{ overall_stats.tong_hoa_don }}</strong>
       </div>
     </div>
+  </div>
+</section>
+
+<section class="card permission-card" id="user-permission-card" data-user-id="{{ nv.id }}" data-update-endpoint="{{ url_for('cap_nhat_quyen_ca_nhan', nhanvien_id=nv.id) }}" data-personal='{{ personal_permissions|list|tojson }}'>
+  <header class="permission-header">
+    <div>
+      <h3>Quyền truy cập</h3>
+      <p>Vai trò hiện tại: <strong>{{ nv.role_name }}</strong>. Quyền cá nhân chỉ bổ sung thêm ngoài quyền của vai trò.</p>
+    </div>
+    <div class="permission-badges">
+      <span class="badge badge-inherit">Theo vai trò</span>
+      <span class="badge badge-personal">Cá nhân</span>
+    </div>
+  </header>
+  <div class="permission-groups">
+    {% for group_key, group_label, items in permission_groups %}
+    <div class="permission-group">
+      <h4>{{ group_label }}</h4>
+      <div class="permission-items">
+        {% for key, label in items %}
+        {% set is_inherited = key in role_permissions %}
+        {% set is_personal = key in personal_permissions %}
+        <label class="permission-item {% if is_inherited %}inherited{% endif %} {% if is_personal %}personal{% endif %}" data-permission-key="{{ key }}">
+          <div class="permission-info">
+            <strong>{{ label }}</strong>
+            {% set meta = permission_meta.get(key) %}
+            {% if meta and meta.description %}
+            <span class="hint">{{ meta.description }}</span>
+            {% endif %}
+          </div>
+          <div class="permission-actions">
+            <label class="switch">
+              <input type="checkbox"
+                     value="{{ key }}"
+                     {% if is_personal %}checked{% endif %}
+                     {% if is_inherited and not is_personal %}data-locked="true" disabled{% endif %}
+                     data-user-permission-toggle>
+              <span class="slider"></span>
+            </label>
+            <span class="badge badge-inherit action-inherit">Vai trò</span>
+            <span class="badge badge-personal action-personal">Cá nhân</span>
+          </div>
+        </label>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
   </div>
 </section>
 
@@ -291,6 +338,39 @@
 .customer-spend { font-weight:600; color:#0b3d2a; }
 .customer-list li.empty { justify-content:center; color:#6b8a7a; }
 
+.permission-card { margin-bottom:24px; display:flex; flex-direction:column; gap:18px; }
+.permission-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+.permission-header h3 { margin:0; color:#0b3d2a; }
+.permission-header p { margin:4px 0 0; color:#56726a; font-size:0.92em; max-width:520px; }
+.permission-badges { display:flex; gap:8px; flex-wrap:wrap; }
+.permission-groups { display:flex; flex-direction:column; gap:18px; }
+.permission-group h4 { margin:0 0 10px; font-size:1em; color:#14532d; }
+.permission-items { display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+.permission-item { display:flex; justify-content:space-between; align-items:center; gap:16px; padding:14px 16px; border-radius:14px; border:1px solid rgba(34,197,94,0.18); background:#f5fbf7; transition:border-color 0.18s ease, background 0.18s ease; }
+.permission-item.inherited:not(.personal) { background:#f8fafc; border-color:rgba(148,163,184,0.35); }
+.permission-item.personal { background:#f0fdf4; border-color:rgba(34,197,94,0.45); box-shadow:0 10px 20px rgba(34,197,94,0.15); }
+.permission-info { display:flex; flex-direction:column; gap:6px; flex:1; }
+.permission-info strong { color:#065f46; font-size:0.98em; }
+.permission-info .hint { font-size:0.82em; color:#6b8f7c; }
+.permission-actions { display:flex; align-items:center; gap:10px; }
+.badge { display:inline-flex; align-items:center; gap:6px; border-radius:999px; padding:6px 12px; font-size:0.75em; font-weight:600; letter-spacing:0.04em; text-transform:uppercase; }
+.badge-inherit { background:rgba(59,130,246,0.12); color:#1d4ed8; border:1px solid rgba(59,130,246,0.3); }
+.badge-personal { background:rgba(34,197,94,0.12); color:#15803d; border:1px solid rgba(34,197,94,0.3); }
+.action-inherit { display:none; }
+.action-personal { display:none; }
+.permission-item.inherited:not(.personal) .action-inherit { display:inline-flex; }
+.permission-item.personal .action-personal { display:inline-flex; }
+.permission-item.inherited:not(.personal) .switch { display:none; }
+
+.switch { position:relative; display:inline-flex; width:44px; height:24px; }
+.switch input { opacity:0; width:0; height:0; }
+.slider { position:absolute; cursor:pointer; inset:0; background:#d1d5db; border-radius:999px; transition:all 0.2s ease; }
+.slider:before { content:\"\"; position:absolute; height:20px; width:20px; left:2px; top:2px; background:white; border-radius:50%; transition:transform 0.2s ease; box-shadow:0 2px 6px rgba(15,23,42,0.2); }
+.switch input:checked + .slider { background:linear-gradient(135deg,#16a34a,#22c55e); }
+.switch input:checked + .slider:before { transform:translateX(20px); }
+.switch input[data-locked=\"true\"] + .slider { background:linear-gradient(135deg,#16a34a,#22c55e); opacity:0.6; cursor:not-allowed; }
+.switch input[data-locked=\"true\"] + .slider:before { transform:translateX(20px); box-shadow:none; }
+
 @media (max-width: 1100px) {
   .staff-detail-header { flex-direction:column; align-items:flex-start; }
   .detail-highlight { flex-direction:column; }
@@ -298,4 +378,123 @@
   .detail-lists { grid-template-columns:1fr; }
 }
 </style>
+
+<script>
+(function() {
+  const permissionCard = document.getElementById('user-permission-card');
+  if (!permissionCard) { return; }
+
+  const updateEndpoint = permissionCard.dataset.updateEndpoint;
+  const successIcon = '<i class="fas fa-check-circle"></i>';
+  const warningIcon = '<i class="fas fa-exclamation-triangle"></i>';
+  const errorIcon = '<i class="fas fa-times-circle"></i>';
+  const toast = typeof window.showToast === 'function' ? window.showToast : function() {};
+  let isUpdating = false;
+
+  function getToggles() {
+    return Array.from(permissionCard.querySelectorAll('[data-user-permission-toggle]'));
+  }
+
+  function applyState(personalList) {
+    const personalSet = new Set(personalList || []);
+    permissionCard.dataset.personal = JSON.stringify(Array.from(personalSet));
+    getToggles().forEach(input => {
+      const item = input.closest('.permission-item');
+      if (!item) { return; }
+      const key = input.value;
+      const isInherited = item.classList.contains('inherited');
+      if (personalSet.has(key)) {
+        item.classList.add('personal');
+        input.checked = true;
+        input.disabled = false;
+        input.removeAttribute('data-locked');
+      } else {
+        item.classList.remove('personal');
+        input.checked = false;
+        if (isInherited) {
+          input.setAttribute('data-locked', 'true');
+          input.disabled = true;
+        } else {
+          input.removeAttribute('data-locked');
+          input.disabled = false;
+        }
+      }
+    });
+  }
+
+  function getPersonalFromDom() {
+    const result = [];
+    getToggles().forEach(input => {
+      const item = input.closest('.permission-item');
+      if (!item) { return; }
+      const locked = input.dataset.locked === 'true';
+      if (input.checked && !locked) {
+        result.push(input.value);
+      }
+    });
+    return result;
+  }
+
+  async function updatePermissions(personal) {
+    const response = await fetch(updateEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify({ permissions: personal })
+    });
+    let data = null;
+    try {
+      data = await response.json();
+    } catch (err) {
+      throw new Error('Phản hồi không hợp lệ từ máy chủ.');
+    }
+    if (!response.ok || !data || data.status !== 'success') {
+      throw new Error((data && data.message) || 'Không thể cập nhật quyền.');
+    }
+    applyState(data.personalPermissions || []);
+    toast(successIcon, 'Thành công', data.message || 'Đã cập nhật quyền cá nhân.');
+  }
+
+  const initialPersonal = (() => {
+    try {
+      return JSON.parse(permissionCard.dataset.personal || '[]');
+    } catch (err) {
+      return [];
+    }
+  })();
+  applyState(initialPersonal);
+
+  getToggles().forEach(input => {
+    const locked = input.dataset.locked === 'true';
+    if (locked) {
+      input.disabled = true;
+      return;
+    }
+    input.addEventListener('change', event => {
+      if (isUpdating) {
+        event.preventDefault();
+        event.stopPropagation();
+        return;
+      }
+      const before = (() => {
+        try { return JSON.parse(permissionCard.dataset.personal || '[]'); }
+        catch (_err) { return []; }
+      })();
+      const next = getPersonalFromDom();
+      isUpdating = true;
+      updatePermissions(next).catch(err => {
+        console.error(err);
+        applyState(before);
+        toast(errorIcon, 'Lỗi', err.message || 'Không thể cập nhật quyền.');
+      }).finally(() => {
+        isUpdating = false;
+      });
+    });
+  });
+})();
+</script>
+
 {% endblock %}

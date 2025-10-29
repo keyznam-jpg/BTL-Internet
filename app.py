@@ -1,18 +1,20 @@
+# -*- coding: utf-8 -*-
 from datetime import datetime, date, timedelta
 import os
 import math
 import json
+import re
 import smtplib
 from functools import wraps
 from urllib.parse import quote, urlencode, urljoin
 import uuid # Library to create unique tokens
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, abort
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
     LoginManager, login_user, login_required, logout_user, UserMixin, current_user
 )
 from dotenv import load_dotenv
-from sqlalchemy import func, extract, inspect, text
+from sqlalchemy import func, extract, inspect, text, or_
 from sqlalchemy.orm import joinedload
 from collections import defaultdict
 import calendar
@@ -63,6 +65,7 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["SQLALCHEMY_POOL_SIZE"] = 10
 app.config["SQLALCHEMY_MAX_OVERFLOW"] = 20
 app.config["SQLALCHEMY_POOL_RECYCLE"] = 3600
+app.config['JSON_AS_ASCII'] = False  # Ensure UTF-8 encoding for JSON responses
 app.config["AVATAR_UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "uploads", "avatars")
 app.config["CHAT_UPLOAD_FOLDER"] = os.path.join(app.root_path, "static", "uploads", "chat")
 app.config.setdefault("MAX_CONTENT_LENGTH", 2 * 1024 * 1024)
@@ -90,6 +93,221 @@ PAYMENT_METHODS = [
     ('qr', 'Chuyển khoản QR (VietQR)')
 ]
 PAYMENT_METHOD_LABELS = {code: label for code, label in PAYMENT_METHODS}
+
+PERMISSION_GROUPS = [
+    (
+        'dashboard',
+        'Tổng quan',
+        [
+            ('dashboard.view', 'Xem bảng điều khiển & chỉ số nhanh'),
+        ],
+    ),
+    (
+        'bookings',
+        'Đặt phòng & lịch phòng',
+        [
+            ('bookings.view_map', 'Xem sơ đồ phòng và trạng thái'),
+            ('bookings.create_offline', 'Tạo đặt phòng tại quầy'),
+            ('bookings.manage_online', 'Duyệt & xử lý đặt phòng online'),
+            ('bookings.manage_waiting', 'Quản lý danh sách chờ & sắp xếp phòng'),
+            ('bookings.checkin_checkout', 'Thực hiện nhận/trả phòng'),
+            ('bookings.cancel', 'Hủy đặt phòng & giải phóng phòng'),
+        ],
+    ),
+    (
+        'payments',
+        'Thanh toán & hóa đơn',
+        [
+            ('payments.process', 'Xử lý thanh toán, đặt cọc, dịch vụ'),
+            ('payments.invoices', 'Xem/in/gửi hóa đơn'),
+            ('payments.export', 'Xuất báo cáo thanh toán'),
+            ('payments.configure_timeout', 'Thiết lập thời hạn & phiên thanh toán'),
+        ],
+    ),
+    (
+        'customers',
+        'Khách hàng & ưu đãi',
+        [
+            ('customers.view', 'Quản lý hồ sơ khách hàng'),
+            ('customers.export', 'Xuất dữ liệu khách hàng'),
+            ('customers.vouchers', 'Cấu hình voucher & khuyến mãi'),
+        ],
+    ),
+    (
+        'services',
+        'Dịch vụ & tài nguyên',
+        [
+            ('services.manage', 'Quản lý danh mục dịch vụ'),
+            ('services.orders', 'Quản lý sử dụng dịch vụ & thanh toán'),
+            ('room_types.manage', 'Quản lý loại phòng'),
+        ],
+    ),
+    (
+        'communications',
+        'Liên lạc & email',
+        [
+            ('communications.chat', 'Xem & phản hồi tin nhắn khách hàng'),
+            ('chat.delete', 'Xóa hội thoại khách hàng'),
+            ('email.settings', 'Cấu hình email'),
+            ('email.logs', 'Xem nhật ký email'),
+        ],
+    ),
+    (
+        'attendance',
+        'Chấm công',
+        [
+            ('attendance.manage', 'Phê duyệt và báo cáo chấm công'),
+        ],
+    ),
+    (
+        'staff',
+        'Nhân sự & lương thưởng',
+        [
+            ('staff.manage', 'Quản lý hồ sơ nhân viên'),
+            ('payroll.configure', 'Cài đặt lương thưởng'),
+        ],
+    ),
+    (
+        'analytics',
+        'Thống kê & báo cáo',
+        [
+            ('analytics.revenue', 'Xem và xuất báo cáo doanh thu'),
+        ],
+    ),
+    (
+        'operations',
+        'Vận hành hệ thống',
+        [
+            ('roles.manage', 'Quản lý vai trò & phân quyền'),
+            ('system.maintenance', 'Tác vụ bảo trì hệ thống'),
+        ],
+    ),
+
+]
+PERMISSION_META = {
+    key: {
+        'label': label,
+        'group': group_key,
+        'group_label': group_label,
+    }
+    for group_key, group_label, entries in PERMISSION_GROUPS
+    for key, label in entries
+}
+ALL_PERMISSION_KEYS = set(PERMISSION_META.keys())
+DEFAULT_ROLE_PERMISSIONS = {
+    'admin': set(ALL_PERMISSION_KEYS),
+    'nhanvien': set(),
+}
+
+
+def set_role_permissions(role, permission_keys):
+    desired = set(permission_keys) & ALL_PERMISSION_KEYS
+    current = {rp.permission for rp in role.permissions}
+    changed = False
+    for rp in list(role.permissions):
+        if rp.permission not in desired:
+            db.session.delete(rp)
+            changed = True
+    for perm in desired - current:
+        role.permissions.append(RolePermission(permission=perm))
+        changed = True
+    return changed
+
+
+def set_user_permissions(user, permission_keys):
+    desired = set(permission_keys) & ALL_PERMISSION_KEYS
+    current = {up.permission for up in user.personal_permissions}
+    changed = False
+    for up in list(user.personal_permissions):
+        if up.permission not in desired:
+            db.session.delete(up)
+            changed = True
+    for perm in desired - current:
+        user.personal_permissions.append(UserPermission(permission=perm))
+        changed = True
+    return changed
+
+
+def permission_required(*permissions):
+    def deco(fn):
+        @wraps(fn)
+        def wrapper(*args, **kwargs):
+            if not current_user.is_authenticated:
+                flash('Bạn cần đăng nhập để tiếp tục.', 'warning')
+                return redirect(url_for('login'))
+            if current_user.role and current_user.role.is_system:
+                return fn(*args, **kwargs)
+            if current_user.loai == 'admin':
+                return fn(*args, **kwargs)
+            if not permissions:
+                return fn(*args, **kwargs)
+            if any(current_user.has_permission(perm) for perm in permissions):
+                return fn(*args, **kwargs)
+            abort(404)
+        return wrapper
+    return deco
+
+
+def generate_role_slug(name):
+    base = unicodedata.normalize('NFKD', (name or '').strip())
+    base = base.encode('ascii', 'ignore').decode('ascii').lower()
+    base = re.sub(r'[^a-z0-9]+', '-', base).strip('-')
+    if not base:
+        base = 'role'
+    slug = base
+    index = 1
+    while Role.query.filter_by(slug=slug).first():
+        slug = f"{base}-{index}"
+        index += 1
+    return slug
+
+
+def ensure_default_roles():
+    changed = False
+    admin_role = Role.query.filter_by(slug='admin').first()
+    if not admin_role:
+        admin_role = Role(
+            name='Quản trị viên',
+            slug='admin',
+            description='Toàn quyền quản trị hệ thống',
+            is_system=True,
+        )
+        db.session.add(admin_role)
+        changed = True
+    elif not admin_role.is_system:
+        admin_role.is_system = True
+        changed = True
+    staff_role = Role.query.filter_by(slug='nhanvien').first()
+    if not staff_role:
+        staff_role = Role(
+            name='Nhân viên',
+            slug='nhanvien',
+            description='Vai trò mặc định cho nhân viên',
+            is_system=False,
+        )
+        db.session.add(staff_role)
+        changed = True
+    db.session.flush()
+
+    if set_role_permissions(admin_role, DEFAULT_ROLE_PERMISSIONS['admin']):
+        changed = True
+    if set_role_permissions(staff_role, DEFAULT_ROLE_PERMISSIONS['nhanvien']):
+        changed = True
+
+    roles = {role.slug: role for role in Role.query.all()}
+    default_role = roles.get('nhanvien') or staff_role
+    updated_users = False
+    for user in NguoiDung.query.all():
+        slug = (user.loai or '').strip() or 'nhanvien'
+        role = roles.get(slug, default_role)
+        if user.role_id != role.id:
+            user.role_id = role.id
+            updated_users = True
+        if user.loai != role.slug:
+            user.loai = role.slug
+            updated_users = True
+    if changed or updated_users:
+        db.session.commit()
 
 VIETQR_BANK_ID = os.getenv('VIETQR_BANK_ID', '970423')
 VIETQR_ACCOUNT_NO = os.getenv('VIETQR_ACCOUNT_NO', '99992162001')
@@ -147,10 +365,8 @@ def get_voucher_config():
 # ==== ROUTE CÀI ĐẶT VOUCHER ====
 @app.route('/cai-dat-voucher', methods=['POST'])
 @login_required
+@permission_required('customers.vouchers')
 def cai_dat_voucher():
-    if current_user.loai != 'admin':
-        flash('Bạn không có quyền thực hiện thao tác này.', 'danger')
-        return redirect(url_for('quan_li_dich_vu'))
     try:
         discount_percent = int(request.form.get('discount_percent', 10))
         expires_days = int(request.form.get('expires_days', 60))
@@ -188,15 +404,70 @@ login_manager = LoginManager(app)
 login_manager.login_view = "login"
 
 # ========================= DATABASE MODELS =========================
+class Role(db.Model):
+    __tablename__ = "role"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    slug = db.Column(db.String(50), unique=True, nullable=False)
+    description = db.Column(db.String(255))
+    is_system = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    users = db.relationship("NguoiDung", backref="role", lazy=True)
+    permissions = db.relationship(
+        "RolePermission",
+        backref="role",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return f"<Role {self.slug}>"
+
+
+class RolePermission(db.Model):
+    __tablename__ = "role_permission"
+    id = db.Column(db.Integer, primary_key=True)
+    role_id = db.Column(db.Integer, db.ForeignKey("role.id", ondelete="CASCADE"), nullable=False)
+    permission = db.Column(db.String(100), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("role_id", "permission", name="uq_role_permission"),
+    )
+
+    def __repr__(self):
+        return f"<RolePermission role={self.role_id} perm={self.permission}>"
+
+
+class UserPermission(db.Model):
+    __tablename__ = "user_permission"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("nguoidung.id", ondelete="CASCADE"), nullable=False)
+    permission = db.Column(db.String(100), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "permission", name="uq_user_permission"),
+    )
+
+    def __repr__(self):
+        return f"<UserPermission user={self.user_id} perm={self.permission}>"
+
+
 class NguoiDung(UserMixin, db.Model):
     __tablename__ = "nguoidung"
     id = db.Column(db.Integer, primary_key=True)
     ten_dang_nhap = db.Column(db.String(50), unique=True, nullable=False)
     mat_khau = db.Column(db.String(128), nullable=False)
     loai = db.Column(db.String(20), default="nhanvien")
+    role_id = db.Column(db.Integer, db.ForeignKey("role.id"))
     ten  = db.Column(db.String(100), nullable=False)
     ngay_vao_lam = db.Column(db.Date)
     anh_dai_dien = db.Column(db.String(255))
+    personal_permissions = db.relationship(
+        "UserPermission",
+        backref="user",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
     def get_id(self): return str(self.id)
 
     @property
@@ -204,6 +475,38 @@ class NguoiDung(UserMixin, db.Model):
         if self.anh_dai_dien:
             return self.anh_dai_dien.replace('\\', '/')
         return "img/ttcn.png"
+
+    @property
+    def role_slug(self):
+        if self.role and self.role.slug:
+            return self.role.slug
+        return self.loai
+
+    @property
+    def role_name(self):
+        if self.role and self.role.name:
+            return self.role.name
+        default_labels = {
+            'admin': 'Quản trị viên',
+            'nhanvien': 'Nhân viên',
+        }
+        if not self.loai:
+            return ''
+        return default_labels.get(self.loai, self.loai.replace('_', ' ').title())
+
+    def has_permission(self, permission_key):
+        if not permission_key:
+            return True
+        # System/admin roles always permitted
+        if self.role and self.role.is_system:
+            return True
+        if self.loai == 'admin':
+            return True
+        if any(up.permission == permission_key for up in self.personal_permissions):
+            return True
+        if not self.role:
+            return False
+        return any(rp.permission == permission_key for rp in self.role.permissions)
 
 
 class LoaiPhong(db.Model):
@@ -659,17 +962,6 @@ def get_active_booking_by_token(token):
     return DatPhong.query.filter_by(chat_token=token, trang_thai='nhan').first()
 
 # ========================= PHÂN QUYỀN =========================
-def roles_required(*roles):
-    def deco(fn):
-        @wraps(fn)
-        def wrapper(*args, **kwargs):
-            if not current_user.is_authenticated or current_user.loai not in roles:
-                flash('Bạn không có quyền truy cập chức năng này.', 'warning')
-                return redirect(url_for('dashboard'))
-            return fn(*args, **kwargs)
-        return wrapper
-    return deco
-
 # ========================= CHẤM CÔNG =========================
 @app.route('/attendance', methods=['GET', 'POST'])
 @login_required
@@ -695,14 +987,14 @@ def attendance_checkin():
 # Quản trị viên phê duyệt chấm công
 @app.route('/attendance/admin', methods=['GET'])
 @login_required
-@roles_required('admin')
+@permission_required('attendance.manage')
 def attendance_admin():
     attendances = Attendance.query.order_by(Attendance.checkin_time.desc()).all()
     return render_template('attendance_admin.html', attendances=attendances)
 
 @app.route('/attendance/approve/<int:att_id>', methods=['POST'])
 @login_required
-@roles_required('admin')
+@permission_required('attendance.manage')
 def attendance_approve(att_id):
     att = Attendance.query.get_or_404(att_id)
     action = request.form.get('action')
@@ -727,21 +1019,23 @@ def inject_globals():
     unread_count = 0
     pending_online_count = 0
     if current_user.is_authenticated:
-        unread_count = TinNhan.query.join(DatPhong).filter(
-            TinNhan.trang_thai == 'chua_doc',
-            TinNhan.nguoi_gui == 'khach',
-            DatPhong.trang_thai == 'nhan'
-        ).count()
-        pending_online_count = DatPhong.query.join(
-            TinNhan,
-            db.and_(
-                TinNhan.datphong_id == DatPhong.id,
+        if current_user.has_permission('communications.chat'):
+            unread_count = TinNhan.query.join(DatPhong).filter(
+                TinNhan.trang_thai == 'chua_doc',
                 TinNhan.nguoi_gui == 'khach',
-                TinNhan.noi_dung == ONLINE_DEPOSIT_REQUEST_MESSAGE
-            )
-        ).filter(
-            DatPhong.trang_thai == 'cho_xac_nhan'
-        ).distinct().count()
+                DatPhong.trang_thai == 'nhan'
+            ).count()
+        if current_user.has_permission('bookings.manage_online'):
+            pending_online_count = DatPhong.query.join(
+                TinNhan,
+                db.and_(
+                    TinNhan.datphong_id == DatPhong.id,
+                    TinNhan.nguoi_gui == 'khach',
+                    TinNhan.noi_dung == ONLINE_DEPOSIT_REQUEST_MESSAGE
+                )
+            ).filter(
+                DatPhong.trang_thai == 'cho_xac_nhan'
+            ).distinct().count()
     return dict(
         now=datetime.now,
         unread_messages=unread_count,
@@ -755,6 +1049,10 @@ def ensure_tables_exist():
         db.create_all()
         try:
             inspector = inspect(db.engine)
+            user_columns = {col['name'] for col in inspector.get_columns('nguoidung')}
+            if 'role_id' not in user_columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE nguoidung ADD COLUMN role_id INT NULL'))
             columns = {col['name'] for col in inspector.get_columns('khachhang')}
             if 'email' not in columns:
                 with db.engine.connect() as conn:
@@ -765,6 +1063,7 @@ def ensure_tables_exist():
                     conn.execute(text('ALTER TABLE datphong ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP'))
         except Exception as exc:
             app.logger.warning("Không thể đảm bảo cột cho bảng: %s", exc)
+        ensure_default_roles()
     except Exception as exc:
         app.logger.warning("Không thể tạo bảng tự động: %s", exc)
 
@@ -1836,16 +2135,6 @@ def send_email_with_template(template_key, recipient_email, context, attachments
 
     return True
 
-def roles_required(*roles):
-    def deco(fn):
-        @wraps(fn)
-        def wrapper(*args, **kwargs):
-            if not current_user.is_authenticated or current_user.loai not in roles:
-                flash('Bạn không có quyền truy cập chức năng này.', 'warning')
-                return redirect(url_for('dashboard'))
-            return fn(*args, **kwargs)
-        return wrapper
-    return deco
 def snapshot_and_bill(dp, now=None):
     if now is None: now = datetime.now()
     checkin = dp.thuc_te_nhan or dp.ngay_nhan
@@ -2045,6 +2334,7 @@ def huy_dat_phong_khong_den():
 
 @app.route('/api/bookings/<int:dat_id>/auto-cancel', methods=['POST'])
 @login_required
+@permission_required('bookings.cancel')
 def api_auto_cancel_booking(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     minutes = get_config_int('auto_cancel_minutes', 5)
@@ -2057,6 +2347,7 @@ def api_auto_cancel_booking(dat_id):
 
 @app.route('/api/bookings/<int:dat_id>/mark-waiting', methods=['POST'])
 @login_required
+@permission_required('bookings.manage_waiting')
 def api_mark_booking_waiting(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     if dp.trang_thai not in {'dat', 'waiting'}:
@@ -2083,6 +2374,7 @@ def api_mark_booking_waiting(dat_id):
 
 @app.route('/api/bookings/<int:dat_id>/refund-overstay', methods=['POST'])
 @login_required
+@permission_required('bookings.cancel')
 def api_refund_overstay_booking(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     if dp.trang_thai not in {'dat', 'waiting'}:
@@ -2240,7 +2532,7 @@ def index():
 
 @app.route('/test-timeout-cleanup')
 @login_required
-@roles_required('admin', 'nhanvien')
+@permission_required('system.maintenance')
 def test_timeout_cleanup():
     """Route để test việc dọn dẹp timeout thủ công"""
     huy_dat_phong_timeout()
@@ -2266,6 +2558,7 @@ def logout():
 @app.route('/dashboard')
 @login_required
 # @cache.cached(timeout=300)  # Cache for 5 minutes
+@permission_required('dashboard.view')
 def dashboard():
     today = date.today()
 
@@ -2300,6 +2593,7 @@ def dashboard():
 
 @app.route('/thanh-toan-chua-hoan-tat')
 @login_required
+@permission_required('payments.process')
 def thanh_toan_chua_hoan_tat():
     # Chạy cleanup timeout trước khi hiển thị
     huy_dat_phong_timeout()
@@ -2393,7 +2687,7 @@ def thanh_toan_chua_hoan_tat():
 
 @app.route('/cap-nhat-timeout-thanh-toan', methods=['POST'])
 @login_required
-@roles_required('admin')
+@permission_required('payments.configure_timeout')
 def cap_nhat_timeout_thanh_toan():
     """Cập nhật thời gian timeout cho thanh toán"""
     try:
@@ -2425,6 +2719,7 @@ def cap_nhat_timeout_thanh_toan():
 
 @app.route('/huy-dat-phong/<int:dat_id>')
 @login_required
+@permission_required('bookings.cancel')
 def huy_dat_phong(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     
@@ -2452,6 +2747,7 @@ def huy_dat_phong(dat_id):
 
 @app.route('/huy-thanh-toan/<token>')
 @login_required
+@permission_required('payments.process')
 def huy_thanh_toan(token):
     sess = PaymentSession.query.filter_by(token=token).first()
     if sess:
@@ -2463,6 +2759,8 @@ def huy_thanh_toan(token):
     return redirect(url_for('thanh_toan_chua_hoan_tat'))
 
 @app.route('/dat-phong', methods=['GET', 'POST'])
+@login_required
+@permission_required('bookings.create_offline')
 def dat_phong():
     # ...existing code...
     discount_percent, _ = get_voucher_config()
@@ -2780,6 +3078,20 @@ def dat_phong_online_dat_coc(token):
 def dat_phong_online_request_confirmation(token):
     dp = DatPhong.query.filter_by(chat_token=token).first_or_404()
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    can_manage_services = current_user.has_permission('services.manage')
+    if request.method == 'POST' and not can_manage_services:
+        message = 'Ban khong co quyen quan ly dich vu.'
+        if wants_json:
+            return jsonify({'status': 'error', 'message': message}), 403
+        flash(message, 'danger')
+        return redirect(url_for('quan_li_dich_vu'))
+    can_manage_services = current_user.has_permission('services.manage')
+    if request.method == 'POST' and not can_manage_services:
+        message = 'B?n kh�ng c� quy?n qu?n l� d?ch v?.'
+        if wants_json:
+            return jsonify({'status': 'error', 'message': message}), 403
+        flash(message, 'danger')
+        return redirect(url_for('quan_li_dich_vu'))
     payload = {}
     if request.is_json:
         payload = request.get_json(silent=True) or {}
@@ -2822,6 +3134,7 @@ def dat_phong_online_request_confirmation(token):
 
 @app.route('/quan-ly-dat-phong-online')
 @login_required
+@permission_required('bookings.manage_online')
 def quan_ly_dat_phong_online():
     page = request.args.get('page', 1, type=int)
     per_page = 10  # Items per page
@@ -2846,6 +3159,7 @@ def quan_ly_dat_phong_online():
 
 @app.route('/quan-ly-dat-phong-online/<int:dat_id>/xac-nhan', methods=['POST'])
 @login_required
+@permission_required('bookings.manage_online')
 def quan_ly_dat_phong_online_xac_nhan(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     if dp.trang_thai != 'cho_xac_nhan':
@@ -2892,6 +3206,7 @@ def quan_ly_dat_phong_online_xac_nhan(dat_id):
 
 @app.route('/quan-ly-dat-phong-online/<int:dat_id>/tu-choi', methods=['POST'])
 @login_required
+@permission_required('bookings.manage_online')
 def quan_ly_dat_phong_online_tu_choi(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     if dp.trang_thai != 'cho_xac_nhan':
@@ -2916,6 +3231,7 @@ def quan_ly_dat_phong_online_tu_choi(dat_id):
 
 @app.route('/quan-ly-booking-cho')
 @login_required
+@permission_required('bookings.manage_waiting')
 def quan_ly_booking_cho():
     page = request.args.get('page', 1, type=int)
     per_page = 10
@@ -2934,6 +3250,7 @@ def quan_ly_booking_cho():
 
 @app.route('/quan-ly-booking-cho/<int:dat_id>/tu-choi', methods=['POST'])
 @login_required
+@permission_required('bookings.manage_waiting')
 def quan_ly_booking_cho_tu_choi(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     if dp.trang_thai != 'waiting':
@@ -2951,6 +3268,7 @@ def quan_ly_booking_cho_tu_choi(dat_id):
 
 @app.route('/nhan-phong', methods=['GET','POST'])
 @login_required
+@permission_required('bookings.checkin_checkout')
 def nhan_phong():
     huy_dat_phong_khong_den()
     if request.method == 'POST':
@@ -3209,6 +3527,7 @@ def build_salary_settings_context(selected_id=None):
 
 @app.route('/dich-vu-thanh-toan')
 @login_required
+@permission_required('payments.process', 'services.orders')
 def dich_vu_thanh_toan():
     dat_id = request.args.get("dat_id")
     chon_dat = DatPhong.query.get(int(dat_id)) if dat_id else None
@@ -3242,6 +3561,7 @@ def dich_vu_thanh_toan():
 
 @app.route('/thanh-toan-dv/<int:dat_id>', methods=['GET', 'POST'])
 @login_required
+@permission_required('payments.process', 'services.orders')
 def thanh_toan_dv(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     rows = (
@@ -3317,6 +3637,7 @@ def thanh_toan_dv(dat_id):
 
 @app.route('/thanh-toan-coc/<int:dat_id>', methods=['GET', 'POST'])
 @login_required
+@permission_required('payments.process')
 def thanh_toan_coc(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     if dp.coc_da_thanh_toan:
@@ -3426,6 +3747,7 @@ def process_waiting_bookings(phong_id, previous_checkout_time=None):
 
 @app.route('/thanh-toan/<int:dat_id>', methods=['GET', 'POST'])
 @login_required
+@permission_required('payments.process')
 def thanh_toan(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     email_prefill = request.args.get('email', '')
@@ -3866,6 +4188,7 @@ def api_payment_status(token):
 
 @app.route('/gui-hoa-don-email/<int:dat_id>', methods=['POST'])
 @login_required
+@permission_required('payments.invoices')
 def gui_hoa_don_email(dat_id):
     email_to = (request.form.get('email_to') or '').strip()
     if not email_to:
@@ -3935,6 +4258,7 @@ def gui_hoa_don_email(dat_id):
 
 @app.route('/in-hoa-don-coc/<int:dat_id>')
 @login_required
+@permission_required('payments.invoices')
 def in_hoa_don_coc(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     if not dp.coc_da_thanh_toan:
@@ -3958,6 +4282,7 @@ def in_hoa_don_coc(dat_id):
 
 @app.route('/in-hoa-don-dv/<token>')
 @login_required
+@permission_required('payments.invoices')
 def in_hoa_don_dv(token):
     # Try to get from payment session first
     session = get_payment_session(token)
@@ -4024,6 +4349,7 @@ def in_hoa_don_dv(token):
 
 @app.route('/in-hoa-don/<int:dat_id>')
 @login_required
+@permission_required('payments.invoices')
 def in_hoa_don(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     if dp.trang_thai != 'da_thanh_toan':
@@ -4044,6 +4370,7 @@ def in_hoa_don(dat_id):
 
 @app.route('/xoa-sudung-dichvu/<int:sudungdv_id>', methods=['POST'])
 @login_required
+@permission_required('payments.process', 'services.orders')
 def xoa_sudung_dichvu(sudungdv_id):
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     sd_item = SuDungDichVu.query.get_or_404(sudungdv_id)
@@ -4059,6 +4386,7 @@ def xoa_sudung_dichvu(sudungdv_id):
 
 @app.route('/tra-phong/<int:dat_id>', methods=['POST'])
 @login_required
+@permission_required('bookings.checkin_checkout')
 def tra_phong(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     if not dp.thuc_te_tra:
@@ -4068,6 +4396,7 @@ def tra_phong(dat_id):
 
 @app.route('/khach-hang')
 @login_required
+@permission_required('customers.view')
 def khach_hang():
     ds_khach = DatPhong.query.order_by(DatPhong.ngay_nhan.asc()).all()
     return render_template('khach_hang.html', ds_khach=ds_khach)
@@ -4207,8 +4536,8 @@ def tai_xuong_luong_excel():
     from openpyxl.utils import get_column_letter
     import io
 
-    # Debug: kiểm tra giá trị current_user.loai
-    print(f"DEBUG: current_user.loai = '{current_user.loai}'")
+    # Debug: kiểm tra vai trò hiện tại
+    print(f"DEBUG: current_user.role_slug = '{current_user.role_slug}'")
     print(f"DEBUG: current_user.ten = '{current_user.ten}'")
     print(f"DEBUG: current_user.id = {current_user.id}")
 
@@ -4296,7 +4625,7 @@ def tai_xuong_luong_excel():
     ws['A3'] = 'Họ và tên:'
     ws['B3'] = current_user.ten
     ws['A4'] = 'Chức vụ:'
-    ws['B4'] = 'Quản trị viên' if current_user.loai == 'admin' else 'Nhân viên'
+    ws['B4'] = current_user.role_name or ''
     ws['A5'] = 'Tháng:'
     ws['B5'] = start_month.strftime('%m/%Y')
 
@@ -4424,6 +4753,7 @@ def tai_xuong_luong_excel():
 
 @app.route('/so-do-phong')
 @login_required
+@permission_required('bookings.view_map')
 def so_do_phong():
     phongs = Phong.query.order_by(Phong.ten).all()
     loai_phongs = LoaiPhong.query.all()
@@ -4539,18 +4869,34 @@ def gioi_thieu():
 
 @app.route('/nhan-vien', methods=['GET','POST'])
 @login_required
-@roles_required('admin')
+@permission_required('staff.manage')
 def nhan_vien():
+    roles = Role.query.order_by(Role.name.asc()).all()
+    default_role = next((r for r in roles if r.slug == 'nhanvien'), roles[0] if roles else None)
+
     if request.method == 'POST':
         ten_dn = request.form['ten_dn']
         if NguoiDung.query.filter_by(ten_dang_nhap=ten_dn).first():
             flash(f"Tên đăng nhập '{ten_dn}' đã tồn tại.", 'danger')
         else:
+            role = None
+            try:
+                role_id = int(request.form.get('role_id') or 0)
+            except (TypeError, ValueError):
+                role_id = 0
+            if role_id:
+                role = Role.query.get(role_id)
+            if not role:
+                role = default_role
+            if not role:
+                flash('Chưa cấu hình vai trò. Vui lòng tạo vai trò trước.', 'danger')
+                return redirect(url_for('quan_ly_vai_tro'))
             nv = NguoiDung(
                 ten_dang_nhap=ten_dn,
                 mat_khau=request.form['mat_khau'],
                 ten=request.form['ten'],
-                loai=request.form['loai'],
+                loai=role.slug if role else 'nhanvien',
+                role_id=role.id if role else None,
                 ngay_vao_lam=datetime.now().date()
             )
             db.session.add(nv)
@@ -4689,8 +5035,8 @@ def nhan_vien():
     min_days = get_min_work_days()
     summary = {
         'total': len(staffs),
-        'admins': sum(1 for s in staffs if s.loai == 'admin'),
-        'employees': sum(1 for s in staffs if s.loai != 'admin'),
+        'admins': sum(1 for s in staffs if s.role_slug == 'admin'),
+        'employees': sum(1 for s in staffs if s.role_slug != 'admin'),
         'new_this_month': sum(1 for s in staffs if s.ngay_vao_lam and s.ngay_vao_lam >= start_month.date()),
         'handled_this_month': sum(month_stats.get(s.id, {}).get('so_hd', 0) for s in staffs)
     }
@@ -4710,13 +5056,221 @@ def nhan_vien():
         work_days_map=work_days_map,
         min_days=min_days,
         attendance_month_default=start_month.strftime('%Y-%m'),
-        salary_mode=salary_mode
+        salary_mode=salary_mode,
+        roles=roles
     )
+
+
+def build_role_management_context(selected_id=None):
+    roles = Role.query.order_by(Role.name.asc()).all()
+    selected_role = None
+
+    if roles:
+        if selected_id:
+            selected_role = next((role for role in roles if role.id == selected_id), None)
+        if not selected_role:
+            selected_role = roles[0]
+            selected_id = selected_role.id
+
+    selected_permissions = {rp.permission for rp in selected_role.permissions} if selected_role else set()
+    permission_groups_ui = []
+    for group_key, group_label, entries in PERMISSION_GROUPS:
+        permissions = [key for key, _ in entries]
+        total = len(permissions)
+        selected_count = sum(1 for key in permissions if key in selected_permissions)
+        permission_groups_ui.append({
+            'key': group_key,
+            'label': group_label,
+            'entries': entries,
+            'permissions': permissions,
+            'total': total,
+            'selected_count': selected_count,
+            'all_selected': bool(total and selected_count == total),
+            'partially_selected': bool(0 < selected_count < total),
+        })
+    assigned_counts = {role.id: NguoiDung.query.filter_by(role_id=role.id).count() for role in roles}
+    system_role_ids = {role.id for role in roles if role.is_system or role.slug in ('admin', 'nhanvien')}
+
+    return {
+        'roles': roles,
+        'selected_role': selected_role,
+        'selected_id': selected_role.id if selected_role else None,
+        'selected_permissions': selected_permissions,
+        'assigned_counts': assigned_counts,
+        'system_role_ids': system_role_ids,
+        'permission_groups': PERMISSION_GROUPS,
+        'permission_groups_ui': permission_groups_ui,
+        'permission_meta': PERMISSION_META,
+    }
+
+
+def process_role_action(action, form):
+    try:
+        if action == 'create':
+            name = (form.get('name') or '').strip()
+            description = (form.get('description') or '').strip()
+            if not name:
+                return {'success': False, 'message': 'Tên vai trò không được để trống.', 'category': 'danger'}
+            existing = Role.query.filter(func.lower(Role.name) == name.lower()).first()
+            if existing:
+                return {
+                    'success': False,
+                    'message': 'Tên vai trò đã tồn tại.',
+                    'category': 'danger',
+                    'selected_id': existing.id
+                }
+            slug = generate_role_slug(name)
+            role = Role(name=name, slug=slug, description=description, is_system=False)
+            db.session.add(role)
+            db.session.flush()
+            permissions = set(form.getlist('permissions')) & ALL_PERMISSION_KEYS
+            if permissions:
+                set_role_permissions(role, permissions)
+            db.session.commit()
+            return {
+                'success': True,
+                'message': 'Đã tạo vai trò mới.',
+                'category': 'success',
+                'selected_id': role.id
+            }
+
+        elif action == 'update':
+            try:
+                role_id = int(form.get('role_id') or 0)
+            except (TypeError, ValueError):
+                role_id = 0
+            role = Role.query.get(role_id)
+            if not role:
+                return {'success': False, 'message': 'Không tìm thấy vai trò cần cập nhật.', 'category': 'danger'}
+            name = (form.get('name') or '').strip()
+            description = (form.get('description') or '').strip()
+            permissions = set(form.getlist('permissions')) & ALL_PERMISSION_KEYS
+            if name and name.lower() != (role.name or '').lower():
+                duplicate = Role.query.filter(func.lower(Role.name) == name.lower(), Role.id != role.id).first()
+                if duplicate:
+                    return {
+                        'success': False,
+                        'message': 'Tên vai trò đã được sử dụng.',
+                        'category': 'danger',
+                        'selected_id': role.id
+                    }
+                role.name = name
+            role.description = description
+            if role.is_system and role.slug == 'admin':
+                set_role_permissions(role, ALL_PERMISSION_KEYS)
+            else:
+                set_role_permissions(role, permissions)
+            db.session.commit()
+            return {
+                'success': True,
+                'message': 'Đã cập nhật vai trò.',
+                'category': 'success',
+                'selected_id': role.id
+            }
+
+        elif action == 'delete':
+            try:
+                role_id = int(form.get('role_id') or 0)
+            except (TypeError, ValueError):
+                role_id = 0
+            role = Role.query.get(role_id)
+            if not role:
+                return {'success': False, 'message': 'Không tìm thấy vai trò để xoá.', 'category': 'danger'}
+            if role.is_system or role.slug in ('admin', 'nhanvien'):
+                return {
+                    'success': False,
+                    'message': 'Không thể xoá vai trò hệ thống.',
+                    'category': 'warning',
+                    'selected_id': role.id
+                }
+            if NguoiDung.query.filter_by(role_id=role.id).count() > 0:
+                return {
+                    'success': False,
+                    'message': 'Không thể xoá vai trò đang được gán cho người dùng.',
+                    'category': 'warning',
+                    'selected_id': role.id
+                }
+            RolePermission.query.filter_by(role_id=role.id).delete()
+            db.session.delete(role)
+            db.session.commit()
+            return {
+                'success': True,
+                'message': 'Đã xoá vai trò.',
+                'category': 'success',
+                'selected_id': None
+            }
+
+        else:
+            return {'success': False, 'message': 'Yêu cầu không hợp lệ.', 'category': 'danger'}
+
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.exception('Không thể xử lý thao tác vai trò: %s', exc)
+        return {
+            'success': False,
+            'message': 'Hệ thống gặp lỗi trong khi xử lý yêu cầu.',
+            'category': 'danger'
+        }
+
+
+def wants_role_json_response():
+    requested_with = request.headers.get('X-Requested-With', '')
+    if requested_with.lower() == 'xmlhttprequest':
+        return True
+    accept_header = request.headers.get('Accept', '')
+    return 'application/json' in accept_header.lower()
+
+
+@app.route('/quan-ly-vai-tro', methods=['GET', 'POST'])
+@login_required
+@permission_required('roles.manage')
+def quan_ly_vai_tro():
+    selected_id = request.args.get('role_id', type=int)
+    expects_json = wants_role_json_response()
+
+    if request.method == 'POST':
+        action = (request.form.get('action') or '').strip()
+        result = process_role_action(action, request.form)
+        context = build_role_management_context(result.get('selected_id') if result.get('selected_id') is not None else selected_id)
+
+        if expects_json:
+            status = 'success' if result.get('success') else 'error'
+            status_code = 200 if result.get('success') else 400
+            fragments = {
+                'roleList': render_template('partials/role_list_items.html', **context),
+                'roleDetail': render_template('partials/role_detail.html', **context),
+            }
+            return jsonify({
+                'status': status,
+                'message': result.get('message'),
+                'fragments': fragments,
+                'selectedRoleId': context.get('selected_id'),
+            }), status_code
+
+        flash(result.get('message'), result.get('category', 'info'))
+        redirect_id = context.get('selected_id')
+        if redirect_id:
+            return redirect(url_for('quan_ly_vai_tro', role_id=redirect_id))
+        return redirect(url_for('quan_ly_vai_tro'))
+
+    context = build_role_management_context(selected_id)
+    if expects_json:
+        fragments = {
+            'roleList': render_template('partials/role_list_items.html', **context),
+            'roleDetail': render_template('partials/role_detail.html', **context),
+        }
+        return jsonify({
+            'status': 'success',
+            'fragments': fragments,
+            'selectedRoleId': context.get('selected_id'),
+        })
+
+    return render_template('quan_ly_vai_tro.html', **context)
 
 
 @app.route('/nhan-vien/export-cham-cong')
 @login_required
-@roles_required('admin')
+@permission_required('staff.manage')
 def export_attendance_overview():
     month_str = request.args.get('month', '').strip()
     try:
@@ -4819,7 +5373,7 @@ def export_attendance_overview():
         name_cell.border = thin_border
         name_cell.alignment = Alignment(vertical='center')
 
-        role_display = 'Quản trị viên' if staff.loai == 'admin' else 'Nhân viên'
+        role_display = staff.role_name or ''
         role_cell = ws.cell(row=row_index, column=3, value=role_display)
         role_cell.alignment = Alignment(horizontal='center')
         role_cell.border = thin_border
@@ -4882,7 +5436,7 @@ def export_attendance_overview():
 
 @app.route('/nhan-vien/<int:nhanvien_id>')
 @login_required
-@roles_required('admin')
+@permission_required('staff.manage')
 def nhan_vien_chi_tiet(nhanvien_id):
     nv = NguoiDung.query.get_or_404(nhanvien_id)
 
@@ -5045,6 +5599,9 @@ def nhan_vien_chi_tiet(nhanvien_id):
         for year, month in trend_months
     ]
 
+    role_permissions = {rp.permission for rp in nv.role.permissions} if nv.role else set()
+    personal_permissions = {up.permission for up in nv.personal_permissions}
+
     return render_template(
         'nhan_vien_chi_tiet.html',
         nv=nv,
@@ -5058,12 +5615,43 @@ def nhan_vien_chi_tiet(nhanvien_id):
         revenue_trend=revenue_trend,
         start_month=start_month,
         salary_info=salary_info,
-        tiers=tiers
+        tiers=tiers,
+        roles=Role.query.order_by(Role.name.asc()).all(),
+        role_permissions=role_permissions,
+        personal_permissions=personal_permissions,
+        permission_groups=PERMISSION_GROUPS,
+        permission_meta=PERMISSION_META
     )
+
+
+@app.route('/nhan-vien/<int:nhanvien_id>/permissions', methods=['POST'])
+@login_required
+@permission_required('staff.manage')
+def cap_nhat_quyen_ca_nhan(nhanvien_id):
+    nv = NguoiDung.query.get_or_404(nhanvien_id)
+    payload = request.get_json(silent=True)
+    if payload is None:
+        payload = request.form
+    permissions = payload.get('permissions', [])
+    if isinstance(permissions, str):
+        permissions = [permissions]
+    if not isinstance(permissions, (list, tuple, set)):
+        return jsonify({'status': 'error', 'message': 'Dữ liệu không hợp lệ.'}), 400
+    desired = [perm for perm in permissions if isinstance(perm, str)]
+    set_user_permissions(nv, desired)
+    db.session.commit()
+    personal_permissions = [up.permission for up in nv.personal_permissions]
+    role_permissions = [rp.permission for rp in nv.role.permissions] if nv.role else []
+    return jsonify({
+        'status': 'success',
+        'message': 'Đã cập nhật quyền cá nhân.',
+        'personalPermissions': personal_permissions,
+        'rolePermissions': role_permissions
+    })
 
 @app.route('/nhan-vien/xoa/<int:nhanvien_id>', methods=['POST'])
 @login_required
-@roles_required('admin')
+@permission_required('staff.manage')
 def xoa_nhan_vien(nhanvien_id):
     if current_user.id == nhanvien_id:
         flash('Bạn không thể tự xoá tài khoản của mình.', 'warning')
@@ -5071,8 +5659,14 @@ def xoa_nhan_vien(nhanvien_id):
 
     nv = NguoiDung.query.get_or_404(nhanvien_id)
 
-    if nv.loai == 'admin':
-        remaining_admins = NguoiDung.query.filter(NguoiDung.loai == 'admin', NguoiDung.id != nv.id).count()
+    if nv.role_slug == 'admin':
+        remaining_admins = NguoiDung.query.filter(
+            NguoiDung.id != nv.id,
+            or_(
+                NguoiDung.loai == 'admin',
+                NguoiDung.role.has(Role.slug == 'admin')
+            )
+        ).count()
         if remaining_admins == 0:
             flash('Không thể xoá quản trị viên cuối cùng.', 'warning')
             return redirect(url_for('nhan_vien'))
@@ -5096,7 +5690,7 @@ def xoa_nhan_vien(nhanvien_id):
 
 @app.route('/cai-dat-luong-thuong', methods=['GET', 'POST'])
 @login_required
-@roles_required('admin')
+@permission_required('payroll.configure')
 def cai_dat_luong_thuong():
     selected_id = request.args.get('staff_id', type=int)
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -5234,7 +5828,7 @@ def cai_dat_luong_thuong():
 
 @app.route('/cai-dat-email', methods=['GET', 'POST'])
 @login_required
-@roles_required('admin')
+@permission_required('email.settings')
 def cai_dat_email():
     ensure_email_templates()
     if request.method == 'POST':
@@ -5308,7 +5902,7 @@ def cai_dat_email():
 
 @app.route('/lich-su-email')
 @login_required
-@roles_required('admin')
+@permission_required('email.logs')
 def lich_su_email():
     """Trang xem lịch sử gửi email"""
     page = request.args.get('page', 1, type=int)
@@ -5348,7 +5942,7 @@ def lich_su_email():
 
 @app.route('/chi-tiet-email/<int:log_id>')
 @login_required
-@roles_required('admin')
+@permission_required('email.logs')
 def chi_tiet_email(log_id):
     """Xem chi tiết một email log"""
     log = EmailLog.query.get_or_404(log_id)
@@ -5357,7 +5951,7 @@ def chi_tiet_email(log_id):
 
 @app.route('/thong-ke-doanh-thu')
 @login_required
-@roles_required('admin')
+@permission_required('analytics.revenue')
 def thong_ke_doanh_thu():
     now = datetime.now()
     view_type = request.args.get('view', 'month')  # month, quarter, year, custom
@@ -5519,6 +6113,7 @@ def thong_ke_doanh_thu():
 
 @app.route('/quan-li-hoa-don')
 @login_required
+@permission_required('payments.invoices')
 def quan_li_hoa_don():
     query = DatPhong.query.filter(
         db.or_(
@@ -5541,6 +6136,7 @@ def quan_li_hoa_don():
 
 @app.route('/xuat-excel-hoa-don')
 @login_required
+@permission_required('payments.export')
 def xuat_excel_hoa_don():
     from io import BytesIO
     import pandas as pd
@@ -5809,6 +6405,7 @@ def xuat_excel_hoa_don():
 
 @app.route('/xuat-excel-khach-hang')
 @login_required
+@permission_required('customers.export')
 def xuat_excel_khach_hang():
     from io import BytesIO
     import pandas as pd
@@ -5933,7 +6530,7 @@ def xuat_excel_khach_hang():
 
 @app.route('/xuat-excel-lich-su-email')
 @login_required
-@roles_required('admin')
+@permission_required('email.logs')
 def xuat_excel_lich_su_email():
     from io import BytesIO
     import pandas as pd
@@ -6045,9 +6642,16 @@ def xuat_excel_lich_su_email():
 
 @app.route('/quan-li-dich-vu', methods=['GET', 'POST'])
 @login_required
-@roles_required('admin')
+@permission_required('services.manage', 'customers.vouchers')
 def quan_li_dich_vu():
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    can_manage_services = current_user.has_permission('services.manage')
+    if request.method == 'POST' and not can_manage_services:
+        message = 'Ban khong co quyen quan ly dich vu.'
+        if wants_json:
+            return jsonify({'status': 'error', 'message': message}), 403
+        flash(message, 'danger')
+        return redirect(url_for('quan_li_dich_vu'))
     if request.method == 'POST':
         try:
             ten = request.form['ten'].strip()
@@ -6075,16 +6679,30 @@ def quan_li_dich_vu():
         flash(data['message'], 'success')
         return redirect(url_for('quan_li_dich_vu'))
     discount_percent, expires_days = get_voucher_config()
-    return render_template('quan_li_dich_vu.html', ds_dv=DichVu.query.order_by(DichVu.loai_id, DichVu.ten).all(), ds_loai=DichVuLoai.query.all(), dv_edit=None,
-        voucher_discount=discount_percent, voucher_expires=expires_days)
+    return render_template(
+        'quan_li_dich_vu.html',
+        ds_dv=DichVu.query.order_by(DichVu.loai_id, DichVu.ten).all(),
+        ds_loai=DichVuLoai.query.all(),
+        dv_edit=None,
+        voucher_discount=discount_percent,
+        voucher_expires=expires_days,
+        can_manage_services=can_manage_services
+    )
 
 @app.route('/quan-li-dich-vu/sua/<int:dichvu_id>', methods=['GET', 'POST'])
 @app.route('/sua-dich-vu/<int:dichvu_id>', methods=['POST'])
 @login_required
-@roles_required('admin')
+@permission_required('services.manage', 'customers.vouchers')
 def sua_dich_vu(dichvu_id):
     dv_edit = DichVu.query.get_or_404(dichvu_id)
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+    can_manage_services = current_user.has_permission('services.manage')
+    if request.method == 'POST' and not can_manage_services:
+        message = 'Ban khong co quyen quan ly dich vu.'
+        if wants_json:
+            return jsonify({'status': 'error', 'message': message}), 403
+        flash(message, 'danger')
+        return redirect(url_for('quan_li_dich_vu'))
     if request.method == 'POST':
         try:
             ten = request.form['ten'].strip()
@@ -6113,13 +6731,20 @@ def sua_dich_vu(dichvu_id):
         flash(data['message'], 'success')
         return redirect(url_for('quan_li_dich_vu'))
     discount_percent, expires_days = get_voucher_config()
-    return render_template('quan_li_dich_vu.html', ds_dv=DichVu.query.order_by(DichVu.loai_id, DichVu.ten).all(), ds_loai=DichVuLoai.query.all(), dv_edit=dv_edit,
-        voucher_discount=discount_percent, voucher_expires=expires_days)
+    return render_template(
+        'quan_li_dich_vu.html',
+        ds_dv=DichVu.query.order_by(DichVu.loai_id, DichVu.ten).all(),
+        ds_loai=DichVuLoai.query.all(),
+        dv_edit=dv_edit,
+        voucher_discount=discount_percent,
+        voucher_expires=expires_days,
+        can_manage_services=can_manage_services
+    )
 
 @app.route('/quan-li-dich-vu/xoa/<int:dichvu_id>', methods=['POST'])
 @app.route('/xoa-dich-vu/<int:dichvu_id>', methods=['POST'])
 @login_required
-@roles_required('admin')
+@permission_required('services.manage', 'customers.vouchers')
 def xoa_dich_vu(dichvu_id):
     dv = DichVu.query.get_or_404(dichvu_id)
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
@@ -6139,7 +6764,7 @@ def xoa_dich_vu(dichvu_id):
 
 @app.route('/quan-li-loai-phong', methods=['GET', 'POST'])
 @login_required
-@roles_required('admin')
+@permission_required('room_types.manage')
 def quan_li_loai_phong():
     if request.method == 'POST':
         ten, so_nguoi, gia = request.form['ten'], int(request.form['so_nguoi']), int(request.form['gia'])
@@ -6153,7 +6778,7 @@ def quan_li_loai_phong():
 
 @app.route('/quan-li-loai-phong/sua/<int:loai_id>', methods=['GET', 'POST'])
 @login_required
-@roles_required('admin')
+@permission_required('room_types.manage')
 def sua_loai_phong(loai_id):
     lp_edit = LoaiPhong.query.get_or_404(loai_id)
     if request.method == 'POST':
@@ -6165,19 +6790,43 @@ def sua_loai_phong(loai_id):
 
 @app.route('/quan-li-loai-phong/xoa/<int:loai_id>', methods=['POST'])
 @login_required
-@roles_required('admin')
+@permission_required('room_types.manage')
 def xoa_loai_phong(loai_id):
     lp = LoaiPhong.query.get_or_404(loai_id)
-    if Phong.query.filter_by(loai_id=loai_id).first():
-        flash('Không thể xóa loại phòng đang được sử dụng.', 'danger')
+    related_rooms = Phong.query.filter_by(loai_id=loai_id).all()
+
+    if related_rooms:
+        room_ids = [room.id for room in related_rooms]
+        bookings = DatPhong.query.filter(DatPhong.phong_id.in_(room_ids)).all()
+
+        if bookings:
+            has_active_booking = any(
+                booking.trang_thai in BOOKING_BLOCKING_STATUSES for booking in bookings
+            )
+            if has_active_booking:
+                flash('Không thể xóa loại phòng vì vẫn còn phòng thuộc loại này đang được sử dụng trong các đặt phòng hiện tại.', 'danger')
+                return redirect(url_for('quan_li_loai_phong'))
+
+            flash('Không thể xóa loại phòng vì các phòng thuộc loại này đã có lịch sử đặt phòng. Vui lòng lưu trữ thay vì xóa.', 'danger')
+            return redirect(url_for('quan_li_loai_phong'))
+
+    deleted_room_count = len(related_rooms)
+
+    for room in related_rooms:
+        db.session.delete(room)
+
+    db.session.delete(lp)
+    db.session.commit()
+
+    if deleted_room_count:
+        flash(f'Đã xóa loại phòng và {deleted_room_count} phòng liên quan.', 'success')
     else:
-        db.session.delete(lp); db.session.commit()
         flash('Đã xóa loại phòng.', 'success')
     return redirect(url_for('quan_li_loai_phong'))
 
 @app.route('/xuat-bao-cao/<int:nam>')
 @login_required
-@roles_required('admin')
+@permission_required('analytics.revenue')
 def xuat_bao_cao_doanh_thu(nam):
     from openpyxl.styles import Font, PatternFill, Border, Side, Alignment
     from openpyxl.chart import BarChart, Reference, Series
@@ -6381,6 +7030,7 @@ def xuat_bao_cao_doanh_thu(nam):
 # Chat và api
 @app.route('/qr-chat/<int:dat_id>')
 @login_required
+@permission_required('communications.chat')
 def qr_chat(dat_id):
     dp = DatPhong.query.get_or_404(dat_id)
     if not dp.chat_token:
@@ -6402,6 +7052,7 @@ def chat_khach(token):
 
 @app.route('/tin-nhan')
 @login_required
+@permission_required('communications.chat')
 def tin_nhan():
     conversations = db.session.query(
         DatPhong, 
@@ -6421,7 +7072,8 @@ def tin_nhan():
 
 @app.route('/xoa-hoi-thoai/<int:datphong_id>', methods=['POST'])
 @login_required
-@roles_required('admin')
+@permission_required('communications.chat')
+@permission_required('chat.delete')
 def xoa_hoi_thoai(datphong_id):
     TinNhan.query.filter_by(datphong_id=datphong_id).delete()
     db.session.commit()
@@ -6450,6 +7102,7 @@ def api_public_send_message():
 
 @app.route('/api/tin-nhan/gui', methods=['POST'])
 @login_required
+@permission_required('communications.chat')
 def api_send_message():
     data = request.json
     datphong_id, noi_dung = data.get('datphong_id'), data.get('noi_dung')
@@ -6498,6 +7151,7 @@ def api_public_send_file():
 
 @app.route('/api/tin-nhan/gui-file', methods=['POST'])
 @login_required
+@permission_required('communications.chat')
 def api_send_file():
     datphong_id = request.form.get('datphong_id', type=int)
     file = request.files.get('file')
@@ -6534,6 +7188,7 @@ def api_public_get_messages(token):
 
 @app.route('/api/tin-nhan/<int:datphong_id>')
 @login_required
+@permission_required('communications.chat')
 def api_get_messages(datphong_id):
     messages = TinNhan.query.filter_by(datphong_id=datphong_id).order_by(TinNhan.thoi_gian.asc()).all()
     TinNhan.query.filter_by(datphong_id=datphong_id, nguoi_gui='khach', trang_thai='chua_doc').update({'trang_thai': 'da_doc'})
@@ -6543,6 +7198,7 @@ def api_get_messages(datphong_id):
 
 @app.route('/api/dat-phong-online/pending-count')
 @login_required
+@permission_required('bookings.manage_online')
 def api_pending_online_count():
     """API tra ve so dat phong online dang cho xac nhan."""
     count = DatPhong.query.join(
@@ -6559,6 +7215,7 @@ def api_pending_online_count():
 
 @app.route('/api/tin-nhan/dem-chua-doc')
 @login_required
+@permission_required('communications.chat')
 def api_dem_tin_nhan_chua_doc():
     """API để đếm số tin nhắn chưa đọc từ khách"""
     unread_count = TinNhan.query.join(DatPhong).filter(
@@ -7062,6 +7719,7 @@ def api_public_validate_voucher():
 
 @app.route('/api/dich-vu/<int:service_id>/xac-nhan-thanh-toan', methods=['POST'])
 @login_required
+@permission_required('payments.process', 'services.orders')
 def api_confirm_service_payment(service_id):
     """API để nhân viên XÁC NHẬN đã nhận tiền từ khách (bước cuối)"""
     try:
@@ -7105,6 +7763,7 @@ def api_confirm_service_payment(service_id):
 
 @app.route('/api/dich-vu/<int:service_id>/danh-dau-da-thanh-toan', methods=['POST'])
 @login_required
+@permission_required('payments.process', 'services.orders')
 def api_mark_service_paid(service_id):
     """API KHÔNG CÒN SỬ DỤNG - Khách tự gửi yêu cầu xác nhận"""
     return jsonify({
@@ -7115,6 +7774,7 @@ def api_mark_service_paid(service_id):
 
 @app.route('/api/dich-vu/<int:service_id>/huy-yeu-cau', methods=['POST'])
 @login_required
+@permission_required('payments.process', 'services.orders')
 def api_cancel_payment_request(service_id):
     """API để nhân viên HỦY YÊU CẦU xác nhận thanh toán
        Trạng thái: cho_xac_nhan -> chua_thanh_toan
@@ -7171,6 +7831,7 @@ def api_cancel_payment_request(service_id):
 
 @app.route('/api/dich-vu/huy-yeu-cau-nhieu', methods=['POST'])
 @login_required
+@permission_required('payments.process', 'services.orders')
 def api_cancel_payment_request_multiple():
     """API để nhân viên HỦY NHIỀU YÊU CẦU xác nhận thanh toán cùng lúc
        Trạng thái: cho_xac_nhan -> chua_thanh_toan
@@ -7477,6 +8138,7 @@ def api_validate_voucher():
 
 @app.route('/api/dat-theo-phong/<int:phong_id>')
 @login_required
+@permission_required('payments.process', 'services.orders')
 def api_dat_theo_phong(phong_id):
     dp = DatPhong.query.filter_by(phong_id=phong_id, trang_thai='nhan').order_by(DatPhong.id.desc()).first()
     if not dp:
@@ -7488,12 +8150,14 @@ def api_dat_theo_phong(phong_id):
 
 @app.route('/api/dichvu-theo-loai/<int:loai_id>')
 @login_required
+@permission_required('payments.process', 'services.orders')
 def api_dichvu_theo_loai(loai_id):
     dvs = DichVu.query.all() if loai_id == 0 else DichVu.query.filter_by(loai_id=loai_id).all()
     return jsonify([{'id': d.id, 'ten': d.ten, 'gia': d.gia} for d in dvs])
 
 @app.route('/them-dich-vu', methods=['POST'])
 @login_required
+@permission_required('payments.process', 'services.orders')
 def them_dich_vu():
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
     dat_raw = (request.form.get('dat_id') or '').strip()

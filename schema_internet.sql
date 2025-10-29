@@ -16,18 +16,51 @@ DROP TABLE IF EXISTS loaiphong;
 DROP TABLE IF EXISTS khachhang;
 DROP TABLE IF EXISTS attendance;
 DROP TABLE IF EXISTS hethongcauhinh;
+DROP TABLE IF EXISTS role_permission;
+DROP TABLE IF EXISTS user_permission;
+DROP TABLE IF EXISTS role;
 DROP TABLE IF EXISTS nguoidung;
+
+CREATE TABLE role(
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  name VARCHAR(100) NOT NULL UNIQUE,
+  slug VARCHAR(50) NOT NULL UNIQUE,
+  description VARCHAR(255),
+  is_system BOOLEAN DEFAULT FALSE,
+  created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
 
 CREATE TABLE nguoidung(
   id INT PRIMARY KEY AUTO_INCREMENT,
   ten_dang_nhap VARCHAR(50) UNIQUE NOT NULL,
   mat_khau VARCHAR(128) NOT NULL,
   loai VARCHAR(20) DEFAULT 'nhanvien',
+  role_id INT NULL,
   ten VARCHAR(100) NOT NULL,
   ngay_vao_lam DATE,
-  anh_dai_dien VARCHAR(255) DEFAULT NULL
+  anh_dai_dien VARCHAR(255) DEFAULT NULL,
+  FOREIGN KEY (role_id) REFERENCES role(id) ON DELETE SET NULL
 );
 CREATE INDEX idx_nguoidung_loai ON nguoidung(loai);
+CREATE INDEX idx_nguoidung_role_id ON nguoidung(role_id);
+
+CREATE TABLE role_permission(
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  role_id INT NOT NULL,
+  permission VARCHAR(100) NOT NULL,
+  UNIQUE KEY uq_role_permission (role_id, permission),
+  FOREIGN KEY (role_id) REFERENCES role(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_role_permission_role ON role_permission(role_id);
+
+CREATE TABLE user_permission(
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  permission VARCHAR(100) NOT NULL,
+  UNIQUE KEY uq_user_permission (user_id, permission),
+  FOREIGN KEY (user_id) REFERENCES nguoidung(id) ON DELETE CASCADE
+);
+CREATE INDEX idx_user_permission_user ON user_permission(user_id);
 
 CREATE TABLE loaiphong(
   id INT PRIMARY KEY AUTO_INCREMENT,

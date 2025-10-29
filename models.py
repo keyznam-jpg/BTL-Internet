@@ -1,8 +1,57 @@
+# -*- coding: utf-8 -*-
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 
 db = SQLAlchemy()
+
+class Role(db.Model):
+    __tablename__ = "role"
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), unique=True, nullable=False)
+    slug = db.Column(db.String(50), unique=True, nullable=False)
+    description = db.Column(db.String(255))
+    is_system = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+    users = db.relationship("NguoiDung", backref="role", lazy=True)
+    permissions = db.relationship(
+        "RolePermission",
+        backref="role",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
+
+    def __repr__(self):
+        return f"<Role {self.slug}>"
+
+
+class RolePermission(db.Model):
+    __tablename__ = "role_permission"
+    id = db.Column(db.Integer, primary_key=True)
+    role_id = db.Column(db.Integer, db.ForeignKey("role.id", ondelete="CASCADE"), nullable=False)
+    permission = db.Column(db.String(100), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("role_id", "permission", name="uq_role_permission"),
+    )
+
+    def __repr__(self):
+        return f"<RolePermission role={self.role_id} perm={self.permission}>"
+
+
+class UserPermission(db.Model):
+    __tablename__ = "user_permission"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("nguoidung.id", ondelete="CASCADE"), nullable=False)
+    permission = db.Column(db.String(100), nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint("user_id", "permission", name="uq_user_permission"),
+    )
+
+    def __repr__(self):
+        return f"<UserPermission user={self.user_id} perm={self.permission}>"
+
 
 class NguoiDung(UserMixin, db.Model):
     __tablename__ = "nguoidung"
@@ -10,9 +59,16 @@ class NguoiDung(UserMixin, db.Model):
     ten_dang_nhap = db.Column(db.String(50), unique=True, nullable=False)
     mat_khau = db.Column(db.String(128), nullable=False)
     loai = db.Column(db.String(20), default="nhanvien")
+    role_id = db.Column(db.Integer, db.ForeignKey("role.id"))
     ten  = db.Column(db.String(100), nullable=False)
     ngay_vao_lam = db.Column(db.Date)
     anh_dai_dien = db.Column(db.String(255))
+    personal_permissions = db.relationship(
+        "UserPermission",
+        backref="user",
+        lazy=True,
+        cascade="all, delete-orphan"
+    )
     def get_id(self): return str(self.id)
 
     @property
@@ -20,6 +76,39 @@ class NguoiDung(UserMixin, db.Model):
         if self.anh_dai_dien:
             return self.anh_dai_dien.replace('\\', '/')
         return "img/ttcn.png"
+
+    @property
+    def role_slug(self):
+        if self.role and self.role.slug:
+            return self.role.slug
+        return self.loai
+
+    @property
+    def role_name(self):
+        if self.role and self.role.name:
+            return self.role.name
+        default_labels = {
+            'admin': 'Quản trị viên',
+            'nhanvien': 'Nhân viên',
+        }
+        if not self.loai:
+            return ''
+        return default_labels.get(self.loai, self.loai.replace('_', ' ').title())
+
+    def has_permission(self, permission_key):
+        if not permission_key:
+            return True
+        # Admin (system) role always allowed
+        if self.role and self.role.is_system:
+            return True
+        if self.loai == 'admin':
+            return True
+        # Check personal allowances first
+        if any(up.permission == permission_key for up in self.personal_permissions):
+            return True
+        if not self.role:
+            return False
+        return any(rp.permission == permission_key for rp in self.role.permissions)
 
 class LoaiPhong(db.Model):
     __tablename__ = "loaiphong"

@@ -37,7 +37,7 @@
         <div class="profile-info-item">
           <dt>Vai trò</dt>
           <dd>
-            <span class="role-pill role-{{ current_user.loai }}">{{ 'Quản trị viên' if current_user.loai == 'admin' else 'Nhân viên' }}</span>
+            <span class="role-pill role-{{ current_user.role_slug }}">{{ current_user.role_name }}</span>
           </dd>
         </div>
         <div class="profile-info-item">

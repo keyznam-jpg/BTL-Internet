@@ -241,6 +241,8 @@ def permission_required(*permissions):
                 return fn(*args, **kwargs)
             if current_user.loai == 'admin':
                 return fn(*args, **kwargs)
+            if getattr(current_user, 'role_slug', None) == 'admin':
+                return fn(*args, **kwargs)
             if not permissions:
                 return fn(*args, **kwargs)
             if any(current_user.has_permission(perm) for perm in permissions):
@@ -4894,6 +4896,16 @@ def nhan_vien():
             if not role:
                 flash('Chưa cấu hình vai trò. Vui lòng tạo vai trò trước.', 'danger')
                 return redirect(url_for('quan_ly_vai_tro'))
+            if role and role.slug == 'admin':
+                first_admin = NguoiDung.query.filter(
+                    or_(
+                        NguoiDung.loai == 'admin',
+                        NguoiDung.role.has(Role.slug == 'admin')
+                    )
+                ).order_by(NguoiDung.id.asc()).first()
+                if first_admin and current_user.id != first_admin.id:
+                    flash('Chỉ quản trị viên đầu tiên mới được tạo tài khoản quản trị.', 'warning')
+                    return redirect(url_for('nhan_vien'))
             nv = NguoiDung(
                 ten_dang_nhap=ten_dn,
                 mat_khau=request.form['mat_khau'],
@@ -5663,6 +5675,22 @@ def xoa_nhan_vien(nhanvien_id):
     nv = NguoiDung.query.get_or_404(nhanvien_id)
 
     if nv.role_slug == 'admin':
+        first_admin = NguoiDung.query.filter(
+            or_(
+                NguoiDung.loai == 'admin',
+                NguoiDung.role.has(Role.slug == 'admin')
+            )
+        ).order_by(NguoiDung.id.asc()).first()
+
+        if first_admin:
+            if nv.id == first_admin.id:
+                flash('Không thể xoá quản trị viên ban đầu.', 'warning')
+                return redirect(url_for('nhan_vien'))
+
+            if current_user.id != first_admin.id:
+                flash('Chỉ quản trị viên đầu tiên mới có quyền xoá các quản trị viên khác.', 'warning')
+                return redirect(url_for('nhan_vien'))
+
         remaining_admins = NguoiDung.query.filter(
             NguoiDung.id != nv.id,
             or_(

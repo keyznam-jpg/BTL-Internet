@@ -859,9 +859,113 @@
         justify-content: center;
       }
 
+      .auth-action-bar {
+        padding: 20px;
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .auth-buttons {
+        width: 100%;
+        justify-content: center;
+      }
+
       .summary-grid {
         grid-template-columns: 1fr;
       }
+    }
+
+    .auth-action-bar {
+      margin: 16px auto 32px;
+      padding: 22px 28px;
+      max-width: 1200px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      flex-wrap: wrap;
+      background: linear-gradient(135deg, rgba(12, 84, 62, 0.75), rgba(15, 118, 110, 0.6));
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      border-radius: 26px;
+      color: rgba(241, 245, 249, 0.9);
+      box-shadow: 0 20px 45px -20px rgba(4, 120, 87, 0.65);
+      backdrop-filter: blur(14px);
+    }
+
+    .auth-action-bar .auth-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .auth-action-bar .auth-info strong {
+      font-size: 1.15rem;
+      letter-spacing: 0.02em;
+    }
+
+    .auth-action-bar .auth-info span {
+      font-size: 0.95rem;
+      color: rgba(226, 232, 240, 0.85);
+    }
+
+    .auth-buttons {
+      display: inline-flex;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .auth-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 22px;
+      border-radius: 18px;
+      border: none;
+      background: linear-gradient(135deg, rgba(59, 130, 246, 0.95), rgba(37, 99, 235, 0.95));
+      color: #f8fafc;
+      font-weight: 600;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 16px 28px -18px rgba(37, 99, 235, 0.9);
+    }
+
+    .auth-btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(120deg, rgba(255, 255, 255, 0.45), transparent 55%);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+
+    .auth-btn:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 32px -18px rgba(30, 64, 175, 0.95);
+    }
+
+    .auth-btn:hover::after {
+      opacity: 1;
+    }
+
+    .auth-btn i {
+      font-size: 1.05rem;
+    }
+
+    .auth-btn.outline {
+      background: rgba(15, 118, 110, 0.32);
+      border: 1px solid rgba(148, 163, 184, 0.45);
+      box-shadow: 0 16px 24px -20px rgba(15, 118, 110, 0.9);
+    }
+
+    .auth-btn.outline:hover {
+      box-shadow: 0 18px 30px -20px rgba(13, 148, 136, 0.9);
+    }
+
+    .auth-btn.outline::after {
+      background: linear-gradient(120deg, rgba(255, 255, 255, 0.3), transparent 55%);
     }
 
     /* Loading Spinner */
@@ -883,16 +987,6 @@
   </style>
 </head>
 <body>
-  <div style="display:flex; justify-content:flex-end; gap:12px; align-items:center; padding:10px 0;">
-    {% if current_user.is_authenticated and current_user.is_customer %}
-      <span style="color:#f0fdf4; font-weight:600;">Xin chào {{ current_user.ten }}!</span>
-      <a href="{{ url_for('khach_hang_tai_khoan') }}" style="background:rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:999px; text-decoration:none;">Tài khoản</a>
-      <a href="{{ url_for('khach_hang_dang_xuat') }}" style="background:rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:999px; text-decoration:none;">Đăng xuất</a>
-    {% else %}
-      <a href="{{ url_for('khach_hang_dang_nhap') }}" style="background:rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:999px; text-decoration:none;">Đăng nhập khách hàng</a>
-      <a href="{{ url_for('khach_hang_dang_ky') }}" style="background:rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:999px; text-decoration:none;">Đăng ký</a>
-    {% endif %}
-  </div>
   <div class="container">
     <!-- Header -->
     <div class="header">
@@ -902,6 +996,41 @@
       <h1>Đặt phòng trực tuyến</h1>
       <p>Hoàn tất biểu mẫu để giữ phòng. Tiền cọc {{ deposit_percent }}% sẽ được thanh toán qua VietQR.</p>
     </div>
+
+    <div class="auth-action-bar">
+      {% if current_user.is_authenticated and current_user.is_customer %}
+      <div class="auth-info">
+        <strong>Xin chào {{ current_user.ten }}!</strong>
+        <span>Bạn có thể quản lý thông tin đặt phòng và thanh toán trong khu vực tài khoản.</span>
+      </div>
+      <div class="auth-buttons">
+        <a class="auth-btn outline" href="{{ url_for('khach_hang_tai_khoan') }}">
+          <i class="fas fa-user-circle"></i>
+          Tài khoản khách hàng
+        </a>
+        <a class="auth-btn" href="{{ url_for('khach_hang_dang_xuat') }}">
+          <i class="fas fa-arrow-right-from-bracket"></i>
+          Đăng xuất
+        </a>
+      </div>
+      {% else %}
+      <div class="auth-info">
+        <strong>Bạn đã sẵn sàng đặt phòng?</strong>
+        <span>Đăng nhập để theo dõi tiến trình hoặc tạo tài khoản mới trong vài giây.</span>
+      </div>
+      <div class="auth-buttons">
+        <a class="auth-btn" href="{{ url_for('khach_hang_dang_nhap') }}">
+          <i class="fas fa-right-to-bracket"></i>
+          Đăng nhập khách hàng
+        </a>
+        <a class="auth-btn outline" href="{{ url_for('khach_hang_dang_ky') }}">
+          <i class="fas fa-user-plus"></i>
+          Đăng ký
+        </a>
+      </div>
+      {% endif %}
+    </div>
+
 
     <!-- Main Card -->
     <div class="main-card">

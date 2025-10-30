@@ -1,6 +1,14 @@
-{% extends 'khach_hang_base.html' %}
+﻿{% extends 'khach_hang_base.html' %}
 {% set title = 'Quên mật khẩu' %}
 {% set header_title = 'Khôi phục mật khẩu khách hàng' %}
+
+{% block header_block %}{% endblock %}
+
+{% block page_styles %}
+  main {
+    margin: 40px auto 56px;
+  }
+{% endblock %}
 
 {% block content %}
   <h2>Khôi phục mật khẩu</h2>
@@ -28,3 +36,4 @@
     </div>
   </form>
 {% endblock %}
+

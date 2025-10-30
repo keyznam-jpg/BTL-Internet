@@ -1,6 +1,14 @@
-{% extends 'khach_hang_base.html' %}
+﻿{% extends 'khach_hang_base.html' %}
 {% set title = 'Đăng ký khách hàng' %}
 {% set header_title = 'Tạo tài khoản khách hàng thân thiết' %}
+
+{% block header_block %}{% endblock %}
+
+{% block page_styles %}
+  main {
+    margin: 40px auto 56px;
+  }
+{% endblock %}
 
 {% block content %}
   <h2>Tạo tài khoản khách hàng</h2>
@@ -53,3 +61,4 @@
     <p style="color:#4b5563; font-size:0.95rem;">Bấm "Tạo tài khoản" nghĩa là bạn đồng ý với chính sách bảo mật và điều khoản sử dụng dịch vụ của khách sạn.</p>
   </form>
 {% endblock %}
+

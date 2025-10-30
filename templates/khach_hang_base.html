@@ -279,7 +279,6 @@
         <div class="brand-block">
           <div class="brand-logo">KH</div>
           <div class="brand-copy">
-            <span>Chương trình thân thiết</span>
             <h1>{{ header_title or 'Trung tâm khách hàng' }}</h1>
           </div>
         </div>
@@ -295,9 +294,12 @@
           <a href="{{ url_for('dat_phong_online') }}">Đặt phòng trực tuyến</a>
         </nav>
       </div>
+      {% set portal_intro = hotel_info.customer_portal_intro if hotel_info and hotel_info.customer_portal_intro else header_description %}
+      {% if portal_intro %}
       <p class="header-description">
-        {{ hotel_info.customer_portal_intro if hotel_info and hotel_info.customer_portal_intro else 'Kết nối cùng khách sạn, quản lý đặt phòng và tận hưởng ưu đãi cá nhân hóa chỉ với vài bước đăng nhập.' }}
+        {{ portal_intro }}
       </p>
+      {% endif %}
     </div>
   </header>
 

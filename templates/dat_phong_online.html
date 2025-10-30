@@ -883,6 +883,16 @@
   </style>
 </head>
 <body>
+  <div style="display:flex; justify-content:flex-end; gap:12px; align-items:center; padding:10px 0;">
+    {% if current_user.is_authenticated and current_user.is_customer %}
+      <span style="color:#f0fdf4; font-weight:600;">Xin chào {{ current_user.ten }}!</span>
+      <a href="{{ url_for('khach_hang_tai_khoan') }}" style="background:rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:999px; text-decoration:none;">Tài khoản</a>
+      <a href="{{ url_for('khach_hang_dang_xuat') }}" style="background:rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:999px; text-decoration:none;">Đăng xuất</a>
+    {% else %}
+      <a href="{{ url_for('khach_hang_dang_nhap') }}" style="background:rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:999px; text-decoration:none;">Đăng nhập khách hàng</a>
+      <a href="{{ url_for('khach_hang_dang_ky') }}" style="background:rgba(255,255,255,0.15); color:#fff; padding:6px 12px; border-radius:999px; text-decoration:none;">Đăng ký</a>
+    {% endif %}
+  </div>
   <div class="container">
     <!-- Header -->
     <div class="header">

@@ -1,0 +1,34 @@
+{% extends 'khach_hang_base.html' %}
+{% set title = 'Đăng nhập khách hàng' %}
+{% set header_title = 'Đăng nhập khách hàng thân thiết' %}
+
+{% block content %}
+  <h2>Đăng nhập tài khoản khách hàng</h2>
+  <p style="color:#4b5563; margin-bottom: 24px;">Sử dụng CMND/CCCD hoặc email đã đăng ký để đăng nhập và theo dõi đặt phòng.</p>
+
+  {% if error %}
+  <div class="alert danger">{{ error }}</div>
+  {% endif %}
+
+  <form method="post" style="display:flex; flex-direction:column; gap:18px;">
+    <label>
+      <span style="display:block; font-weight:600; margin-bottom:6px;">CMND/CCCD hoặc Email</span>
+      <input type="text" name="ten_dang_nhap" required value="{{ form_username }}" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+    </label>
+    <label>
+      <span style="display:block; font-weight:600; margin-bottom:6px;">Mật khẩu</span>
+      <input type="password" name="mat_khau" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+    </label>
+    <label style="display:flex; align-items:center; gap:8px; font-size:0.95rem; color:#4b5563;">
+      <input type="checkbox" name="ghi_nho" value="1">
+      Ghi nhớ đăng nhập trên thiết bị này
+    </label>
+    <button type="submit" style="background:var(--green); color:#fff; border:none; padding:12px 20px; border-radius:999px; font-size:1rem; font-weight:600; cursor:pointer;">
+      Đăng nhập
+    </button>
+    <div style="display:flex; flex-direction:column; gap:6px; font-size:0.95rem;">
+      <a href="{{ url_for('khach_hang_dang_ky') }}" style="color:var(--green-dark); text-decoration:none;">Chưa có tài khoản? Đăng ký ngay</a>
+      <a href="{{ url_for('khach_hang_quen_mat_khau') }}" style="color:var(--green-dark); text-decoration:none;">Quên mật khẩu</a>
+    </div>
+  </form>
+{% endblock %}

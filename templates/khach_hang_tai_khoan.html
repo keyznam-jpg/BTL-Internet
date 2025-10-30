@@ -1,0 +1,181 @@
+{% extends 'khach_hang_base.html' %}
+{% set title = 'Tài khoản khách hàng' %}
+{% set header_title = 'Không gian khách hàng thân thiết' %}
+
+{% block content %}
+  <h2 style="margin-bottom: 18px;">Xin chào {{ kh.ho_ten }}!</h2>
+  <p style="color:#4b5563; margin-bottom: 28px;">Điểm tích lũy hiện có: <strong style="color:var(--green)">{{ kh.diem_tich_luy or 0 }}</strong> điểm. Mỗi điểm tương đương giảm giá {{ loyalty_percent_per_point|percent }}%, tối đa {{ loyalty_max_discount }}% cho một voucher.</p>
+
+  <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:24px;">
+    {% set tabs = [
+      ('thong_tin', 'Thông tin cá nhân'),
+      ('doi_mat_khau', 'Đổi mật khẩu'),
+      ('uu_dai', 'Điểm & voucher'),
+      ('lich_su', 'Lịch sử đặt phòng')
+    ] %}
+    {% for tab, label in tabs %}
+    <a href="{{ url_for('khach_hang_tai_khoan', tab=tab) }}" style="
+        padding:10px 18px; border-radius:999px; text-decoration:none;
+        font-weight:600; color: {{ 'white' if active_tab == tab else '#065f46' }};
+        background: {{ 'linear-gradient(135deg, var(--green), var(--green-dark))' if active_tab == tab else 'var(--green-light)' }};">
+      {{ label }}
+    </a>
+    {% endfor %}
+  </div>
+
+  <section {% if active_tab != 'thong_tin' %}style="display:none;"{% endif %}>
+    <h3 style="margin-bottom:16px;">Cập nhật thông tin cá nhân</h3>
+    <form method="post" style="display:grid; gap:20px;">
+      <input type="hidden" name="hanh_dong" value="cap_nhat_thong_tin">
+      <div>
+        <label style="display:block; font-weight:600; margin-bottom:6px;">Họ và tên *</label>
+        <input type="text" name="ho_ten" value="{{ kh.ho_ten }}" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+        {% if errors.ho_ten %}<div class="alert danger" style="margin-top:8px;">{{ errors.ho_ten }}</div>{% endif %}
+      </div>
+      <div style="display:grid; gap:20px; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));">
+        <div>
+          <label style="display:block; font-weight:600; margin-bottom:6px;">Số điện thoại</label>
+          <input type="text" name="sdt" value="{{ kh.sdt or '' }}" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+        </div>
+        <div>
+          <label style="display:block; font-weight:600; margin-bottom:6px;">Email</label>
+          <input type="email" name="email" value="{{ kh.email or '' }}" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+          {% if errors.email %}<div class="alert danger" style="margin-top:8px;">{{ errors.email }}</div>{% endif %}
+        </div>
+      </div>
+      <div>
+        <label style="display:block; font-weight:600; margin-bottom:6px;">Địa chỉ</label>
+        <input type="text" name="dia_chi" value="{{ kh.dia_chi or '' }}" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+      </div>
+      <button type="submit" style="background:var(--green); color:#fff; border:none; padding:12px 20px; border-radius:999px; font-weight:600; cursor:pointer;">
+        Lưu thay đổi
+      </button>
+    </form>
+  </section>
+
+  <section {% if active_tab != 'doi_mat_khau' %}style="display:none;"{% endif %}>
+    <h3 style="margin-bottom:16px;">Đổi mật khẩu</h3>
+    <form method="post" style="display:grid; gap:20px;">
+      <input type="hidden" name="hanh_dong" value="doi_mat_khau">
+      <label>
+        <span style="display:block; font-weight:600; margin-bottom:6px;">Mật khẩu hiện tại</span>
+        <input type="password" name="mat_khau_cu" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+        {% if errors.mat_khau_cu %}<div class="alert danger" style="margin-top:8px;">{{ errors.mat_khau_cu }}</div>{% endif %}
+      </label>
+      <label>
+        <span style="display:block; font-weight:600; margin-bottom:6px;">Mật khẩu mới</span>
+        <input type="password" name="mat_khau_moi" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+        {% if errors.mat_khau_moi %}<div class="alert danger" style="margin-top:8px;">{{ errors.mat_khau_moi }}</div>{% endif %}
+      </label>
+      <label>
+        <span style="display:block; font-weight:600; margin-bottom:6px;">Xác nhận mật khẩu mới</span>
+        <input type="password" name="mat_khau_moi_xac_nhan" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+        {% if errors.mat_khau_moi_xac_nhan %}<div class="alert danger" style="margin-top:8px;">{{ errors.mat_khau_moi_xac_nhan }}</div>{% endif %}
+      </label>
+      <button type="submit" style="background:var(--green); color:#fff; border:none; padding:12px 20px; border-radius:999px; font-weight:600; cursor:pointer;">
+        Cập nhật mật khẩu
+      </button>
+    </form>
+  </section>
+
+  <section {% if active_tab != 'uu_dai' %}style="display:none;"{% endif %}>
+    <h3 style="margin-bottom:16px;">Điểm thưởng và voucher</h3>
+    <div style="background:var(--green-light); border-radius:12px; padding:18px; margin-bottom:20px; color:var(--green-dark);">
+      <p style="margin:0; font-weight:600;">Hướng dẫn quy đổi</p>
+      <ul style="margin:8px 0 0 18px;">
+        <li>1 điểm tương đương giảm giá {{ loyalty_percent_per_point }}% (0,1%) trên giá phòng.</li>
+        <li>Voucher tối đa {{ loyalty_max_discount }}% cho một lần đặt phòng.</li>
+        <li>Voucher có hiệu lực theo cấu hình chung của khách sạn.</li>
+      </ul>
+    </div>
+    <form method="post" style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; margin-bottom:28px;">
+      <input type="hidden" name="hanh_dong" value="doi_diem">
+      <label style="flex:1; min-width:220px;">
+        <span style="display:block; font-weight:600; margin-bottom:6px;">Số điểm muốn đổi</span>
+        <input type="number" min="1" name="so_diem" value="" placeholder="Nhập số điểm" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+        {% if errors.so_diem %}<div class="alert danger" style="margin-top:8px;">{{ errors.so_diem }}</div>{% endif %}
+      </label>
+      <button type="submit" style="background:var(--green); color:#fff; border:none; padding:12px 20px; border-radius:999px; font-weight:600; cursor:pointer;">
+        Đổi điểm lấy voucher
+      </button>
+    </form>
+
+    <h4>Voucher còn hiệu lực</h4>
+    {% if vouchers_con_han %}
+      <div style="overflow-x:auto; margin-bottom:24px;">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr style="background:#f9fafb;">
+              <th style="text-align:left; padding:10px; border-bottom:1px solid #e5e7eb;">Mã</th>
+              <th style="text-align:left; padding:10px; border-bottom:1px solid #e5e7eb;">Giảm giá</th>
+              <th style="text-align:left; padding:10px; border-bottom:1px solid #e5e7eb;">Ngày tạo</th>
+              <th style="text-align:left; padding:10px; border-bottom:1px solid #e5e7eb;">Hết hạn</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for voucher in vouchers_con_han %}
+            <tr>
+              <td style="padding:10px; border-bottom:1px solid #f3f4f6; font-weight:600;">{{ voucher.code }}</td>
+              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">{{ voucher.discount_percent|percent }}%</td>
+              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">{{ voucher.created_at|fmt_dt }}</td>
+              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">{{ voucher.expires_at|fmt_dt if voucher.expires_at else 'Không giới hạn' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color:#6b7280;">Bạn chưa có voucher nào đang hoạt động.</p>
+    {% endif %}
+
+    {% if vouchers_khong_con_hieu_luc %}
+      <h4>Voucher đã sử dụng hoặc không còn hiệu lực</h4>
+      <ul style="margin:12px 0 0 18px; color:#4b5563;">
+        {% for voucher, status in vouchers_khong_con_hieu_luc %}
+        <li>
+          <strong>{{ voucher.code }}</strong> - {{ voucher.discount_percent|percent }}% ({{ status }}).
+          {% if voucher.used_at %}Thời gian sử dụng: {{ voucher.used_at|fmt_dt }}.{% elif voucher.expires_at and voucher.expires_at < now() %}Hết hạn: {{ voucher.expires_at|fmt_dt }}.{% endif %}
+        </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </section>
+
+  <section {% if active_tab != 'lich_su' %}style="display:none;"{% endif %}>
+    <h3 style="margin-bottom:16px;">Lịch sử đặt phòng</h3>
+    {% if lich_su_dat_phong %}
+      <div style="overflow-x:auto;">
+        <table style="width:100%; border-collapse:collapse;">
+          <thead>
+            <tr style="background:#f9fafb;">
+              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left;">Mã đặt</th>
+              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left;">Phòng</th>
+              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left;">Nhận</th>
+              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left;">Trả</th>
+              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left;">Trạng thái</th>
+              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:right;">Tổng thanh toán</th>
+              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:right;">Điểm cộng</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for dp in lich_su_dat_phong %}
+            <tr>
+              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">#{{ dp.id }}</td>
+              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">{{ dp.phong.ten if dp.phong else 'Đang cập nhật' }}</td>
+              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">{{ dp.ngay_nhan|fmt_dt }}</td>
+              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">{{ dp.ngay_tra|fmt_dt }}</td>
+              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">
+                {% if dp.trang_thai == 'da_thanh_toan' %}Đã thanh toán{% elif dp.trang_thai == 'nhan' %}Đang ở{% elif dp.trang_thai == 'dat' %}Đang giữ phòng{% elif dp.trang_thai == 'waiting' %}Đang chờ{% elif dp.trang_thai == 'cho_xac_nhan' %}Chờ xác nhận{% elif dp.trang_thai == 'huy' %}Đã hủy{% else %}{{ dp.trang_thai }}{% endif %}
+              </td>
+              <td style="padding:10px; border-bottom:1px solid #f3f4f6; text-align:right;">{{ vnd(dp.tong_thanh_toan or 0) }}</td>
+              <td style="padding:10px; border-bottom:1px solid #f3f4f6; text-align:right;">{{ dp.diem_loyalty_da_cong or 0 }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    {% else %}
+      <p style="color:#6b7280;">Bạn chưa có đặt phòng nào trong hệ thống.</p>
+    {% endif %}
+  </section>
+{% endblock %}

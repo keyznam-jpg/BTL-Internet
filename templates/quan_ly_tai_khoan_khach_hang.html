@@ -1,0 +1,77 @@
+{% extends 'base.html' %}
+{% block content %}
+
+<h2>Quản lý tài khoản khách hàng</h2>
+
+<form method="get" class="card" style="margin-bottom:20px; display:flex; flex-wrap:wrap; gap:12px; align-items:flex-end;">
+  <div style="flex:1; min-width:220px;">
+    <label for="q" style="display:block; font-weight:600; color:#1b5e20; margin-bottom:6px;">Tìm nhanh</label>
+    <input type="text" id="q" name="q" value="{{ keyword }}" placeholder="Nhập họ tên, CMND hoặc email" style="width:100%; padding:10px; border-radius:8px; border:1px solid #c8e6c9;">
+  </div>
+  <div>
+    <label for="trang_thai" style="display:block; font-weight:600; color:#1b5e20; margin-bottom:6px;">Trạng thái</label>
+    <select name="trang_thai" id="trang_thai" style="padding:10px; border-radius:8px; border:1px solid #c8e6c9;">
+      <option value="">Tất cả</option>
+      <option value="hoat_dong" {% if selected_status == 'hoat_dong' %}selected{% endif %}>Hoạt động</option>
+      <option value="khoa" {% if selected_status == 'khoa' %}selected{% endif %}>Đã khóa</option>
+    </select>
+  </div>
+  <button type="submit" class="btn" style="background:#1b5e20; color:#fff; padding:10px 18px; border:none; border-radius:8px; cursor:pointer;">Lọc danh sách</button>
+</form>
+
+<div class="card">
+  <div class="table-scroll with-scroll">
+  <table class="tbl">
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Họ tên</th>
+        <th>CMND/CCCD</th>
+        <th>Email</th>
+        <th>Số điện thoại</th>
+        <th>Điểm</th>
+        <th>Trạng thái</th>
+        <th>Lần đăng nhập cuối</th>
+        <th>Thao tác</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for kh in accounts %}
+      <tr>
+        <td>{{ loop.index }}</td>
+        <td>{{ kh.ho_ten }}</td>
+        <td>{{ kh.cmnd }}</td>
+        <td>{{ kh.email or '—' }}</td>
+        <td>{{ kh.sdt or '—' }}</td>
+        <td style="text-align:right; font-weight:600;">{{ kh.diem_tich_luy or 0 }}</td>
+        <td>
+          {% if kh.trang_thai_tai_khoan == 'khoa' %}
+            <span class="status status-cancelled">Đã khóa</span>
+          {% else %}
+            <span class="status status-checked-in">Hoạt động</span>
+          {% endif %}
+        </td>
+        <td>{{ kh.lan_dang_nhap_cuoi|fmt_dt if kh.lan_dang_nhap_cuoi else 'Chưa đăng nhập' }}</td>
+        <td>
+          <form method="post" action="{{ url_for('cap_nhat_trang_thai_khach_hang', kh_id=kh.id) }}" style="display:flex; gap:6px;">
+            <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
+            {% if kh.trang_thai_tai_khoan == 'khoa' %}
+              <input type="hidden" name="trang_thai" value="hoat_dong">
+              <button type="submit" class="btn" style="background:#2e7d32; color:#fff; padding:6px 12px; border:none; border-radius:6px; cursor:pointer;">Mở khóa</button>
+            {% else %}
+              <input type="hidden" name="trang_thai" value="khoa">
+              <button type="submit" class="btn" style="background:#c62828; color:#fff; padding:6px 12px; border:none; border-radius:6px; cursor:pointer;">Khóa</button>
+            {% endif %}
+          </form>
+        </td>
+      </tr>
+      {% endfor %}
+      {% if not accounts %}
+      <tr><td colspan="9" class="muted">Chưa có khách hàng nào đăng ký tài khoản.</td></tr>
+      {% endif %}
+    </tbody>
+  </table>
+  </div>
+</div>
+
+{% endblock %}

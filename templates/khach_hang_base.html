@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <title>{{ title or 'Tài khoản khách hàng' }}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    :root {
+      --green: #047857;
+      --green-dark: #065f46;
+      --green-light: #d1fae5;
+      --gray-100: #f3f4f6;
+      --gray-300: #d1d5db;
+      --gray-600: #4b5563;
+      --danger: #dc2626;
+      --warning: #f59e0b;
+      --info: #2563eb;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+      margin: 0;
+      background: var(--gray-100);
+      color: #1f2937;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: linear-gradient(135deg, var(--green), var(--green-dark));
+      color: #fff;
+      padding: 24px 18px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.8rem;
+      font-weight: 600;
+    }
+    nav {
+      margin-top: 16px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    nav a {
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      padding: 8px 16px;
+      border-radius: 999px;
+      text-decoration: none;
+      transition: background 0.2s ease;
+      font-weight: 500;
+    }
+    nav a:hover {
+      background: rgba(255,255,255,0.25);
+    }
+    main {
+      flex: 1;
+      width: 100%;
+      max-width: 960px;
+      margin: -60px auto 40px;
+      padding: 0 16px 32px;
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 20px 40px -24px rgba(4, 120, 87, 0.4);
+      padding: 32px;
+    }
+    .flash-messages {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .alert {
+      padding: 14px 18px;
+      border-radius: 12px;
+      background: var(--gray-300);
+      color: #1f2937;
+      font-weight: 500;
+    }
+    .alert.success { background: var(--green-light); color: var(--green-dark); }
+    .alert.danger { background: #fee2e2; color: var(--danger); }
+    .alert.warning { background: #fef3c7; color: var(--warning); }
+    .alert.info { background: #dbeafe; color: var(--info); }
+    footer {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--gray-600);
+      padding: 16px;
+    }
+    @media (max-width: 640px) {
+      header h1 { font-size: 1.4rem; }
+      main { margin-top: -40px; padding: 0 12px 24px; }
+      .card { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>{{ header_title or 'Trung tâm khách hàng' }}</h1>
+    <nav>
+      {% if current_user.is_authenticated and current_user.is_customer %}
+      <a href="{{ url_for('khach_hang_tai_khoan') }}">Tài khoản của tôi</a>
+      <a href="{{ url_for('khach_hang_dang_xuat') }}">Đăng xuất</a>
+      {% else %}
+      <a href="{{ url_for('khach_hang_dang_nhap') }}">Đăng nhập</a>
+      <a href="{{ url_for('khach_hang_dang_ky') }}">Tạo tài khoản</a>
+      <a href="{{ url_for('khach_hang_quen_mat_khau') }}">Quên mật khẩu</a>
+      {% endif %}
+      <a href="{{ url_for('dat_phong_online') }}">Đặt phòng trực tuyến</a>
+    </nav>
+  </header>
+
+  <main>
+    <div class="card">
+      {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+      <div class="flash-messages">
+        {% for cat, msg in messages %}
+        <div class="alert {{ cat }}">{{ msg }}</div>
+        {% endfor %}
+      </div>
+      {% endif %}
+      {% endwith %}
+
+      {% block content %}{% endblock %}
+    </div>
+  </main>
+
+  <footer>
+    &copy; {{ now().year }} {{ hotel_info.name if hotel_info else 'Khách sạn của bạn' }}
+  </footer>
+</body>
+</html>

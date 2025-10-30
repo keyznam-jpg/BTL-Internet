@@ -6,15 +6,15 @@ import json
 import re
 import smtplib
 from functools import wraps
-from urllib.parse import quote, urlencode, urljoin
+from urllib.parse import quote, urlencode, urljoin, urlparse
 import uuid # Library to create unique tokens
 from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
-    LoginManager, login_user, login_required, logout_user, UserMixin, current_user
+    LoginManager, login_user, login_required, logout_user, UserMixin, current_user, AnonymousUserMixin
 )
 from dotenv import load_dotenv
-from sqlalchemy import func, extract, inspect, text, or_
+from sqlalchemy import func, extract, inspect, text, or_, case
 from sqlalchemy.orm import joinedload
 from collections import defaultdict
 import calendar
@@ -34,6 +34,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.middleware.proxy_fix import ProxyFix
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from flask_caching import Cache
 from flask_migrate import Migrate
@@ -257,6 +258,20 @@ def permission_required(*permissions):
     return deco
 
 
+def customer_login_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if not current_user.is_authenticated or not getattr(current_user, 'is_customer', False):
+            flash('Vui lòng đăng nhập tài khoản khách hàng để tiếp tục.', 'warning')
+            return redirect(url_for('khach_hang_dang_nhap', next=request.url))
+        if getattr(current_user, 'trang_thai_tai_khoan', 'hoat_dong') == 'khoa':
+            flash('Tài khoản của bạn đang bị khóa. Vui lòng liên hệ lễ tân để được hỗ trợ.', 'danger')
+            logout_user()
+            return redirect(url_for('khach_hang_dang_nhap'))
+        return fn(*args, **kwargs)
+    return wrapper
+
+
 def generate_role_slug(name):
     base = unicodedata.normalize('NFKD', (name or '').strip())
     base = base.encode('ascii', 'ignore').decode('ascii').lower()
@@ -362,12 +377,16 @@ CUSTOMER_PENDING_CONFIRMATION_MESSAGE = (
     'Đang chờ xác nhận. Nhân viên đang kiểm tra khoản cọc của bạn. '
     'Chúng tôi sẽ thông báo ngay khi có kết quả.'
 )
+LOYALTY_POINT_RATE_VND = 100000  # 1 điểm cho mỗi 100.000đ đã thanh toán
+LOYALTY_PERCENT_PER_POINT = 0.1  # 1 điểm = giảm 0.1%
+LOYALTY_MAX_DISCOUNT_PERCENT = 40.0
+
 # ==== CẤU HÌNH VOUCHER TOÀN CỤC ====
 @cache.memoize(timeout=300)  # Cache voucher config for 5 minutes
 def get_voucher_config():
     discount = HeThongCauHinh.query.filter_by(key='voucher_discount').first()
     expires = HeThongCauHinh.query.filter_by(key='voucher_expires').first()
-    discount_percent = int(discount.value) if discount and discount.value else 10
+    discount_percent = float(discount.value) if discount and discount.value else 10.0
     expires_days = int(expires.value) if expires and expires.value else 60
     return discount_percent, expires_days
 
@@ -377,8 +396,10 @@ def get_voucher_config():
 @permission_required('customers.vouchers')
 def cai_dat_voucher():
     try:
-        discount_percent = int(request.form.get('discount_percent', 10))
+        discount_percent = float(request.form.get('discount_percent', 10))
         expires_days = int(request.form.get('expires_days', 60))
+        if discount_percent < 0 or discount_percent > 100:
+            raise ValueError("discount_percent_range")
         # Lưu vào bảng cấu hình
         for key, value in [('voucher_discount', discount_percent), ('voucher_expires', expires_days)]:
             cauhinh = HeThongCauHinh.query.filter_by(key=key).first()
@@ -411,6 +432,23 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 login_manager = LoginManager(app)
 login_manager.login_view = "login"
+
+
+class AnonymousUser(AnonymousUserMixin):
+    @property
+    def is_customer(self):
+        return False
+
+    @property
+    def is_staff(self):
+        return False
+
+    @property
+    def avatar_path(self):
+        return "img/ttcn.png"
+
+
+login_manager.anonymous_user = AnonymousUser
 
 # ========================= DATABASE MODELS =========================
 class Role(db.Model):
@@ -503,6 +541,14 @@ class NguoiDung(UserMixin, db.Model):
             return ''
         return default_labels.get(self.loai, self.loai.replace('_', ' ').title())
 
+    @property
+    def is_customer(self):
+        return False
+
+    @property
+    def is_staff(self):
+        return True
+
     def has_permission(self, permission_key):
         if not permission_key:
             return True
@@ -541,6 +587,102 @@ class KhachHang(db.Model):
     sdt    = db.Column(db.String(30))
     email  = db.Column(db.String(120))
     dia_chi = db.Column(db.String(200))
+    mat_khau_hash = db.Column(db.String(255))
+    diem_tich_luy = db.Column(db.Integer, default=0)
+    ngay_dang_ky = db.Column(db.DateTime)
+    ngay_cap_nhat = db.Column(db.DateTime)
+    lan_dang_nhap_cuoi = db.Column(db.DateTime)
+    trang_thai_tai_khoan = db.Column(db.String(20), default='hoat_dong')  # hoat_dong, khoa
+
+    def set_password(self, raw_password):
+        if not raw_password:
+            raise ValueError("Mật khẩu không được để trống.")
+        self.mat_khau_hash = generate_password_hash(raw_password)
+        if not self.ngay_dang_ky:
+            self.ngay_dang_ky = datetime.now()
+        self.ngay_cap_nhat = datetime.now()
+
+    def check_password(self, raw_password):
+        if not self.mat_khau_hash:
+            return False
+        return check_password_hash(self.mat_khau_hash, raw_password)
+
+    @property
+    def co_tai_khoan(self):
+        return bool(self.mat_khau_hash)
+
+    def tang_diem(self, so_diem):
+        if so_diem is None:
+            return
+        self.diem_tich_luy = (self.diem_tich_luy or 0) + int(so_diem)
+        self.ngay_cap_nhat = datetime.now()
+
+    def tru_diem(self, so_diem):
+        if so_diem is None:
+            return
+        hien_tai = self.diem_tich_luy or 0
+        moi = hien_tai - int(so_diem)
+        self.diem_tich_luy = moi if moi > 0 else 0
+        self.ngay_cap_nhat = datetime.now()
+
+
+class CustomerUser(UserMixin):
+    """Wrapper cho tài khoản khách hàng dùng chung với Flask-Login."""
+
+    role = None
+    personal_permissions = ()
+
+    def __init__(self, khachhang: KhachHang):
+        self.khachhang = khachhang
+
+    def get_id(self):
+        return f"customer:{self.khachhang.id}"
+
+    @property
+    def id(self):
+        return self.khachhang.id
+
+    @property
+    def ten(self):
+        return self.khachhang.ho_ten
+
+    @property
+    def ten_dang_nhap(self):
+        return self.khachhang.email or self.khachhang.cmnd
+
+    @property
+    def loai(self):
+        return 'khach'
+
+    @property
+    def role_slug(self):
+        return 'khach'
+
+    @property
+    def role_name(self):
+        return 'Khách hàng'
+
+    @property
+    def is_staff(self):
+        return False
+
+    @property
+    def is_customer(self):
+        return True
+
+    @property
+    def avatar_path(self):
+        return "img/ttcn.png"
+
+    def has_permission(self, permission_key):
+        return False
+
+    @property
+    def is_active(self):
+        return self.khachhang.trang_thai_tai_khoan != 'khoa'
+
+    def __getattr__(self, item):
+        return getattr(self.khachhang, item)
 
 class DatPhong(db.Model):
     __tablename__ = "datphong"
@@ -568,6 +710,7 @@ class DatPhong(db.Model):
     voucher_id = db.Column(db.Integer, db.ForeignKey("voucher.id"), nullable=True)
     auto_confirmed_at = db.Column(db.DateTime)
     created_at = db.Column(db.DateTime, default=datetime.now)
+    diem_loyalty_da_cong = db.Column(db.Integer, default=0)
     voucher = db.relationship("Voucher")
     khachhang = db.relationship("KhachHang")
     phong = db.relationship("Phong")
@@ -776,7 +919,7 @@ class Voucher(db.Model):
     is_used = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.now)
     expires_at = db.Column(db.DateTime)
-    discount_percent = db.Column(db.Integer, default=10)  # 10% mặc định
+    discount_percent = db.Column(db.Float, default=10.0)  # 10% mặc định, hỗ trợ số lẻ
     used_at = db.Column(db.DateTime)
     khachhang = db.relationship("KhachHang")
 
@@ -833,7 +976,22 @@ class Attendance(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return NguoiDung.query.get(int(user_id))
+    if not user_id:
+        return None
+    try:
+        if user_id.startswith('customer:'):
+            kh_id = int(user_id.split(':', 1)[1])
+            kh = KhachHang.query.get(kh_id)
+            return CustomerUser(kh) if kh else None
+        if user_id.startswith('staff:'):
+            user_id = user_id.split(':', 1)[1]
+    except AttributeError:
+        # user_id là dạng số nguyên cũ -> tiếp tục xử lý
+        pass
+    try:
+        return NguoiDung.query.get(int(user_id))
+    except (ValueError, TypeError):
+        return None
 
 # ========================= HELPER FUNCTIONS =========================
 def vnd(n):
@@ -857,7 +1015,66 @@ def generate_voucher_code(length=8):
         if not Voucher.query.filter_by(code=code).first():
             return code
 
-def issue_voucher_for_khachhang(khachhang_id, discount_percent=None, expires_days=None):
+def tinh_diem_tich_luy_tu_thanh_toan(so_tien):
+    if not so_tien or so_tien <= 0:
+        return 0
+    return max(0, int(so_tien // LOYALTY_POINT_RATE_VND))
+
+def tinh_muc_giam_gia_tu_diem(so_diem):
+    if not so_diem or so_diem <= 0:
+        return 0.0
+    giam = round(float(so_diem) * LOYALTY_PERCENT_PER_POINT, 1)
+    return min(giam, LOYALTY_MAX_DISCOUNT_PERCENT)
+
+def award_loyalty_points_for_booking(dp):
+    if not dp or not dp.khachhang or not dp.khachhang.co_tai_khoan:
+        return 0
+    tong = dp.tong_thanh_toan or 0
+    if tong <= 0:
+        tong = (dp.tien_phong or 0) + (dp.tien_dv or 0) + (dp.tien_phat or 0)
+    so_diem_du_kien = tinh_diem_tich_luy_tu_thanh_toan(tong)
+    da_cong = dp.diem_loyalty_da_cong or 0
+    if so_diem_du_kien <= da_cong:
+        return 0
+    moi = so_diem_du_kien - da_cong
+    dp.khachhang.tang_diem(moi)
+    dp.diem_loyalty_da_cong = da_cong + moi
+    return moi
+
+def get_current_customer():
+    if not current_user.is_authenticated:
+        return None
+    if getattr(current_user, 'is_customer', False):
+        if isinstance(current_user, CustomerUser):
+            return current_user.khachhang
+        return current_user
+    return None
+
+def resolve_next_url(default_endpoint='khach_hang_tai_khoan'):
+    next_url = request.args.get('next') or request.form.get('next')
+    if next_url:
+        parsed = urlparse(next_url)
+        if not parsed.netloc and not parsed.scheme:
+            return next_url
+    return url_for(default_endpoint)
+
+def normalize_email(email_value):
+    if not email_value:
+        return ''
+    return email_value.strip().lower()
+
+def format_percent(value):
+    try:
+        value_float = float(value)
+    except (TypeError, ValueError):
+        return '0'
+    if value_float.is_integer():
+        return str(int(value_float))
+    text = f"{value_float:.1f}"
+    return text.rstrip('0').rstrip('.')
+
+
+def issue_voucher_for_khachhang(khachhang_id, discount_percent=None, expires_days=None, auto_commit=True):
     # Luôn lấy cấu hình mới nhất từ database
     discount_percent_db, expires_days_db = get_voucher_config()
     if discount_percent is None:
@@ -868,7 +1085,8 @@ def issue_voucher_for_khachhang(khachhang_id, discount_percent=None, expires_day
     expires_at = datetime.now() + timedelta(days=expires_days)
     voucher = Voucher(code=code, khachhang_id=khachhang_id, discount_percent=discount_percent, expires_at=expires_at)
     db.session.add(voucher)
-    db.session.commit()
+    if auto_commit:
+        db.session.commit()
     return voucher
 
 def fmt_dt(dt):
@@ -877,6 +1095,7 @@ def fmt_dt(dt):
 app.jinja_env.filters["vnd"] = vnd
 app.jinja_env.filters["fmt_dt"] = fmt_dt
 app.jinja_env.filters["vnd_short"] = vnd_short
+app.jinja_env.filters["percent"] = format_percent
 
 
 def allowed_avatar(filename):
@@ -1049,7 +1268,8 @@ def inject_globals():
         now=datetime.now,
         unread_messages=unread_count,
         pending_online_count=pending_online_count,
-        vnd=vnd
+        vnd=vnd,
+        hotel_info=get_hotel_profile()
     )
 
 
@@ -1066,10 +1286,36 @@ def ensure_tables_exist():
             if 'email' not in columns:
                 with db.engine.connect() as conn:
                     conn.execute(text('ALTER TABLE khachhang ADD COLUMN email VARCHAR(120)'))
+            if 'mat_khau_hash' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE khachhang ADD COLUMN mat_khau_hash VARCHAR(255)'))
+            if 'diem_tich_luy' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE khachhang ADD COLUMN diem_tich_luy INT DEFAULT 0'))
+            if 'ngay_dang_ky' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE khachhang ADD COLUMN ngay_dang_ky DATETIME NULL'))
+            if 'ngay_cap_nhat' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE khachhang ADD COLUMN ngay_cap_nhat DATETIME NULL'))
+            if 'lan_dang_nhap_cuoi' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE khachhang ADD COLUMN lan_dang_nhap_cuoi DATETIME NULL'))
+            if 'trang_thai_tai_khoan' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text("ALTER TABLE khachhang ADD COLUMN trang_thai_tai_khoan VARCHAR(20) DEFAULT 'hoat_dong'"))
             columns_datphong = {col['name'] for col in inspector.get_columns('datphong')}
             if 'created_at' not in columns_datphong:
                 with db.engine.connect() as conn:
                     conn.execute(text('ALTER TABLE datphong ADD COLUMN created_at DATETIME DEFAULT CURRENT_TIMESTAMP'))
+            if 'diem_loyalty_da_cong' not in columns_datphong:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE datphong ADD COLUMN diem_loyalty_da_cong INT DEFAULT 0'))
+            voucher_columns = inspector.get_columns('voucher')
+            discount_column = next((col for col in voucher_columns if col['name'] == 'discount_percent'), None)
+            if discount_column and discount_column['type'].__class__.__name__.lower() in {'integer', 'smallinteger', 'bigint'}:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE voucher MODIFY COLUMN discount_percent FLOAT DEFAULT 10'))
         except Exception as exc:
             app.logger.warning("Không thể đảm bảo cột cho bảng: %s", exc)
         ensure_default_roles()
@@ -1077,8 +1323,53 @@ def ensure_tables_exist():
         app.logger.warning("Không thể tạo bảng tự động: %s", exc)
 
 
+def ensure_customer_email_templates():
+    templates = {
+        'customer_welcome': {
+            'subject': 'Chào mừng {{ ho_ten }} đến với {{ ten_khach_san }}',
+            'body': """<!DOCTYPE html>
+<html lang="vi">
+  <body style="font-family: Arial, sans-serif; color:#1f2937;">
+    <p>Xin chào {{ ho_ten }},</p>
+    <p>Cảm ơn bạn đã đăng ký tài khoản khách hàng tại <strong>{{ ten_khach_san }}</strong>.</p>
+    <p>Từ nay bạn có thể theo dõi lịch sử đặt phòng, tích điểm và đổi lấy ưu đãi một cách dễ dàng.</p>
+    <p><strong>Thông tin đăng nhập:</strong></p>
+    <ul>
+      <li>CMND/CCCD: <strong>{{ cmnd }}</strong></li>
+      <li>Email: <strong>{{ email or 'Chưa cập nhật' }}</strong></li>
+    </ul>
+    <p>Đừng quên đăng nhập và cập nhật thông tin cá nhân để chúng tôi phục vụ bạn tốt hơn.</p>
+    <p>Trân trọng,<br>{{ ten_khach_san }}</p>
+  </body>
+</html>"""
+        },
+        'customer_password_reset': {
+            'subject': 'Mật khẩu mới cho tài khoản khách hàng tại {{ ten_khach_san }}',
+            'body': """<!DOCTYPE html>
+<html lang="vi">
+  <body style="font-family: Arial, sans-serif; color:#1f2937;">
+    <p>Xin chào {{ ho_ten }},</p>
+    <p>Chúng tôi đã nhận được yêu cầu khôi phục mật khẩu của bạn. Dưới đây là mật khẩu đăng nhập mới:</p>
+    <p style="font-size: 18px; font-weight: 600;">Mật khẩu mới: <span style="color:#047857;">{{ mat_khau_moi }}</span></p>
+    <p>Vui lòng đăng nhập và thay đổi mật khẩu ngay sau khi truy cập để đảm bảo an toàn.</p>
+    <p>Nếu bạn không thực hiện yêu cầu này, hãy liên hệ ngay với chúng tôi để được hỗ trợ.</p>
+    <p>Trân trọng,<br>{{ ten_khach_san }}</p>
+  </body>
+</html>"""
+        }
+    }
+    created = False
+    for key, tpl in templates.items():
+        if not EmailTemplate.query.filter_by(key=key).first():
+            db.session.add(EmailTemplate(key=key, subject=tpl['subject'], body=tpl['body']))
+            created = True
+    if created:
+        db.session.commit()
+
+
 with app.app_context():
     ensure_tables_exist()
+    ensure_customer_email_templates()
 
 
 def tinh_thuong_doanh_thu(doanh_thu, tiers):
@@ -2548,6 +2839,345 @@ def test_timeout_cleanup():
     flash('Đã chạy cleanup timeout thủ công', 'info')
     return redirect(url_for('thanh_toan_chua_hoan_tat'))
 
+@app.route('/khach-hang/dang-ky', methods=['GET', 'POST'])
+def khach_hang_dang_ky():
+    if current_user.is_authenticated:
+        if getattr(current_user, 'is_customer', False):
+            return redirect(url_for('khach_hang_tai_khoan'))
+        flash('Bạn đang đăng nhập bằng tài khoản nhân viên.', 'info')
+        return redirect(url_for('dashboard'))
+
+    form = {
+        'ho_ten': '',
+        'cmnd': '',
+        'email': '',
+        'sdt': '',
+        'dia_chi': ''
+    }
+    errors = {}
+
+    if request.method == 'POST':
+        ho_ten = (request.form.get('ho_ten') or '').strip()
+        cmnd = (request.form.get('cmnd') or '').strip()
+        email_raw = (request.form.get('email') or '').strip()
+        email_normalized = normalize_email(email_raw)
+        sdt = (request.form.get('sdt') or '').strip()
+        dia_chi = (request.form.get('dia_chi') or '').strip()
+        mat_khau = request.form.get('mat_khau') or ''
+        mat_khau_xac_nhan = request.form.get('mat_khau_xac_nhan') or ''
+        form.update({'ho_ten': ho_ten, 'cmnd': cmnd, 'email': email_raw, 'sdt': sdt, 'dia_chi': dia_chi})
+
+        if not ho_ten:
+            errors['ho_ten'] = 'Vui lòng nhập họ tên đầy đủ.'
+        if not cmnd:
+            errors['cmnd'] = 'Vui lòng nhập số CMND/CCCD.'
+        elif not re.fullmatch(r'\d{9,12}', cmnd):
+            errors['cmnd'] = 'CMND/CCCD phải gồm 9-12 chữ số.'
+        if not email_raw:
+            errors['email'] = 'Vui lòng nhập email để nhận thông tin.'
+        elif not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', email_raw):
+            errors['email'] = 'Địa chỉ email không hợp lệ.'
+        if len(mat_khau) < 8:
+            errors['mat_khau'] = 'Mật khẩu phải có tối thiểu 8 ký tự.'
+        if mat_khau != mat_khau_xac_nhan:
+            errors['mat_khau_xac_nhan'] = 'Mật khẩu xác nhận chưa khớp.'
+
+        existing = KhachHang.query.filter_by(cmnd=cmnd).first() if cmnd else None
+        if existing and existing.co_tai_khoan:
+            errors['cmnd'] = 'CMND/CCCD này đã được đăng ký tài khoản khách hàng.'
+
+        if email_normalized:
+            email_conflict = KhachHang.query.filter(
+                func.lower(KhachHang.email) == email_normalized,
+                KhachHang.cmnd != cmnd,
+                KhachHang.mat_khau_hash.isnot(None)
+            ).first()
+            if email_conflict:
+                errors['email'] = 'Email này đã được sử dụng cho tài khoản khác.'
+
+        if not errors:
+            try:
+                if existing:
+                    kh = existing
+                else:
+                    kh = KhachHang(cmnd=cmnd)
+                    db.session.add(kh)
+                kh.ho_ten = ho_ten
+                kh.email = email_normalized or None
+                kh.sdt = sdt or None
+                kh.dia_chi = dia_chi or None
+                kh.set_password(mat_khau)
+                kh.trang_thai_tai_khoan = 'hoat_dong'
+                kh.diem_tich_luy = kh.diem_tich_luy or 0
+                now = datetime.now()
+                kh.ngay_dang_ky = kh.ngay_dang_ky or now
+                kh.ngay_cap_nhat = now
+                kh.lan_dang_nhap_cuoi = now
+                db.session.flush()
+                points_added = 0
+                if kh.id:
+                    thanh_toan_truoc = DatPhong.query.filter_by(khachhang_id=kh.id, trang_thai='da_thanh_toan').all()
+                    for dp in thanh_toan_truoc:
+                        points_added += award_loyalty_points_for_booking(dp)
+                db.session.commit()
+                if kh.email:
+                    try:
+                        hotel = get_hotel_profile()
+                        send_email_with_template(
+                            'customer_welcome',
+                            kh.email,
+                            {
+                                'ho_ten': kh.ho_ten,
+                                'ten_khach_san': hotel['name'],
+                                'cmnd': kh.cmnd,
+                                'email': kh.email
+                            },
+                            khachhang_id=kh.id
+                        )
+                    except Exception as exc:
+                        app.logger.warning('Không thể gửi email chào mừng khách hàng mới: %s', exc)
+                login_user(CustomerUser(kh))
+                flash('Đăng ký tài khoản thành công! Bạn có thể theo dõi đặt phòng và tích điểm ngay bây giờ.', 'success')
+                if points_added:
+                    flash(f'Đã cộng thêm {points_added} điểm từ những lần lưu trú trước đây.', 'info')
+                return redirect(url_for('khach_hang_tai_khoan'))
+            except Exception as exc:
+                app.logger.error('Lỗi đăng ký tài khoản khách hàng: %s', exc)
+                db.session.rollback()
+                flash('Không thể đăng ký tài khoản. Vui lòng thử lại sau ít phút.', 'danger')
+
+    return render_template('khach_hang_dang_ky.html', form=form, errors=errors)
+
+
+@app.route('/khach-hang/dang-nhap', methods=['GET', 'POST'])
+def khach_hang_dang_nhap():
+    if current_user.is_authenticated:
+        if getattr(current_user, 'is_customer', False):
+            return redirect(url_for('khach_hang_tai_khoan'))
+        flash('Bạn đang đăng nhập bằng tài khoản nhân viên.', 'info')
+        return redirect(url_for('dashboard'))
+
+    error = None
+    form_username = ''
+    if request.method == 'POST':
+        identifier = (request.form.get('ten_dang_nhap') or '').strip()
+        mat_khau = request.form.get('mat_khau') or ''
+        remember = bool(request.form.get('ghi_nho'))
+        form_username = identifier
+        if not identifier or not mat_khau:
+            error = 'Vui lòng nhập đủ thông tin đăng nhập.'
+        else:
+            identifier_lower = normalize_email(identifier)
+            kh = KhachHang.query.filter(
+                db.or_(
+                    KhachHang.cmnd == identifier,
+                    func.lower(KhachHang.email) == identifier_lower
+                )
+            ).first()
+            if not kh:
+                error = 'Không tìm thấy tài khoản phù hợp.'
+            elif not kh.co_tai_khoan:
+                error = 'CMND/CCCD này chưa được đăng ký tài khoản khách hàng.'
+            elif kh.trang_thai_tai_khoan == 'khoa':
+                error = 'Tài khoản của bạn đang bị khóa. Vui lòng liên hệ lễ tân để được hỗ trợ.'
+            elif not kh.check_password(mat_khau):
+                error = 'Mật khẩu không chính xác.'
+            else:
+                kh.lan_dang_nhap_cuoi = datetime.now()
+                kh.ngay_cap_nhat = datetime.now()
+                db.session.commit()
+                login_user(CustomerUser(kh), remember=remember)
+                flash('Đăng nhập thành công.', 'success')
+                return redirect(resolve_next_url())
+
+    return render_template('khach_hang_dang_nhap.html', error=error, form_username=form_username)
+
+
+@app.route('/khach-hang/dang-xuat')
+@customer_login_required
+def khach_hang_dang_xuat():
+    logout_user()
+    flash('Bạn đã đăng xuất khỏi tài khoản khách hàng.', 'info')
+    return redirect(url_for('khach_hang_dang_nhap'))
+
+
+@app.route('/khach-hang/quen-mat-khau', methods=['GET', 'POST'])
+def khach_hang_quen_mat_khau():
+    if current_user.is_authenticated and getattr(current_user, 'is_customer', False):
+        return redirect(url_for('khach_hang_tai_khoan'))
+
+    form = {'cmnd': '', 'email': ''}
+    error = None
+
+    if request.method == 'POST':
+        cmnd = (request.form.get('cmnd') or '').strip()
+        email_raw = (request.form.get('email') or '').strip()
+        email_normalized = normalize_email(email_raw)
+        form.update({'cmnd': cmnd, 'email': email_raw})
+
+        if not cmnd or not email_raw:
+            error = 'Vui lòng nhập đầy đủ CMND/CCCD và email đã đăng ký.'
+        else:
+            kh = KhachHang.query.filter_by(cmnd=cmnd).first()
+            if not kh or not kh.co_tai_khoan:
+                error = 'Thông tin chưa khớp với tài khoản nào.'
+            elif not kh.email:
+                error = 'Tài khoản này chưa cập nhật email. Vui lòng liên hệ lễ tân để thay đổi mật khẩu.'
+            elif kh.email.lower() != email_normalized:
+                error = 'Email không trùng khớp với thông tin đã đăng ký.'
+            else:
+                new_password = ''.join(random.choices(string.ascii_letters + string.digits, k=10))
+                try:
+                    kh.set_password(new_password)
+                    kh.ngay_cap_nhat = datetime.now()
+                    db.session.commit()
+                except Exception as exc:
+                    db.session.rollback()
+                    app.logger.error('Không thể đặt lại mật khẩu cho khách hàng %s: %s', kh.id, exc)
+                    error = 'Không thể đặt lại mật khẩu lúc này. Vui lòng thử lại sau.'
+                else:
+                    email_sent = False
+                    if kh.email:
+                        try:
+                            hotel = get_hotel_profile()
+                            send_email_with_template(
+                                'customer_password_reset',
+                                kh.email,
+                                {
+                                    'ho_ten': kh.ho_ten,
+                                    'ten_khach_san': hotel['name'],
+                                    'mat_khau_moi': new_password
+                                },
+                                khachhang_id=kh.id
+                            )
+                            email_sent = True
+                        except Exception as exc:
+                            app.logger.warning('Không thể gửi email đặt lại mật khẩu: %s', exc)
+                            flash('Đã tạo mật khẩu mới nhưng không thể gửi email thông báo. Vui lòng liên hệ lễ tân để nhận hỗ trợ.', 'warning')
+                    if email_sent:
+                        flash('Mật khẩu mới đã được gửi tới email của bạn. Vui lòng kiểm tra hộp thư và đổi lại mật khẩu sau khi đăng nhập.', 'success')
+                    else:
+                        flash('Mật khẩu mới đã được tạo. Vui lòng liên hệ lễ tân để nhận hỗ trợ đăng nhập.', 'success')
+                    flash('Vui lòng đăng nhập và đổi mật khẩu để đảm bảo an toàn.', 'info')
+                    return redirect(url_for('khach_hang_dang_nhap'))
+
+    return render_template('khach_hang_quen_mat_khau.html', form=form, error=error)
+
+
+@app.route('/khach-hang/tai-khoan', methods=['GET', 'POST'])
+@customer_login_required
+def khach_hang_tai_khoan():
+    kh = get_current_customer()
+    if not kh:
+        flash('Không tìm thấy thông tin tài khoản.', 'danger')
+        return redirect(url_for('khach_hang_dang_nhap'))
+
+    errors = {}
+    active_tab = request.form.get('hanh_dong') or request.args.get('tab') or 'thong_tin'
+
+    if request.method == 'POST':
+        action = request.form.get('hanh_dong')
+        if action == 'cap_nhat_thong_tin':
+            ho_ten = (request.form.get('ho_ten') or '').strip()
+            sdt = (request.form.get('sdt') or '').strip()
+            dia_chi = (request.form.get('dia_chi') or '').strip()
+            email_raw = (request.form.get('email') or '').strip()
+            email_normalized = normalize_email(email_raw)
+            if not ho_ten:
+                errors['ho_ten'] = 'Họ tên không được để trống.'
+            if email_raw and not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', email_raw):
+                errors['email'] = 'Định dạng email không hợp lệ.'
+            if email_normalized:
+                email_conflict = KhachHang.query.filter(
+                    func.lower(KhachHang.email) == email_normalized,
+                    KhachHang.id != kh.id,
+                    KhachHang.mat_khau_hash.isnot(None)
+                ).first()
+                if email_conflict:
+                    errors['email'] = 'Email này đã được dùng cho tài khoản khác.'
+            if not errors:
+                kh.ho_ten = ho_ten
+                kh.sdt = sdt or None
+                kh.dia_chi = dia_chi or None
+                kh.email = email_normalized or None
+                kh.ngay_cap_nhat = datetime.now()
+                db.session.commit()
+                flash('Đã cập nhật thông tin cá nhân.', 'success')
+                return redirect(url_for('khach_hang_tai_khoan', tab='thong_tin'))
+            active_tab = 'thong_tin'
+
+        elif action == 'doi_mat_khau':
+            mat_khau_cu = request.form.get('mat_khau_cu') or ''
+            mat_khau_moi = request.form.get('mat_khau_moi') or ''
+            mat_khau_moi_xac_nhan = request.form.get('mat_khau_moi_xac_nhan') or ''
+            if not kh.check_password(mat_khau_cu):
+                errors['mat_khau_cu'] = 'Mật khẩu hiện tại không đúng.'
+            if len(mat_khau_moi) < 8:
+                errors['mat_khau_moi'] = 'Mật khẩu mới phải có ít nhất 8 ký tự.'
+            if mat_khau_moi != mat_khau_moi_xac_nhan:
+                errors['mat_khau_moi_xac_nhan'] = 'Mật khẩu xác nhận chưa khớp.'
+            if not errors:
+                kh.set_password(mat_khau_moi)
+                kh.ngay_cap_nhat = datetime.now()
+                db.session.commit()
+                flash('Đã đổi mật khẩu thành công.', 'success')
+                return redirect(url_for('khach_hang_tai_khoan', tab='doi_mat_khau'))
+            active_tab = 'doi_mat_khau'
+
+        elif action == 'doi_diem':
+            try:
+                so_diem = int(request.form.get('so_diem', '0'))
+            except ValueError:
+                so_diem = 0
+            if so_diem <= 0:
+                errors['so_diem'] = 'Vui lòng nhập số điểm muốn đổi lớn hơn 0.'
+            elif so_diem > (kh.diem_tich_luy or 0):
+                errors['so_diem'] = 'Bạn không đủ điểm để đổi.'
+            discount_percent = tinh_muc_giam_gia_tu_diem(so_diem)
+            if discount_percent <= 0:
+                errors['so_diem'] = 'Số điểm chưa đủ để tạo voucher.'
+            if not errors:
+                try:
+                    voucher = issue_voucher_for_khachhang(kh.id, discount_percent=discount_percent, auto_commit=False)
+                    kh.tru_diem(so_diem)
+                    db.session.commit()
+                    flash(
+                        f'Đã đổi {so_diem} điểm lấy voucher {voucher.code} giảm {discount_percent}%.',
+                        'success'
+                    )
+                    return redirect(url_for('khach_hang_tai_khoan', tab='uu_dai'))
+                except Exception as exc:
+                    db.session.rollback()
+                    app.logger.error('Không thể đổi điểm sang voucher: %s', exc)
+                    errors['so_diem'] = 'Không thể tạo voucher lúc này, vui lòng thử lại.'
+            active_tab = 'uu_dai'
+
+    lich_su_dat_phong = DatPhong.query.filter_by(khachhang_id=kh.id).order_by(DatPhong.ngay_nhan.desc()).all()
+    vouchers = Voucher.query.filter_by(khachhang_id=kh.id).order_by(Voucher.created_at.desc()).all()
+    now_dt = datetime.now()
+    voucher_con_han = []
+    vouchers_khong_con_hieu_luc = []
+    for voucher in vouchers:
+        if not voucher.is_used and (voucher.expires_at is None or voucher.expires_at >= now_dt):
+            voucher_con_han.append(voucher)
+        else:
+            status_text = 'Đã sử dụng' if voucher.is_used else 'Đã hết hạn'
+            vouchers_khong_con_hieu_luc.append((voucher, status_text))
+
+    return render_template(
+        'khach_hang_tai_khoan.html',
+        kh=kh,
+        errors=errors,
+        active_tab=active_tab,
+        lich_su_dat_phong=lich_su_dat_phong,
+        vouchers_con_han=voucher_con_han,
+        vouchers_khong_con_hieu_luc=vouchers_khong_con_hieu_luc,
+        loyalty_percent_per_point=LOYALTY_PERCENT_PER_POINT,
+        loyalty_max_discount=LOYALTY_MAX_DISCOUNT_PERCENT,
+        tinh_muc_giam_gia_tu_diem=tinh_muc_giam_gia_tu_diem
+    )
+
+
 @app.route('/login', methods=['GET','POST'])
 def login():
     if request.method == 'POST':
@@ -3782,12 +4412,15 @@ def thanh_toan(dat_id):
             dp.phong.trang_thai = 'trong'
             dp.trang_thai = 'da_thanh_toan'
             dp.nhanvien_id = current_user.id
+            diem_moi = award_loyalty_points_for_booking(dp)
             db.session.commit()
             
             # Kiểm tra và chuyển waiting bookings
             process_waiting_bookings(dp.phong_id, dp.thuc_te_tra)
             
             flash('Da ghi nhan thanh toan phong bang tien mat.', 'success')
+            if diem_moi:
+                flash(f'Khách hàng được cộng thêm {diem_moi} điểm thưởng.', 'info')
             return redirect(url_for('in_hoa_don', dat_id=dat_id))
 
         amount_due = max(0, invoice_ctx.get('tien_con_lai', 0))
@@ -4140,8 +4773,12 @@ def api_confirm_payment(token):
             dp.trang_thai = 'da_thanh_toan'
             if current_user.is_authenticated:
                 dp.nhanvien_id = current_user.id
+            diem_moi = award_loyalty_points_for_booking(dp)
             data['redirect_url'] = url_for('cam_on', token=token)
-            data['message'] = 'Cảm ơn bạn đã hoàn tất thanh toán. Thủ tục trả phòng đã được hoàn tất.'
+            if diem_moi:
+                data['message'] = f'Cảm ơn bạn đã hoàn tất thanh toán. Bạn vừa được cộng {diem_moi} điểm tích lũy.'
+            else:
+                data['message'] = 'Cảm ơn bạn đã hoàn tất thanh toán. Thủ tục trả phòng đã được hoàn tất.'
             data['completed'] = True
             session_model.payload = json.dumps(data)
             db.session.commit()
@@ -4405,6 +5042,59 @@ def tra_phong(dat_id):
 def khach_hang():
     ds_khach = DatPhong.query.order_by(DatPhong.ngay_nhan.asc()).all()
     return render_template('khach_hang.html', ds_khach=ds_khach)
+
+
+@app.route('/quan-ly-tai-khoan-khach-hang')
+@login_required
+@permission_required('customers.view')
+def quan_ly_tai_khoan_khach_hang():
+    keyword = (request.args.get('q') or '').strip()
+    trang_thai = request.args.get('trang_thai') or ''
+    query = KhachHang.query.filter(KhachHang.mat_khau_hash.isnot(None))
+    if keyword:
+        like_pattern = f"%{keyword}%"
+        query = query.filter(
+            or_(
+                KhachHang.ho_ten.ilike(like_pattern),
+                KhachHang.cmnd.ilike(like_pattern),
+                KhachHang.email.ilike(like_pattern)
+            )
+        )
+    if trang_thai in {'hoat_dong', 'khoa'}:
+        query = query.filter(KhachHang.trang_thai_tai_khoan == trang_thai)
+    accounts = query.order_by(
+        KhachHang.trang_thai_tai_khoan.asc(),
+        case((KhachHang.ngay_cap_nhat.is_(None), 1), else_=0),
+        KhachHang.ngay_cap_nhat.desc(),
+        KhachHang.ho_ten.asc()
+    ).all()
+    return render_template(
+        'quan_ly_tai_khoan_khach_hang.html',
+        accounts=accounts,
+        keyword=keyword,
+        selected_status=trang_thai
+    )
+
+
+@app.route('/quan-ly-tai-khoan-khach-hang/<int:kh_id>/trang-thai', methods=['POST'])
+@login_required
+@permission_required('customers.view')
+def cap_nhat_trang_thai_khach_hang(kh_id):
+    kh = KhachHang.query.get_or_404(kh_id)
+    trang_thai = request.form.get('trang_thai')
+    if trang_thai not in {'hoat_dong', 'khoa'}:
+        flash('Trạng thái tài khoản không hợp lệ.', 'danger')
+    else:
+        kh.trang_thai_tai_khoan = trang_thai
+        kh.ngay_cap_nhat = datetime.now()
+        db.session.commit()
+        flash('Đã cập nhật trạng thái tài khoản khách hàng.', 'success')
+    redirect_to = request.form.get('redirect_to')
+    if redirect_to:
+        parsed = urlparse(redirect_to)
+        if not parsed.netloc and not parsed.scheme:
+            return redirect(redirect_to)
+    return redirect(url_for('quan_ly_tai_khoan_khach_hang'))
 
 @app.route('/thong-tin-ca-nhan', methods=['GET', 'POST'])
 @login_required

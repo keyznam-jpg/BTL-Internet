@@ -1,0 +1,55 @@
+{% extends 'khach_hang_base.html' %}
+{% set title = 'Đăng ký khách hàng' %}
+{% set header_title = 'Tạo tài khoản khách hàng thân thiết' %}
+
+{% block content %}
+  <h2>Tạo tài khoản khách hàng</h2>
+  <p style="color:#4b5563; margin-bottom: 24px;">Đăng ký tài khoản để tích điểm, đổi voucher và xem lịch sử đặt phòng mọi lúc.</p>
+
+  <form method="post" style="display:grid; gap:18px;">
+    <div>
+      <label style="display:block; font-weight:600; margin-bottom:6px;">Họ và tên *</label>
+      <input type="text" name="ho_ten" required value="{{ form.ho_ten }}" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+      {% if errors.ho_ten %}<div class="alert danger" style="margin-top:8px;">{{ errors.ho_ten }}</div>{% endif %}
+    </div>
+    <div>
+      <label style="display:block; font-weight:600; margin-bottom:6px;">CMND/CCCD *</label>
+      <input type="text" name="cmnd" required value="{{ form.cmnd }}" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+      <small style="color:#6b7280;">Dùng để đăng nhập và nhận diện khi đặt phòng.</small>
+      {% if errors.cmnd %}<div class="alert danger" style="margin-top:8px;">{{ errors.cmnd }}</div>{% endif %}
+    </div>
+    <div>
+      <label style="display:block; font-weight:600; margin-bottom:6px;">Email *</label>
+      <input type="email" name="email" required value="{{ form.email }}" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+      <small style="color:#6b7280;">Email dùng để nhận thông báo và khôi phục mật khẩu.</small>
+      {% if errors.email %}<div class="alert danger" style="margin-top:8px;">{{ errors.email }}</div>{% endif %}
+    </div>
+    <div style="display:grid; gap:18px; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));">
+      <div>
+        <label style="display:block; font-weight:600; margin-bottom:6px;">Số điện thoại</label>
+        <input type="text" name="sdt" value="{{ form.sdt }}" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+      </div>
+      <div>
+        <label style="display:block; font-weight:600; margin-bottom:6px;">Địa chỉ</label>
+        <input type="text" name="dia_chi" value="{{ form.dia_chi }}" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+      </div>
+    </div>
+    <div style="display:grid; gap:18px; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));">
+      <div>
+        <label style="display:block; font-weight:600; margin-bottom:6px;">Mật khẩu *</label>
+        <input type="password" name="mat_khau" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+        <small style="color:#6b7280;">Tối thiểu 8 ký tự, nên chứa cả chữ và số.</small>
+        {% if errors.mat_khau %}<div class="alert danger" style="margin-top:8px;">{{ errors.mat_khau }}</div>{% endif %}
+      </div>
+      <div>
+        <label style="display:block; font-weight:600; margin-bottom:6px;">Xác nhận mật khẩu *</label>
+        <input type="password" name="mat_khau_xac_nhan" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
+        {% if errors.mat_khau_xac_nhan %}<div class="alert danger" style="margin-top:8px;">{{ errors.mat_khau_xac_nhan }}</div>{% endif %}
+      </div>
+    </div>
+    <button type="submit" style="background:var(--green); color:#fff; border:none; padding:14px 22px; border-radius:999px; font-size:1rem; font-weight:600; cursor:pointer;">
+      Tạo tài khoản
+    </button>
+    <p style="color:#4b5563; font-size:0.95rem;">Bấm "Tạo tài khoản" nghĩa là bạn đồng ý với chính sách bảo mật và điều khoản sử dụng dịch vụ của khách sạn.</p>
+  </form>
+{% endblock %}

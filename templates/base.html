@@ -145,6 +145,7 @@
         {% endif %}
         {% if can_manage_customers %}
         <a href="{{ url_for('khach_hang') }}" title="Quản lý Khách hàng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg><span class="menu-text">Quản lý Khách hàng</span></a>
+        <a href="{{ url_for('quan_ly_tai_khoan_khach_hang') }}" title="Tài khoản khách hàng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-3-3.87"></path><path d="M4 21v-2a4 4 0 0 1 3-3.87"></path><path d="M7 4a4 4 0 1 1 8 0 4 4 0 0 1-8 0z"></path></svg><span class="menu-text">Tài khoản khách hàng</span></a>
         {% endif %}
       </div>
       {% endif %}

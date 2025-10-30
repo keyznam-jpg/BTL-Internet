@@ -97,7 +97,13 @@ CREATE TABLE khachhang(
   cmnd VARCHAR(30) UNIQUE NOT NULL,
   sdt VARCHAR(30),
   email VARCHAR(120),
-  dia_chi VARCHAR(200)
+  dia_chi VARCHAR(200),
+  mat_khau_hash VARCHAR(255),
+  diem_tich_luy INT DEFAULT 0,
+  ngay_dang_ky DATETIME,
+  ngay_cap_nhat DATETIME,
+  lan_dang_nhap_cuoi DATETIME,
+  trang_thai_tai_khoan VARCHAR(20) DEFAULT 'hoat_dong'
 );
 CREATE INDEX idx_khachhang_cmnd ON khachhang(cmnd);
 CREATE INDEX idx_khachhang_email ON khachhang(email);
@@ -108,7 +114,7 @@ CREATE TABLE IF NOT EXISTS voucher (
   is_used BOOLEAN DEFAULT FALSE,
   created_at DATETIME,
   expires_at DATETIME,
-  discount_percent INT DEFAULT 10 CHECK (discount_percent >= 0 AND discount_percent <= 100),
+  discount_percent FLOAT DEFAULT 10 CHECK (discount_percent >= 0 AND discount_percent <= 100),
   used_at DATETIME,
   FOREIGN KEY (khachhang_id) REFERENCES khachhang(id),
   CHECK (expires_at >= created_at)
@@ -139,6 +145,7 @@ CREATE TABLE datphong(
   coc_da_thanh_toan BOOLEAN DEFAULT FALSE,
   phuong_thuc_thanh_toan VARCHAR(20) DEFAULT NULL CHECK (phuong_thuc_thanh_toan IN ('cash', 'qr')),
   voucher_id INT NULL,
+  diem_loyalty_da_cong INT DEFAULT 0,
   auto_confirmed_at DATETIME NULL,
   created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY (khachhang_id) REFERENCES khachhang(id),

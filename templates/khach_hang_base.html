@@ -6,111 +6,299 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
     :root {
-      --green: #047857;
-      --green-dark: #065f46;
-      --green-light: #d1fae5;
-      --gray-100: #f3f4f6;
-      --gray-300: #d1d5db;
-      --gray-600: #4b5563;
-      --danger: #dc2626;
+      --primary-900: #0d4a44;
+      --primary-700: #0f766e;
+      --primary-500: #12b981;
+      --primary-soft: rgba(20, 184, 166, 0.12);
+      --surface: #ffffff;
+      --surface-glass: rgba(255, 255, 255, 0.86);
+      --bg: #f1f5f9;
+      --text-900: #0f172a;
+      --text-600: #475569;
+      --text-500: #64748b;
+      --neutral-300: #d4dbe5;
+      --neutral-200: #e2e8f0;
+      --danger: #ef4444;
       --warning: #f59e0b;
-      --info: #2563eb;
+      --info: #3b82f6;
     }
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
     body {
       font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
       margin: 0;
-      background: var(--gray-100);
-      color: #1f2937;
       min-height: 100vh;
+      background: radial-gradient(circle at 20% 20%, rgba(20, 184, 166, 0.12), transparent 55%), radial-gradient(circle at 80% 10%, rgba(79, 70, 229, 0.12), transparent 50%), var(--bg);
+      color: var(--text-900);
       display: flex;
       flex-direction: column;
     }
-    header {
-      background: linear-gradient(135deg, var(--green), var(--green-dark));
-      color: #fff;
-      padding: 24px 18px;
+    .header-shell {
+      background: linear-gradient(135deg, rgba(15, 118, 110, 0.95), rgba(28, 100, 242, 0.85));
+      color: #f8fafc;
+      padding: 32px 18px 140px;
+      position: relative;
+      overflow: hidden;
     }
-    header h1 {
+    .header-shell::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at 15% 80%, rgba(16, 185, 129, 0.28), transparent 55%), radial-gradient(circle at 90% 20%, rgba(244, 114, 182, 0.18), transparent 50%);
+      pointer-events: none;
+    }
+    .header-inner {
+      position: relative;
+      z-index: 1;
+      max-width: 1120px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .brand-block {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-logo {
+      width: 44px;
+      height: 44px;
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.18);
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 1.1rem;
+      letter-spacing: 1px;
+    }
+    .brand-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .brand-copy span {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: rgba(241, 245, 249, 0.8);
+    }
+    .brand-copy h1 {
       margin: 0;
-      font-size: 1.8rem;
+      font-size: clamp(1.6rem, 2vw + 1rem, 2.2rem);
       font-weight: 600;
     }
-    nav {
-      margin-top: 16px;
-      display: flex;
+    .kh-nav {
+      display: inline-flex;
+      gap: 12px;
       flex-wrap: wrap;
-      gap: 10px;
     }
-    nav a {
-      background: rgba(255,255,255,0.15);
-      color: #fff;
-      padding: 8px 16px;
-      border-radius: 999px;
+    .kh-nav a {
+      color: #f8fafc;
       text-decoration: none;
-      transition: background 0.2s ease;
+      padding: 10px 18px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(255, 255, 255, 0.08);
       font-weight: 500;
+      transition: all 0.2s ease;
     }
-    nav a:hover {
-      background: rgba(255,255,255,0.25);
+    .kh-nav a:hover {
+      background: rgba(255, 255, 255, 0.18);
+      border-color: rgba(255, 255, 255, 0.28);
+    }
+    .header-description {
+      max-width: 620px;
+      font-size: 1.05rem;
+      line-height: 1.6;
+      color: rgba(241, 245, 249, 0.84);
     }
     main {
       flex: 1;
       width: 100%;
-      max-width: 960px;
-      margin: -60px auto 40px;
-      padding: 0 16px 32px;
+      max-width: 1120px;
+      margin: -96px auto 56px;
+      padding: 0 24px;
     }
     .card {
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 20px 40px -24px rgba(4, 120, 87, 0.4);
-      padding: 32px;
+      background: var(--surface-glass);
+      border-radius: 28px;
+      padding: 40px;
+      backdrop-filter: blur(18px);
+      border: 1px solid rgba(148, 163, 184, 0.22);
+      box-shadow: 0 24px 60px -30px rgba(15, 118, 110, 0.55), 0 12px 30px -20px rgba(15, 23, 42, 0.22);
     }
     .flash-messages {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-      margin-bottom: 24px;
+      gap: 12px;
+      margin-bottom: 28px;
     }
     .alert {
-      padding: 14px 18px;
-      border-radius: 12px;
-      background: var(--gray-300);
-      color: #1f2937;
+      padding: 14px 16px;
+      border-radius: 14px;
       font-weight: 500;
+      background: rgba(241, 245, 249, 0.6);
+      color: var(--text-600);
+      border: 1px solid rgba(148, 163, 184, 0.26);
     }
-    .alert.success { background: var(--green-light); color: var(--green-dark); }
-    .alert.danger { background: #fee2e2; color: var(--danger); }
-    .alert.warning { background: #fef3c7; color: var(--warning); }
-    .alert.info { background: #dbeafe; color: var(--info); }
+    .alert.success {
+      background: rgba(16, 185, 129, 0.16);
+      color: #065f46;
+      border-color: rgba(16, 185, 129, 0.3);
+    }
+    .alert.danger {
+      background: rgba(248, 113, 113, 0.18);
+      color: var(--danger);
+      border-color: rgba(239, 68, 68, 0.35);
+    }
+    .alert.warning {
+      background: rgba(251, 191, 36, 0.18);
+      color: var(--warning);
+      border-color: rgba(251, 191, 36, 0.32);
+    }
+    .alert.info {
+      background: rgba(96, 165, 250, 0.14);
+      color: var(--info);
+      border-color: rgba(59, 130, 246, 0.28);
+    }
     footer {
       text-align: center;
-      font-size: 0.9rem;
-      color: var(--gray-600);
-      padding: 16px;
+      font-size: 0.95rem;
+      color: var(--text-500);
+      padding: 0 16px 28px;
     }
-    @media (max-width: 640px) {
-      header h1 { font-size: 1.4rem; }
-      main { margin-top: -40px; padding: 0 12px 24px; }
-      .card { padding: 24px 20px; }
+    .form-stack {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
     }
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .input-label {
+      font-weight: 600;
+      color: var(--text-600);
+    }
+    .input-field {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid rgba(148, 163, 184, 0.36);
+      background: var(--surface);
+      font-size: 1rem;
+      line-height: 1.5;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+    .input-field:focus {
+      outline: none;
+      border-color: rgba(20, 184, 166, 0.6);
+      box-shadow: 0 0 0 4px rgba(13, 74, 68, 0.12);
+    }
+    .button-primary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 14px 22px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--primary-700), var(--primary-500));
+      color: #f8fafc;
+      border: none;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 18px 30px -20px rgba(15, 118, 110, 0.8);
+      transition: transform 0.18s ease, box-shadow 0.18s ease;
+    }
+    .button-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 18px 34px -18px rgba(20, 184, 166, 0.75);
+    }
+    .link-inline {
+      color: var(--primary-700);
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .link-inline:hover {
+      color: var(--primary-500);
+    }
+    @media (max-width: 992px) {
+      .header-shell {
+        padding-bottom: 120px;
+      }
+      main {
+        margin-top: -84px;
+      }
+    }
+    @media (max-width: 768px) {
+      .header-top {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .kh-nav {
+        width: 100%;
+      }
+      .card {
+        padding: 32px 24px;
+        border-radius: 22px;
+      }
+    }
+    @media (max-width: 600px) {
+      body {
+        background: linear-gradient(180deg, rgba(15, 118, 110, 0.38), rgba(15, 118, 110, 0.08), var(--bg));
+      }
+      .brand-copy h1 {
+        font-size: 1.5rem;
+      }
+      main {
+        margin-top: -70px;
+        padding: 0 16px;
+      }
+      .card {
+        padding: 26px 20px;
+      }
+    }
+    {% block page_styles %}{% endblock %}
   </style>
 </head>
 <body>
-  <header>
-    <h1>{{ header_title or 'Trung tâm khách hàng' }}</h1>
-    <nav>
-      {% if current_user.is_authenticated and current_user.is_customer %}
-      <a href="{{ url_for('khach_hang_tai_khoan') }}">Tài khoản của tôi</a>
-      <a href="{{ url_for('khach_hang_dang_xuat') }}">Đăng xuất</a>
-      {% else %}
-      <a href="{{ url_for('khach_hang_dang_nhap') }}">Đăng nhập</a>
-      <a href="{{ url_for('khach_hang_dang_ky') }}">Tạo tài khoản</a>
-      <a href="{{ url_for('khach_hang_quen_mat_khau') }}">Quên mật khẩu</a>
-      {% endif %}
-      <a href="{{ url_for('dat_phong_online') }}">Đặt phòng trực tuyến</a>
-    </nav>
+  <header class="header-shell">
+    <div class="header-inner">
+      <div class="header-top">
+        <div class="brand-block">
+          <div class="brand-logo">KH</div>
+          <div class="brand-copy">
+            <span>Chương trình thân thiết</span>
+            <h1>{{ header_title or 'Trung tâm khách hàng' }}</h1>
+          </div>
+        </div>
+        <nav class="kh-nav">
+          {% if current_user.is_authenticated and current_user.is_customer %}
+          <a href="{{ url_for('khach_hang_tai_khoan') }}">Tài khoản của tôi</a>
+          <a href="{{ url_for('khach_hang_dang_xuat') }}">Đăng xuất</a>
+          {% else %}
+          <a href="{{ url_for('khach_hang_dang_nhap') }}">Đăng nhập</a>
+          <a href="{{ url_for('khach_hang_dang_ky') }}">Tạo tài khoản</a>
+          <a href="{{ url_for('khach_hang_quen_mat_khau') }}">Quên mật khẩu</a>
+          {% endif %}
+          <a href="{{ url_for('dat_phong_online') }}">Đặt phòng trực tuyến</a>
+        </nav>
+      </div>
+      <p class="header-description">
+        {{ hotel_info.customer_portal_intro if hotel_info and hotel_info.customer_portal_intro else 'Kết nối cùng khách sạn, quản lý đặt phòng và tận hưởng ưu đãi cá nhân hóa chỉ với vài bước đăng nhập.' }}
+      </p>
+    </div>
   </header>
 
   <main>

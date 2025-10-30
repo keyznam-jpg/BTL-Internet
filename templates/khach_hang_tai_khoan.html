@@ -2,180 +2,473 @@
 {% set title = 'Tài khoản khách hàng' %}
 {% set header_title = 'Không gian khách hàng thân thiết' %}
 
+{% block page_styles %}
+  .account-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 36px;
+  }
+  .account-hero {
+    position: relative;
+    border-radius: 28px;
+    padding: 40px 44px;
+    background: linear-gradient(135deg, #0f172a, #19456f);
+    color: #f8fafc;
+    overflow: hidden;
+  }
+  .account-hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(circle at 18% 25%, rgba(56, 189, 248, 0.22), transparent 45%), radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.3), transparent 52%), radial-gradient(circle at 35% 80%, rgba(16, 185, 129, 0.28), transparent 50%);
+    pointer-events: none;
+  }
+  .account-hero > * {
+    position: relative;
+    z-index: 1;
+  }
+  .hero-heading {
+    font-size: clamp(2rem, 2.5vw + 1rem, 2.6rem);
+    font-weight: 600;
+    margin: 0 0 10px;
+  }
+  .hero-sub {
+    max-width: 620px;
+    font-size: 1.05rem;
+    color: rgba(226, 232, 240, 0.86);
+    margin: 0;
+  }
+  .hero-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    margin-top: 26px;
+  }
+  .hero-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-radius: 16px;
+    background: rgba(15, 118, 110, 0.22);
+    font-size: 0.98rem;
+    font-weight: 500;
+  }
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+  }
+  .stat-card {
+    background: rgba(255, 255, 255, 0.75);
+    border-radius: 22px;
+    padding: 22px;
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    display: grid;
+    gap: 10px;
+    position: relative;
+    overflow: hidden;
+  }
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    inset: auto 16px -28px auto;
+    width: 120px;
+    height: 120px;
+    background: radial-gradient(circle, rgba(59, 130, 246, 0.18), transparent 68%);
+  }
+  .stat-label {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-500);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .stat-value {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary-700);
+  }
+  .stat-sub {
+    font-size: 0.95rem;
+    color: var(--text-500);
+  }
+  .tab-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .tab-nav a {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 20px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.16);
+    color: var(--text-600);
+    text-decoration: none;
+    font-weight: 600;
+    transition: all 0.2s ease;
+  }
+  .tab-nav a:hover {
+    background: rgba(148, 163, 184, 0.28);
+    color: var(--primary-700);
+  }
+  .tab-nav a.is-active {
+    background: linear-gradient(135deg, var(--primary-700), var(--primary-500));
+    color: #f8fafc;
+    box-shadow: 0 14px 24px -16px rgba(15, 118, 110, 0.8);
+  }
+  .tab-panel {
+    display: none;
+  }
+  .tab-panel.is-active {
+    display: block;
+  }
+  .card-section {
+    background: rgba(255, 255, 255, 0.76);
+    border-radius: 26px;
+    padding: 32px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    display: grid;
+    gap: 26px;
+  }
+  .info-banner {
+    background: rgba(59, 130, 246, 0.12);
+    border-radius: 18px;
+    padding: 18px 22px;
+    color: #1d4ed8;
+    display: grid;
+    gap: 10px;
+  }
+  .form-grid {
+    display: grid;
+    gap: 22px;
+  }
+  .form-grid.two-col {
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  }
+  .button-secondary {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 13px 20px;
+    border-radius: 999px;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    background: rgba(148, 163, 184, 0.16);
+    color: var(--text-600);
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, color 0.2s ease;
+  }
+  .button-secondary:hover {
+    border-color: rgba(59, 130, 246, 0.5);
+    background: rgba(59, 130, 246, 0.12);
+    color: var(--primary-700);
+  }
+  .voucher-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+  }
+  .voucher-card {
+    border-radius: 22px;
+    padding: 22px;
+    background: linear-gradient(160deg, rgba(15, 118, 110, 0.12), rgba(59, 130, 246, 0.12));
+    border: 1px solid rgba(148, 163, 184, 0.22);
+    display: grid;
+    gap: 12px;
+  }
+  .voucher-code {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--primary-700);
+  }
+  .voucher-meta {
+    font-size: 0.94rem;
+    color: var(--text-500);
+    line-height: 1.5;
+  }
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 640px;
+  }
+  .history-table thead th {
+    text-align: left;
+    padding: 14px 16px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: rgba(148, 163, 184, 0.16);
+  }
+  .history-table tbody td {
+    padding: 14px 16px;
+    border-bottom: 1px solid rgba(148, 163, 184, 0.22);
+    font-size: 0.95rem;
+    color: var(--text-600);
+  }
+  .badge-status {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    background: rgba(20, 184, 166, 0.18);
+    color: var(--primary-700);
+    text-transform: capitalize;
+  }
+  .muted-text {
+    color: var(--text-500);
+    font-size: 0.95rem;
+  }
+  @media (max-width: 768px) {
+    .account-hero {
+      padding: 32px 28px;
+    }
+    .card-section {
+      padding: 26px 22px;
+    }
+    .history-table {
+      min-width: 560px;
+    }
+  }
+{% endblock %}
+
 {% block content %}
-  <h2 style="margin-bottom: 18px;">Xin chào {{ kh.ho_ten }}!</h2>
-  <p style="color:#4b5563; margin-bottom: 28px;">Điểm tích lũy hiện có: <strong style="color:var(--green)">{{ kh.diem_tich_luy or 0 }}</strong> điểm. Mỗi điểm tương đương giảm giá {{ loyalty_percent_per_point|percent }}%, tối đa {{ loyalty_max_discount }}% cho một voucher.</p>
+  {% set diem_hien_co = kh.diem_tich_luy or 0 %}
+  {% set vouchers_san_sang = vouchers_con_han|default([], true) %}
+  {% set so_voucher_san_sang = vouchers_san_sang|length %}
+  {% set so_dat_phong = lich_su_dat_phong|default([], true)|length %}
+  {% set dat_phong_hoan_tat = lich_su_dat_phong|selectattr('trang_thai', 'equalto', 'da_thanh_toan')|list|length if lich_su_dat_phong else 0 %}
 
-  <div style="display:flex; flex-wrap:wrap; gap:12px; margin-bottom:24px;">
-    {% set tabs = [
-      ('thong_tin', 'Thông tin cá nhân'),
-      ('doi_mat_khau', 'Đổi mật khẩu'),
-      ('uu_dai', 'Điểm & voucher'),
-      ('lich_su', 'Lịch sử đặt phòng')
-    ] %}
-    {% for tab, label in tabs %}
-    <a href="{{ url_for('khach_hang_tai_khoan', tab=tab) }}" style="
-        padding:10px 18px; border-radius:999px; text-decoration:none;
-        font-weight:600; color: {{ 'white' if active_tab == tab else '#065f46' }};
-        background: {{ 'linear-gradient(135deg, var(--green), var(--green-dark))' if active_tab == tab else 'var(--green-light)' }};">
-      {{ label }}
-    </a>
-    {% endfor %}
-  </div>
-
-  <section {% if active_tab != 'thong_tin' %}style="display:none;"{% endif %}>
-    <h3 style="margin-bottom:16px;">Cập nhật thông tin cá nhân</h3>
-    <form method="post" style="display:grid; gap:20px;">
-      <input type="hidden" name="hanh_dong" value="cap_nhat_thong_tin">
-      <div>
-        <label style="display:block; font-weight:600; margin-bottom:6px;">Họ và tên *</label>
-        <input type="text" name="ho_ten" value="{{ kh.ho_ten }}" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
-        {% if errors.ho_ten %}<div class="alert danger" style="margin-top:8px;">{{ errors.ho_ten }}</div>{% endif %}
+  <div class="account-wrapper">
+    <section class="account-hero">
+      <h2 class="hero-heading">Chào {{ kh.ho_ten or 'bạn' }}!</h2>
+      <p class="hero-sub">
+        Theo dõi điểm thưởng, quản lý voucher và xem lại toàn bộ lịch sử đặt phòng của bạn trong một
+        giao diện trực quan – lấy cảm hứng từ các ứng dụng khách hàng thân thiết hiện đại.
+      </p>
+      <div class="hero-meta">
+        <span class="hero-pill">Điểm khả dụng: <strong>{{ diem_hien_co }}</strong></span>
+        <span class="hero-pill">Tỷ lệ quy đổi: {{ loyalty_percent_per_point|percent }} giảm/điểm</span>
+        <span class="hero-pill">Giảm tối đa mỗi voucher: {{ loyalty_max_discount }}%</span>
       </div>
-      <div style="display:grid; gap:20px; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));">
-        <div>
-          <label style="display:block; font-weight:600; margin-bottom:6px;">Số điện thoại</label>
-          <input type="text" name="sdt" value="{{ kh.sdt or '' }}" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
-        </div>
-        <div>
-          <label style="display:block; font-weight:600; margin-bottom:6px;">Email</label>
-          <input type="email" name="email" value="{{ kh.email or '' }}" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
-          {% if errors.email %}<div class="alert danger" style="margin-top:8px;">{{ errors.email }}</div>{% endif %}
-        </div>
-      </div>
-      <div>
-        <label style="display:block; font-weight:600; margin-bottom:6px;">Địa chỉ</label>
-        <input type="text" name="dia_chi" value="{{ kh.dia_chi or '' }}" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
-      </div>
-      <button type="submit" style="background:var(--green); color:#fff; border:none; padding:12px 20px; border-radius:999px; font-weight:600; cursor:pointer;">
-        Lưu thay đổi
-      </button>
-    </form>
-  </section>
+    </section>
 
-  <section {% if active_tab != 'doi_mat_khau' %}style="display:none;"{% endif %}>
-    <h3 style="margin-bottom:16px;">Đổi mật khẩu</h3>
-    <form method="post" style="display:grid; gap:20px;">
-      <input type="hidden" name="hanh_dong" value="doi_mat_khau">
-      <label>
-        <span style="display:block; font-weight:600; margin-bottom:6px;">Mật khẩu hiện tại</span>
-        <input type="password" name="mat_khau_cu" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
-        {% if errors.mat_khau_cu %}<div class="alert danger" style="margin-top:8px;">{{ errors.mat_khau_cu }}</div>{% endif %}
-      </label>
-      <label>
-        <span style="display:block; font-weight:600; margin-bottom:6px;">Mật khẩu mới</span>
-        <input type="password" name="mat_khau_moi" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
-        {% if errors.mat_khau_moi %}<div class="alert danger" style="margin-top:8px;">{{ errors.mat_khau_moi }}</div>{% endif %}
-      </label>
-      <label>
-        <span style="display:block; font-weight:600; margin-bottom:6px;">Xác nhận mật khẩu mới</span>
-        <input type="password" name="mat_khau_moi_xac_nhan" required style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
-        {% if errors.mat_khau_moi_xac_nhan %}<div class="alert danger" style="margin-top:8px;">{{ errors.mat_khau_moi_xac_nhan }}</div>{% endif %}
-      </label>
-      <button type="submit" style="background:var(--green); color:#fff; border:none; padding:12px 20px; border-radius:999px; font-weight:600; cursor:pointer;">
-        Cập nhật mật khẩu
-      </button>
-    </form>
-  </section>
-
-  <section {% if active_tab != 'uu_dai' %}style="display:none;"{% endif %}>
-    <h3 style="margin-bottom:16px;">Điểm thưởng và voucher</h3>
-    <div style="background:var(--green-light); border-radius:12px; padding:18px; margin-bottom:20px; color:var(--green-dark);">
-      <p style="margin:0; font-weight:600;">Hướng dẫn quy đổi</p>
-      <ul style="margin:8px 0 0 18px;">
-        <li>1 điểm tương đương giảm giá {{ loyalty_percent_per_point }}% (0,1%) trên giá phòng.</li>
-        <li>Voucher tối đa {{ loyalty_max_discount }}% cho một lần đặt phòng.</li>
-        <li>Voucher có hiệu lực theo cấu hình chung của khách sạn.</li>
-      </ul>
+    <div class="overview-grid">
+      <article class="stat-card">
+        <span class="stat-label">Điểm tích lũy</span>
+        <span class="stat-value">{{ diem_hien_co }}</span>
+        <span class="stat-sub">Mỗi 100.000₫ tương ứng 1 điểm thưởng.</span>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">Voucher khả dụng</span>
+        <span class="stat-value">{{ so_voucher_san_sang }}</span>
+        <span class="stat-sub">Voucher chưa dùng, còn hạn sử dụng hợp lệ.</span>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">Đặt phòng hoàn tất</span>
+        <span class="stat-value">{{ dat_phong_hoan_tat }}</span>
+        <span class="stat-sub">Tổng số giao dịch đã thanh toán thành công.</span>
+      </article>
+      <article class="stat-card">
+        <span class="stat-label">Tổng đặt phòng</span>
+        <span class="stat-value">{{ so_dat_phong }}</span>
+        <span class="stat-sub">Bao gồm cả các đặt phòng đang chờ xử lý.</span>
+      </article>
     </div>
-    <form method="post" style="display:flex; flex-wrap:wrap; gap:16px; align-items:flex-end; margin-bottom:28px;">
-      <input type="hidden" name="hanh_dong" value="doi_diem">
-      <label style="flex:1; min-width:220px;">
-        <span style="display:block; font-weight:600; margin-bottom:6px;">Số điểm muốn đổi</span>
-        <input type="number" min="1" name="so_diem" value="" placeholder="Nhập số điểm" style="width:100%; padding:12px; border-radius:10px; border:1px solid #d1d5db;">
-        {% if errors.so_diem %}<div class="alert danger" style="margin-top:8px;">{{ errors.so_diem }}</div>{% endif %}
-      </label>
-      <button type="submit" style="background:var(--green); color:#fff; border:none; padding:12px 20px; border-radius:999px; font-weight:600; cursor:pointer;">
-        Đổi điểm lấy voucher
-      </button>
-    </form>
 
-    <h4>Voucher còn hiệu lực</h4>
-    {% if vouchers_con_han %}
-      <div style="overflow-x:auto; margin-bottom:24px;">
-        <table style="width:100%; border-collapse:collapse;">
-          <thead>
-            <tr style="background:#f9fafb;">
-              <th style="text-align:left; padding:10px; border-bottom:1px solid #e5e7eb;">Mã</th>
-              <th style="text-align:left; padding:10px; border-bottom:1px solid #e5e7eb;">Giảm giá</th>
-              <th style="text-align:left; padding:10px; border-bottom:1px solid #e5e7eb;">Ngày tạo</th>
-              <th style="text-align:left; padding:10px; border-bottom:1px solid #e5e7eb;">Hết hạn</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for voucher in vouchers_con_han %}
-            <tr>
-              <td style="padding:10px; border-bottom:1px solid #f3f4f6; font-weight:600;">{{ voucher.code }}</td>
-              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">{{ voucher.discount_percent|percent }}%</td>
-              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">{{ voucher.created_at|fmt_dt }}</td>
-              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">{{ voucher.expires_at|fmt_dt if voucher.expires_at else 'Không giới hạn' }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+    <nav class="tab-nav">
+      {% set tabs = [
+        ('thong_tin', 'Thông tin cá nhân', '👤'),
+        ('doi_mat_khau', 'Đổi mật khẩu', '🔒'),
+        ('uu_dai', 'Điểm & voucher', '🎁'),
+        ('lich_su', 'Lịch sử đặt phòng', '🗓')
+      ] %}
+      {% for tab, label, icon in tabs %}
+        {% set active = 'is-active' if active_tab == tab else '' %}
+        <a href="{{ url_for('khach_hang_tai_khoan', tab=tab) }}" class="{{ active }}">
+          <span>{{ icon }}</span>{{ label }}
+        </a>
+      {% endfor %}
+    </nav>
+
+    <section class="card-section tab-panel {{ 'is-active' if active_tab == 'thong_tin' }}">
+      <div>
+        <h3>Cập nhật thông tin cá nhân</h3>
+        <p class="muted-text">Giữ thông tin liên hệ chính xác giúp chúng tôi hỗ trợ bạn nhanh chóng hơn.</p>
       </div>
-    {% else %}
-      <p style="color:#6b7280;">Bạn chưa có voucher nào đang hoạt động.</p>
-    {% endif %}
+      <form method="post" class="form-stack">
+        <input type="hidden" name="hanh_dong" value="cap_nhat_thong_tin">
+        <label class="input-group">
+          <span class="input-label">Họ và tên *</span>
+          <input type="text" name="ho_ten" value="{{ kh.ho_ten }}" required class="input-field">
+          {% if errors.ho_ten %}<div class="alert danger">{{ errors.ho_ten }}</div>{% endif %}
+        </label>
 
-    {% if vouchers_khong_con_hieu_luc %}
-      <h4>Voucher đã sử dụng hoặc không còn hiệu lực</h4>
-      <ul style="margin:12px 0 0 18px; color:#4b5563;">
-        {% for voucher, status in vouchers_khong_con_hieu_luc %}
-        <li>
-          <strong>{{ voucher.code }}</strong> - {{ voucher.discount_percent|percent }}% ({{ status }}).
-          {% if voucher.used_at %}Thời gian sử dụng: {{ voucher.used_at|fmt_dt }}.{% elif voucher.expires_at and voucher.expires_at < now() %}Hết hạn: {{ voucher.expires_at|fmt_dt }}.{% endif %}
-        </li>
-        {% endfor %}
-      </ul>
-    {% endif %}
-  </section>
+        <div class="form-grid two-col">
+          <label class="input-group">
+            <span class="input-label">Số điện thoại</span>
+            <input type="text" name="sdt" value="{{ kh.sdt or '' }}" class="input-field">
+          </label>
+          <label class="input-group">
+            <span class="input-label">Email</span>
+            <input type="email" name="email" value="{{ kh.email or '' }}" class="input-field">
+            {% if errors.email %}<div class="alert danger">{{ errors.email }}</div>{% endif %}
+          </label>
+        </div>
 
-  <section {% if active_tab != 'lich_su' %}style="display:none;"{% endif %}>
-    <h3 style="margin-bottom:16px;">Lịch sử đặt phòng</h3>
-    {% if lich_su_dat_phong %}
-      <div style="overflow-x:auto;">
-        <table style="width:100%; border-collapse:collapse;">
-          <thead>
-            <tr style="background:#f9fafb;">
-              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left;">Mã đặt</th>
-              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left;">Phòng</th>
-              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left;">Nhận</th>
-              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left;">Trả</th>
-              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:left;">Trạng thái</th>
-              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:right;">Tổng thanh toán</th>
-              <th style="padding:10px; border-bottom:1px solid #e5e7eb; text-align:right;">Điểm cộng</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for dp in lich_su_dat_phong %}
-            <tr>
-              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">#{{ dp.id }}</td>
-              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">{{ dp.phong.ten if dp.phong else 'Đang cập nhật' }}</td>
-              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">{{ dp.ngay_nhan|fmt_dt }}</td>
-              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">{{ dp.ngay_tra|fmt_dt }}</td>
-              <td style="padding:10px; border-bottom:1px solid #f3f4f6;">
-                {% if dp.trang_thai == 'da_thanh_toan' %}Đã thanh toán{% elif dp.trang_thai == 'nhan' %}Đang ở{% elif dp.trang_thai == 'dat' %}Đang giữ phòng{% elif dp.trang_thai == 'waiting' %}Đang chờ{% elif dp.trang_thai == 'cho_xac_nhan' %}Chờ xác nhận{% elif dp.trang_thai == 'huy' %}Đã hủy{% else %}{{ dp.trang_thai }}{% endif %}
-              </td>
-              <td style="padding:10px; border-bottom:1px solid #f3f4f6; text-align:right;">{{ vnd(dp.tong_thanh_toan or 0) }}</td>
-              <td style="padding:10px; border-bottom:1px solid #f3f4f6; text-align:right;">{{ dp.diem_loyalty_da_cong or 0 }}</td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        <label class="input-group">
+          <span class="input-label">Địa chỉ</span>
+          <input type="text" name="dia_chi" value="{{ kh.dia_chi or '' }}" class="input-field">
+        </label>
+
+        <button type="submit" class="button-primary">Lưu thay đổi</button>
+      </form>
+    </section>
+
+    <section class="card-section tab-panel {{ 'is-active' if active_tab == 'doi_mat_khau' }}">
+      <div>
+        <h3>Đổi mật khẩu</h3>
+        <p class="muted-text">Tạo mật khẩu mạnh với tối thiểu 8 ký tự, kết hợp chữ, số và ký tự đặc biệt để tăng bảo mật.</p>
       </div>
-    {% else %}
-      <p style="color:#6b7280;">Bạn chưa có đặt phòng nào trong hệ thống.</p>
-    {% endif %}
-  </section>
+      <form method="post" class="form-stack">
+        <input type="hidden" name="hanh_dong" value="doi_mat_khau">
+        <label class="input-group">
+          <span class="input-label">Mật khẩu hiện tại</span>
+          <input type="password" name="mat_khau_cu" required class="input-field">
+          {% if errors.mat_khau_cu %}<div class="alert danger">{{ errors.mat_khau_cu }}</div>{% endif %}
+        </label>
+        <label class="input-group">
+          <span class="input-label">Mật khẩu mới</span>
+          <input type="password" name="mat_khau_moi" required class="input-field">
+          {% if errors.mat_khau_moi %}<div class="alert danger">{{ errors.mat_khau_moi }}</div>{% endif %}
+        </label>
+        <label class="input-group">
+          <span class="input-label">Xác nhận mật khẩu mới</span>
+          <input type="password" name="mat_khau_moi_xac_nhan" required class="input-field">
+          {% if errors.mat_khau_moi_xac_nhan %}<div class="alert danger">{{ errors.mat_khau_moi_xac_nhan }}</div>{% endif %}
+        </label>
+        <button type="submit" class="button-primary">Cập nhật mật khẩu</button>
+      </form>
+    </section>
+
+    <section class="card-section tab-panel {{ 'is-active' if active_tab == 'uu_dai' }}">
+      <div>
+        <h3>Điểm thưởng và voucher</h3>
+        <p class="muted-text">Quy đổi điểm để nhận voucher giảm giá và áp dụng trong lần đặt phòng tiếp theo.</p>
+      </div>
+
+      <div class="info-banner">
+        <strong>Gợi ý quy đổi</strong>
+        <span>1 điểm tương đương {{ loyalty_percent_per_point|percent }} giảm giá trên tổng hóa đơn. Voucher tối đa {{ loyalty_max_discount }}% cho một lần đặt phòng và có hiệu lực theo cấu hình của khách sạn.</span>
+      </div>
+
+      <form method="post" class="form-stack" autocomplete="off">
+        <input type="hidden" name="hanh_dong" value="doi_diem">
+        <div class="form-grid two-col" style="align-items: end;">
+          <label class="input-group">
+            <span class="input-label">Số điểm muốn đổi</span>
+            <input type="number" min="1" name="so_diem" class="input-field" placeholder="Ví dụ: 120">
+            {% if errors.so_diem %}<div class="alert danger">{{ errors.so_diem }}</div>{% endif %}
+          </label>
+          <button type="submit" class="button-primary">Đổi điểm lấy voucher</button>
+        </div>
+      </form>
+
+      <div>
+        <h4>Voucher còn hiệu lực</h4>
+        {% if vouchers_san_sang %}
+          <div class="voucher-grid">
+            {% for voucher in vouchers_san_sang %}
+            <article class="voucher-card">
+              <span class="voucher-code">{{ voucher.code }}</span>
+              <span class="voucher-meta">
+                Giảm {{ voucher.discount_percent|percent }}% cho hóa đơn phòng.<br>
+                Tạo ngày: {{ voucher.created_at|fmt_dt }}.<br>
+                Hết hạn: {{ voucher.expires_at|fmt_dt if voucher.expires_at else 'Không giới hạn' }}.
+              </span>
+            </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="muted-text">Bạn chưa có voucher nào đang hoạt động. Quy đổi điểm để nhận ưu đãi ngay!</p>
+        {% endif %}
+      </div>
+
+      {% if vouchers_khong_con_hieu_luc %}
+        <div>
+          <h4>Voucher đã sử dụng hoặc hết hạn</h4>
+          <ul class="muted-text" style="padding-left: 20px; display: grid; gap: 8px;">
+            {% for voucher, status in vouchers_khong_con_hieu_luc %}
+            <li>
+              <strong>{{ voucher.code }}</strong> - {{ voucher.discount_percent|percent }}% ({{ status }}).
+              {% if voucher.used_at %}Đã dùng: {{ voucher.used_at|fmt_dt }}.{% elif voucher.expires_at and voucher.expires_at < now() %}Hết hạn: {{ voucher.expires_at|fmt_dt }}.{% endif %}
+            </li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+    </section>
+
+    <section class="card-section tab-panel {{ 'is-active' if active_tab == 'lich_su' }}">
+      <div>
+        <h3>Lịch sử đặt phòng</h3>
+        <p class="muted-text">Theo dõi các giao dịch đã thực hiện và điểm thưởng được cộng vào tài khoản.</p>
+      </div>
+      {% if lich_su_dat_phong %}
+        <div style="overflow-x:auto;">
+          <table class="history-table">
+            <thead>
+              <tr>
+                <th>Mã đặt</th>
+                <th>Phòng</th>
+                <th>Nhận</th>
+                <th>Trả</th>
+                <th>Trạng thái</th>
+                <th style="text-align:right;">Tổng thanh toán</th>
+                <th style="text-align:right;">Điểm cộng</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for dp in lich_su_dat_phong %}
+              <tr>
+                <td>#{{ dp.id }}</td>
+                <td>{{ dp.phong.ten if dp.phong else 'Đang cập nhật' }}</td>
+                <td>{{ dp.ngay_nhan|fmt_dt }}</td>
+                <td>{{ dp.ngay_tra|fmt_dt }}</td>
+                <td>
+                  {% if dp.trang_thai == 'da_thanh_toan' %}
+                    <span class="badge-status">Đã thanh toán</span>
+                  {% elif dp.trang_thai == 'nhan' %}
+                    <span class="badge-status" style="background: rgba(59, 130, 246, 0.18); color:#1d4ed8;">Đang ở</span>
+                  {% elif dp.trang_thai == 'dat' %}
+                    <span class="badge-status" style="background: rgba(250, 204, 21, 0.25); color:#92400e;">Đang giữ phòng</span>
+                  {% elif dp.trang_thai == 'waiting' %}
+                    <span class="badge-status" style="background: rgba(250, 204, 21, 0.25); color:#92400e;">Đang chờ</span>
+                  {% elif dp.trang_thai == 'cho_xac_nhan' %}
+                    <span class="badge-status" style="background: rgba(250, 204, 21, 0.25); color:#92400e;">Chờ xác nhận</span>
+                  {% elif dp.trang_thai == 'huy' %}
+                    <span class="badge-status" style="background: rgba(248, 113, 113, 0.22); color:#b91c1c;">Đã hủy</span>
+                  {% else %}
+                    <span class="badge-status" style="background: rgba(148, 163, 184, 0.25); color:#0f172a;">{{ dp.trang_thai }}</span>
+                  {% endif %}
+                </td>
+                <td style="text-align:right;">{{ vnd(dp.tong_thanh_toan or 0) }}</td>
+                <td style="text-align:right;">{{ dp.diem_loyalty_da_cong or 0 }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <p class="muted-text">Bạn chưa có đặt phòng nào trong hệ thống.</p>
+      {% endif %}
+    </section>
+  </div>
 {% endblock %}

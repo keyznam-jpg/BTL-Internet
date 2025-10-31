@@ -260,62 +260,129 @@
         }
 
         .system .bubble {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
+            background: linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.1));
+            color: var(--gray-700);
             text-align: center;
             border-radius: 16px;
+            border: 1px solid rgba(102, 126, 234, 0.12);
         }
 
         .bubble.voucher {
-            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
-            padding: 18px;
-            border: 2px solid rgba(255, 255, 255, 0.3);
+            background: linear-gradient(135deg, #0ba360 0%, #3cba92 100%);
+            color: #ffffff;
+            padding: 22px 24px;
+            border-radius: 22px;
+            box-shadow: 0 26px 48px -22px rgba(10, 76, 48, 0.5);
+            position: relative;
+            overflow: hidden;
         }
 
-        .voucher-title {
-            font-size: 1rem;
-            font-weight: 700;
-            margin-bottom: 10px;
+        .bubble.voucher::after {
+            content: '';
+            position: absolute;
+            inset: 2px;
+            border-radius: 20px;
+            border: 1px dashed rgba(255, 255, 255, 0.32);
+            pointer-events: none;
+        }
+
+        .voucher-head {
             display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .voucher-head .voucher-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.28);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.5rem;
+            box-shadow: 0 16px 30px -20px rgba(255, 255, 255, 0.7);
+        }
+
+        .voucher-head .voucher-text {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .voucher-head .voucher-text span {
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .voucher-head .voucher-text small {
+            font-size: 0.85rem;
+            opacity: 0.88;
+        }
+
+        .voucher-code-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 20px;
+        }
+
+        .voucher-code-text {
+            flex: 1;
+            padding: 12px 18px;
+            border-radius: 16px;
+            background: rgba(255, 255, 255, 0.24);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 1.25rem;
+            letter-spacing: 2px;
+            font-weight: 700;
+            text-align: center;
+            box-shadow: inset 0 8px 18px -16px rgba(0, 0, 0, 0.4);
+        }
+
+        .copy-btn {
+            border: none;
+            padding: 10px 16px;
+            border-radius: 14px;
+            background: rgba(255, 255, 255, 0.22);
+            color: #ffffff;
+            font-weight: 600;
+            font-size: 0.85rem;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: transform 0.2s ease, background 0.2s ease;
+        }
+
+        .copy-btn i {
+            font-size: 0.95rem;
+        }
+
+        .copy-btn:hover {
+            transform: translateY(-1px);
+            background: rgba(255, 255, 255, 0.32);
+        }
+
+        .voucher-info {
+            display: grid;
+            gap: 6px;
+            font-size: 0.95rem;
+            opacity: 0.9;
+        }
+
+        .voucher-info span {
+            display: inline-flex;
             align-items: center;
             gap: 8px;
         }
 
-        .voucher-code {
-            background: rgba(255, 255, 255, 0.25);
-            padding: 10px 14px;
-            border-radius: 12px;
-            font-family: 'Courier New', monospace;
-            font-size: 1.2rem;
-            font-weight: 700;
-            letter-spacing: 2px;
-            margin: 10px 0;
-            border: 2px dashed rgba(255, 255, 255, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .copy-btn {
-            background: rgba(255, 255, 255, 0.3);
-            border: none;
-            color: white;
-            padding: 6px 12px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.8rem;
-            font-weight: 600;
-            transition: all 0.2s ease;
-        }
-
-        .copy-btn:hover {
-            background: rgba(255, 255, 255, 0.4);
-        }
-
-        .voucher-info {
-            font-size: 0.88rem;
-            line-height: 1.6;
-            opacity: 0.95;
+        .voucher-info i {
+            font-size: 1rem;
         }
 
         .message-time {
@@ -1166,21 +1233,26 @@
                 link.innerHTML = `<i class="fas fa-file"></i> ${msg.ten_file || 'File'}`;
                 bubble.appendChild(link);
             } else if (isVoucher && type === 'system') {
-                const voucherMatch = text.match(/voucher giảm giá (\d+)%.*Mã: ([A-Z0-9]+).*HSD: ([\d\/]+)/i);
+                const voucherMatch = text.match(/voucher giảm giá\s*([\d.,]+)%.*Mã:\s*([A-Z0-9]+).*HSD:\s*([\d/]+)/i);
                 if (voucherMatch) {
                     const [, percent, code, expiry] = voucherMatch;
                     bubble.innerHTML = `
-                        <div class="voucher-title">
-                            <i class="fas fa-gift"></i>
-                            <span>Chúc mừng! Bạn nhận được voucher</span>
+                        <div class="voucher-head">
+                            <div class="voucher-icon"><i class="fas fa-gift"></i></div>
+                            <div class="voucher-text">
+                                <span>Chúc mừng! Bạn vừa nhận voucher</span>
+                                <small>Giảm ${percent}% cho lần đặt phòng tiếp theo</small>
+                            </div>
                         </div>
-                        <div class="voucher-code">
-                            <span>${code}</span>
-                            <button class="copy-btn" onclick="copyCode('${code}')"><i class="fas fa-copy"></i> Copy</button>
+                        <div class="voucher-code-row">
+                            <div class="voucher-code-text">${code}</div>
+                            <button class="copy-btn" type="button" onclick="copyCode('${code}')">
+                                <i class="fas fa-copy"></i> Sao chép
+                            </button>
                         </div>
                         <div class="voucher-info">
-                            <i class="fas fa-money-bill-wave"></i> Giảm <strong>${percent}%</strong> cho lần đặt tiếp theo<br>
-                            <i class="fas fa-calendar-alt"></i> HSD: <strong>${expiry}</strong>
+                            <span><i class="fas fa-money-bill-wave"></i> Giảm <strong>${percent}%</strong> cho đơn tiếp theo</span>
+                            <span><i class="fas fa-calendar-alt"></i> Hạn sử dụng: <strong>${expiry}</strong></span>
                         </div>
                     `;
                 } else {

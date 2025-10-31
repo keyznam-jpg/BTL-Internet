@@ -202,10 +202,12 @@ Hệ thống được thiết kế để đáp ứng nhu cầu của các khách
 
 ### 24. Đăng nhập khách hàng
 ![Đăng nhập khách hàng](screenshots/Dangnhapkhachhang.png)
+
 *Giao diện đăng nhập dành cho khách hàng với form đăng ký và đăng nhập*
 
 ### 25. Trang khách hàng
 ![Trang khách hàng](screenshots/Trangkhachhang.png)
+
 *Giao diện chính cho khách hàng với các chức năng đặt phòng và quản lý tài khoản*
 
 ### Yêu cầu hệ thống

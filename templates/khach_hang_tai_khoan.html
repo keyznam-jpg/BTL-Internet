@@ -265,8 +265,26 @@
     }
 
     .table-wrapper {
+      max-height: 320px;
+      overflow-y: auto;
       overflow-x: auto;
       border-radius: 16px;
+      border: 1px solid var(--gray-200);
+      scrollbar-width: thin;
+      scrollbar-color: rgba(37, 99, 235, 0.35) transparent;
+    }
+
+    .table-wrapper::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb {
+      background: rgba(37, 99, 235, 0.25);
+      border-radius: 10px;
+    }
+
+    .table-wrapper::-webkit-scrollbar-thumb:hover {
+      background: rgba(37, 99, 235, 0.4);
     }
 
     table {

@@ -1536,30 +1536,15 @@
                     bubble.appendChild(link);
                 }
             } else if (isVoucher && isSystem) {
-                // Format đặc biệt cho voucher
-                const voucherMatch = text.match(/voucher giảm giá (\d+)%.*Mã: ([A-Z0-9]+).*HSD: ([\d\/]+)/i);
-                if (voucherMatch) {
-                    const [, percent, code, expiry] = voucherMatch;
-                    bubble.innerHTML = `
-                        <div class="voucher-header">
-                            <span><i class="fas fa-birthday-cake"></i></span>
-                            <span>Chúc mừng! Bạn nhận được voucher</span>
-                        </div>
-                        <div class="voucher-code">
-                            <span>${code}</span>
-                            <button class="voucher-copy-btn" onclick="copyVoucherCode('${code}')">
-                                <i class="fas fa-copy"></i> Copy
-                            </button>
-                        </div>
-                        <div class="voucher-info">
-                            <i class="fas fa-tags"></i> Giảm giá: <strong>${percent}%</strong> cho lần đặt tiếp theo<br>
-                            <i class="fas fa-calendar-alt"></i> Hạn sử dụng: <strong>${expiry}</strong>
-                        </div>
-                    `;
-                } else {
-                    bubble.innerHTML = renderMessageHtml(text);
-                    applyCompactBubble(bubble, text);
-                }
+                bubble.innerHTML = `
+                    <div class="voucher-header">
+                        <span><i class="fas fa-gift"></i></span>
+                        <span>Hệ thống đã cấp voucher cho khách hàng</span>
+                    </div>
+                    <div class="voucher-info">
+                        <i class="fas fa-info-circle"></i> Chi tiết mã và hạn sử dụng chỉ hiển thị phía khách hàng.
+                    </div>
+                `;
             } else {
                 // Thêm icon cho tin nhắn đặt dịch vụ - KHÔNG hiển thị nội dung chi tiết
                 if (text.includes('đặt dịch vụ')) {

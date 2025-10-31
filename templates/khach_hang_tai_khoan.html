@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tai khoan khach hang</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1d4ed8;
+      --secondary: #10b981;
+      --danger: #dc2626;
+      --warning: #f59e0b;
+      --gray-50: #f9fafb;
+      --gray-100: #f1f5f9;
+      --gray-200: #e2e8f0;
+      --gray-500: #64748b;
+      --gray-700: #334155;
+      --gray-900: #0f172a;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(140deg, #0f172a 10%, #1e293b 45%, #2563eb 100%);
+      color: var(--gray-900);
+      min-height: 100vh;
+      padding: 32px 16px 48px;
+    }
+
+    .page {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    header {
+      color: #ffffff;
+      margin-bottom: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 30px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .header-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.4);
+      color: #ffffff;
+      text-decoration: none;
+      font-weight: 600;
+      transition: background 0.2s ease, transform 0.2s ease;
+    }
+
+    .header-btn:hover {
+      background: rgba(255,255,255,0.18);
+      transform: translateY(-1px);
+    }
+
+    .card {
+      background: #ffffff;
+      border-radius: 24px;
+      padding: 28px;
+      box-shadow: 0 20px 45px -25px rgba(15, 23, 42, 0.45);
+    }
+
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 18px;
+      margin-bottom: 28px;
+    }
+
+    .stat {
+      background: linear-gradient(135deg, rgba(37,99,235,0.12), rgba(16,185,129,0.12));
+      border-radius: 16px;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .stat h3 {
+      margin: 0;
+      font-size: 16px;
+      color: var(--gray-700);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 600;
+    }
+
+    .stat strong {
+      font-size: 26px;
+      color: var(--primary-dark);
+      font-weight: 700;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+    }
+
+    .tab-link {
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: var(--gray-100);
+      color: var(--gray-700);
+      text-decoration: none;
+      font-weight: 600;
+      transition: background 0.2s ease, color 0.2s ease;
+    }
+
+    .tab-link:hover {
+      background: var(--gray-200);
+    }
+
+    .tab-link.active {
+      background: var(--primary);
+      color: #ffffff;
+    }
+
+    .flash-list {
+      list-style: none;
+      margin: 0 0 20px;
+      padding: 0;
+      display: grid;
+      gap: 12px;
+    }
+
+    .flash {
+      border-radius: 14px;
+      padding: 12px 16px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .flash i {
+      font-size: 16px;
+    }
+
+    .flash-success { background: #ecfdf5; color: #047857; border: 1px solid #bbf7d0; }
+    .flash-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+    .flash-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+    .flash-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+    .section {
+      display: none;
+      animation: fadeIn 0.2s ease;
+    }
+
+    .section.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    form {
+      display: grid;
+      gap: 20px;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 20px;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    }
+
+    label {
+      font-weight: 600;
+      color: var(--gray-700);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--gray-200);
+      font-size: 15px;
+      font-family: inherit;
+      background: var(--gray-50);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+      background: #ffffff;
+    }
+
+    textarea {
+      min-height: 110px;
+      resize: vertical;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 18px;
+      border-radius: 999px;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      color: #ffffff;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 30px -20px rgba(37, 99, 235, 0.8);
+    }
+
+    .btn-secondary {
+      background: var(--gray-100);
+      color: var(--gray-700);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #ffffff;
+      border: 1px solid var(--gray-200);
+      border-radius: 16px;
+      overflow: hidden;
+    }
+
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 16px;
+    }
+
+    th, td {
+      padding: 14px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--gray-200);
+      font-size: 14px;
+    }
+
+    th {
+      background: var(--gray-100);
+      font-weight: 600;
+      color: var(--gray-700);
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .status-da_thanh_toan {
+      background: rgba(16, 185, 129, 0.15);
+      color: #047857;
+    }
+
+    .status-cho_xac_nhan,
+    .status-dat {
+      background: rgba(37, 99, 235, 0.15);
+      color: #1d4ed8;
+    }
+
+    .status-huy {
+      background: rgba(220, 38, 38, 0.15);
+      color: #b91c1c;
+    }
+
+    .voucher-grid {
+      display: grid;
+      gap: 18px;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    }
+
+    .voucher-card {
+      border: 1px dashed rgba(37, 99, 235, 0.35);
+      border-radius: 16px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(16, 185, 129, 0.08));
+    }
+
+    .voucher-code {
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 18px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--primary-dark);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 32px;
+      background: var(--gray-50);
+      border-radius: 18px;
+      border: 1px dashed var(--gray-200);
+      color: var(--gray-500);
+      display: grid;
+      gap: 12px;
+      justify-items: center;
+    }
+
+    .empty-state i {
+      font-size: 28px;
+      color: var(--gray-400);
+    }
+
+    .errors-list {
+      list-style: none;
+      padding: 12px 14px;
+      margin: 0;
+      border-radius: 14px;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+    }
+
+    .field-error {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--danger);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .loyalty-tip {
+      font-size: 14px;
+      color: var(--gray-500);
+      line-height: 1.5;
+    }
+
+    @media (max-width: 768px) {
+      header h1 {
+        font-size: 26px;
+      }
+      .card {
+        padding: 22px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>
+        <i class="fas fa-user-circle"></i>
+        Xin chao, {{ kh.ho_ten or 'Khach hang' }}
+      </h1>
+      <div class="actions">
+        <a class="header-btn" href="{{ url_for('khach_hang_dang_xuat') }}">
+          <i class="fas fa-arrow-right-from-bracket"></i>
+          Dang xuat
+        </a>
+        <a class="header-btn" href="{{ url_for('dat_phong_online') }}">
+          <i class="fas fa-bed"></i>
+          Dat phong online
+        </a>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="stat-grid">
+        <div class="stat">
+          <h3><i class="fas fa-gem"></i>Diem tich luy</h3>
+          <strong>{{ kh.diem_tich_luy or 0 }}</strong>
+          <span class="loyalty-tip">
+            Moi 1 diem quy doi thanh {{ '%.1f' % loyalty_percent_per_point }}% giam gia.
+            Toi da {{ loyalty_max_discount }}% cho moi voucher.
+          </span>
+        </div>
+        <div class="stat">
+          <h3><i class="fas fa-receipt"></i>Lich su dat phong</h3>
+          <strong>{{ lich_su_dat_phong|length }}</strong>
+          <span class="loyalty-tip">Tong so don da luu lai trong he thong.</span>
+        </div>
+        <div class="stat">
+          <h3><i class="fas fa-ticket-alt"></i>Voucher con han</h3>
+          <strong>{{ vouchers_con_han|length }}</strong>
+          <span class="loyalty-tip">Su dung voucher de nhan uu dai khi dat phong.</span>
+        </div>
+      </div>
+
+      {% with messages = get_flashed_messages(with_categories=True) %}
+      {% if messages %}
+      <ul class="flash-list">
+        {% for category, message in messages %}
+        <li class="flash flash-{{ category }}">
+          <i class="fas fa-circle-info"></i>
+          <span>{{ message }}</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endwith %}
+
+      {% if errors %}
+      <ul class="errors-list">
+        {% for value in errors.values() %}
+          {% if value %}
+          <li><i class="fas fa-circle-exclamation"></i> {{ value }}</li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      <div class="tabs">
+        <a class="tab-link {% if active_tab == 'thong_tin' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='thong_tin') }}">Thong tin ca nhan</a>
+        <a class="tab-link {% if active_tab == 'lich_su' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='lich_su') }}">Lich su dat phong</a>
+        <a class="tab-link {% if active_tab == 'uu_dai' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='uu_dai') }}">Voucher & tich diem</a>
+        <a class="tab-link {% if active_tab == 'doi_mat_khau' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='doi_mat_khau') }}">Doi mat khau</a>
+      </div>
+
+      <section class="section {% if active_tab == 'thong_tin' %}active{% endif %}">
+        <form method="post">
+          <input type="hidden" name="hanh_dong" value="cap_nhat_thong_tin">
+          <div class="form-grid">
+            <div>
+              <label for="ho_ten">Ho ten</label>
+              <input id="ho_ten" name="ho_ten" type="text" value="{{ kh.ho_ten or '' }}" required>
+            </div>
+            <div>
+              <label for="cmnd">CMND / CCCD</label>
+              <input id="cmnd" type="text" value="{{ kh.cmnd or '' }}" disabled>
+            </div>
+            <div>
+              <label for="email">Email</label>
+              <input id="email" name="email" type="email" value="{{ kh.email or '' }}">
+            </div>
+            <div>
+              <label for="sdt">So dien thoai</label>
+              <input id="sdt" name="sdt" type="tel" value="{{ kh.sdt or '' }}">
+            </div>
+          </div>
+          <div>
+            <label for="dia_chi">Dia chi</label>
+            <textarea id="dia_chi" name="dia_chi">{{ kh.dia_chi or '' }}</textarea>
+          </div>
+          <button class="btn btn-primary" type="submit">
+            <i class="fas fa-save"></i>
+            <span>Cap nhat thong tin</span>
+          </button>
+        </form>
+      </section>
+
+      <section class="section {% if active_tab == 'lich_su' %}active{% endif %}">
+        {% if lich_su_dat_phong %}
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Ma dat</th>
+                <th>Ngay nhan</th>
+                <th>Ngay tra</th>
+                <th>Trang thai</th>
+                <th>Tong thanh toan</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for dp in lich_su_dat_phong %}
+              <tr>
+                <td>#{{ dp.id }}</td>
+                <td>{{ dp.ngay_nhan.strftime('%d/%m/%Y') if dp.ngay_nhan else '-' }}</td>
+                <td>{{ dp.ngay_tra.strftime('%d/%m/%Y') if dp.ngay_tra else '-' }}</td>
+                <td>
+                  <span class="status status-{{ dp.trang_thai }}">
+                    <i class="fas fa-circle"></i>
+                    {{ dp.trang_thai.replace('_', ' ') }}
+                  </span>
+                </td>
+                <td>{{ (dp.tong_thanh_toan or 0)|vnd }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+          <i class="fas fa-calendar-xmark"></i>
+          <p>Chua co lich su dat phong. Hay dat phong de trai nghiem dich vu va tich diem.</p>
+        </div>
+        {% endif %}
+      </section>
+
+      <section class="section {% if active_tab == 'uu_dai' %}active{% endif %}">
+        <div class="voucher-grid">
+          {% for voucher in vouchers_con_han %}
+          <div class="voucher-card">
+            <div class="voucher-code">{{ voucher.code }}</div>
+            <div><strong>Giam {{ voucher.discount_percent }}%</strong> cho don dat phong.</div>
+            <div>Trang thai: <strong>Chua su dung</strong></div>
+            <div>
+              Han su dung:
+              {% if voucher.expires_at %}
+              {{ voucher.expires_at.strftime('%d/%m/%Y') }}
+              {% else %}
+              Khong gioi han
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        {% if vouchers_con_han|length == 0 %}
+        <div class="empty-state" style="margin-top:20px;">
+          <i class="fas fa-ticket"></i>
+          <p>Ban chua co voucher nao. Hay doi diem hoac hoan tat don dat phong de nhan uu dai.</p>
+        </div>
+        {% endif %}
+
+        <div style="margin-top: 28px;">
+          <h3>Diem tich luy cua ban: {{ kh.diem_tich_luy or 0 }}</h3>
+          <p class="loyalty-tip">
+            Nhap so diem muon doi thanh voucher giam gia. Moi 1 diem giam {{ '%.1f' % loyalty_percent_per_point }}%.
+            Toi da {{ loyalty_max_discount }}% cho mot voucher.
+          </p>
+          <form method="post" style="max-width: 420px; margin-top: 16px;">
+            <input type="hidden" name="hanh_dong" value="doi_diem">
+            <label for="so_diem">So diem muon doi</label>
+            <input id="so_diem" name="so_diem" type="number" min="1" step="1" placeholder="Vi du: 50" required>
+            <button class="btn btn-primary" type="submit" style="margin-top: 12px;">
+              <i class="fas fa-gift"></i>
+              <span>Doi diem lay voucher</span>
+            </button>
+          </form>
+        </div>
+
+        {% if vouchers_khong_con_hieu_luc %}
+        <div style="margin-top: 32px;">
+          <h3>Voucher da het han hoac da su dung</h3>
+          <div class="voucher-grid">
+            {% for voucher, status_text in vouchers_khong_con_hieu_luc %}
+            <div class="voucher-card" style="opacity: 0.6;">
+              <div class="voucher-code">{{ voucher.code }}</div>
+              <div>Trang thai: {{ status_text }}</div>
+              <div>Giam {{ voucher.discount_percent }}%</div>
+              <div>
+                Han su dung:
+                {% if voucher.expires_at %}
+                {{ voucher.expires_at.strftime('%d/%m/%Y') }}
+                {% else %}
+                Khong co han
+                {% endif %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+      </section>
+
+      <section class="section {% if active_tab == 'doi_mat_khau' %}active{% endif %}">
+        <form method="post" style="max-width: 420px;">
+          <input type="hidden" name="hanh_dong" value="doi_mat_khau">
+          <div>
+            <label for="mat_khau_cu">Mat khau hien tai</label>
+            <input id="mat_khau_cu" name="mat_khau_cu" type="password" autocomplete="current-password" required>
+          </div>
+          <div>
+            <label for="mat_khau_moi">Mat khau moi</label>
+            <input id="mat_khau_moi" name="mat_khau_moi" type="password" autocomplete="new-password" required>
+          </div>
+          <div>
+            <label for="mat_khau_xac_nhan">Xac nhan mat khau moi</label>
+            <input id="mat_khau_xac_nhan" name="mat_khau_xac_nhan" type="password" autocomplete="new-password" required>
+          </div>
+          <button class="btn btn-primary" type="submit">
+            <i class="fas fa-key"></i>
+            <span>Cap nhat mat khau</span>
+          </button>
+        </form>
+      </section>
+    </div>
+  </div>
+</body>
+</html>

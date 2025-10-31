@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dang ky tai khoan khach hang</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+    :root {
+      --primary: #2563eb;
+      --primary-dark: #1e3a8a;
+      --danger: #dc2626;
+      --gray-100: #f3f4f6;
+      --gray-300: #d1d5db;
+      --gray-500: #6b7280;
+      --gray-900: #111827;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1d4ed8 100%);
+      color: var(--gray-900);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 12px;
+    }
+
+    .card {
+      background: #ffffff;
+      max-width: 520px;
+      width: 100%;
+      border-radius: 20px;
+      padding: 32px;
+      box-shadow: 0 20px 45px -25px rgba(15, 23, 42, 0.45);
+    }
+
+    h1 {
+      margin: 0 0 20px;
+      font-size: 28px;
+      font-weight: 600;
+      color: var(--primary-dark);
+      text-align: center;
+    }
+
+    .description {
+      text-align: center;
+      color: var(--gray-500);
+      margin-bottom: 28px;
+      line-height: 1.6;
+    }
+
+    form {
+      display: grid;
+      gap: 18px;
+    }
+
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 6px;
+      color: var(--gray-900);
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--gray-300);
+      font-size: 15px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      font-family: inherit;
+    }
+
+    input:focus, textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    textarea {
+      min-height: 90px;
+      resize: vertical;
+    }
+
+    .field-error {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--danger);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .field-error i {
+      font-size: 13px;
+    }
+
+    .btn-primary {
+      margin-top: 6px;
+      padding: 12px 16px;
+      border-radius: 999px;
+      border: none;
+      background: var(--primary);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 16px;
+      cursor: pointer;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      background: #1d4ed8;
+      box-shadow: 0 12px 25px -15px rgba(37, 99, 235, 0.6);
+      transform: translateY(-1px);
+    }
+
+    .footer-links {
+      margin-top: 24px;
+      text-align: center;
+      color: var(--gray-500);
+      font-size: 14px;
+    }
+
+    .footer-links a {
+      color: var(--primary);
+      font-weight: 600;
+      text-decoration: none;
+      margin-left: 6px;
+    }
+
+    .footer-links a:hover {
+      text-decoration: underline;
+    }
+
+    .flash-list {
+      list-style: none;
+      padding: 0;
+      margin: 0 0 20px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .flash {
+      padding: 12px 14px;
+      border-radius: 12px;
+      font-size: 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .flash i {
+      font-size: 16px;
+    }
+
+    .flash-success {
+      background: #ecfdf5;
+      color: #047857;
+      border: 1px solid #a7f3d0;
+    }
+
+    .flash-danger {
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+    }
+
+    .flash-warning {
+      background: #fffbeb;
+      color: #b45309;
+      border: 1px solid #fde68a;
+    }
+
+    .flash-info {
+      background: #eff6ff;
+      color: #1d4ed8;
+      border: 1px solid #bfdbfe;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Dang ky tai khoan</h1>
+    <p class="description">
+      Tao tai khoan khach hang de theo doi lich su dat phong, tich diem va nhan voucher uu dai.
+    </p>
+
+    {% with messages = get_flashed_messages(with_categories=True) %}
+    {% if messages %}
+    <ul class="flash-list">
+      {% for category, message in messages %}
+      <li class="flash flash-{{ category }}">
+        <i class="fas fa-circle-info"></i>
+        <span>{{ message }}</span>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    {% endwith %}
+
+    <form method="post" novalidate>
+      <div>
+        <label for="ho_ten">Ho ten</label>
+        <input id="ho_ten" name="ho_ten" type="text" value="{{ form.ho_ten }}" autocomplete="name" required>
+        {% if errors.ho_ten %}
+        <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.ho_ten }}</div>
+        {% endif %}
+      </div>
+
+      <div>
+        <label for="cmnd">CMND / CCCD</label>
+        <input id="cmnd" name="cmnd" type="text" value="{{ form.cmnd }}" autocomplete="off" required>
+        {% if errors.cmnd %}
+        <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.cmnd }}</div>
+        {% endif %}
+      </div>
+
+      <div>
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" value="{{ form.email }}" autocomplete="email" required>
+        {% if errors.email %}
+        <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.email }}</div>
+        {% endif %}
+      </div>
+
+      <div>
+        <label for="sdt">So dien thoai</label>
+        <input id="sdt" name="sdt" type="tel" value="{{ form.sdt }}" autocomplete="tel">
+        {% if errors.sdt %}
+        <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.sdt }}</div>
+        {% endif %}
+      </div>
+
+      <div>
+        <label for="dia_chi">Dia chi</label>
+        <textarea id="dia_chi" name="dia_chi" rows="3">{{ form.dia_chi }}</textarea>
+        {% if errors.dia_chi %}
+        <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.dia_chi }}</div>
+        {% endif %}
+      </div>
+
+      <div>
+        <label for="mat_khau">Mat khau</label>
+        <input id="mat_khau" name="mat_khau" type="password" autocomplete="new-password" required>
+        {% if errors.mat_khau %}
+        <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.mat_khau }}</div>
+        {% endif %}
+      </div>
+
+      <div>
+        <label for="mat_khau_xac_nhan">Xac nhan mat khau</label>
+        <input id="mat_khau_xac_nhan" name="mat_khau_xac_nhan" type="password" autocomplete="new-password" required>
+        {% if errors.mat_khau_xac_nhan %}
+        <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.mat_khau_xac_nhan }}</div>
+        {% endif %}
+      </div>
+
+      <button class="btn-primary" type="submit">
+        <i class="fas fa-user-plus"></i>
+        <span>Tao tai khoan</span>
+      </button>
+    </form>
+
+    <div class="footer-links">
+      Da co tai khoan?
+      <a href="{{ url_for('khach_hang_dang_nhap') }}">Dang nhap</a>
+    </div>
+  </div>
+</body>
+</html>

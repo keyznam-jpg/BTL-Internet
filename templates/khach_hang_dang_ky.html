@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dang ky tai khoan khach hang</title>
+  <title>Đăng ký tài khoản khách hàng</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
@@ -18,9 +18,7 @@
       --gray-900: #111827;
     }
 
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -158,9 +156,7 @@
       gap: 10px;
     }
 
-    .flash i {
-      font-size: 16px;
-    }
+    .flash i { font-size: 16px; }
 
     .flash-success {
       background: #ecfdf5;
@@ -189,9 +185,9 @@
 </head>
 <body>
   <div class="card">
-    <h1>Dang ky tai khoan</h1>
+    <h1>Đăng ký tài khoản</h1>
     <p class="description">
-      Tao tai khoan khach hang de theo doi lich su dat phong, tich diem va nhan voucher uu dai.
+      Tạo tài khoản khách hàng để theo dõi lịch sử đặt phòng, tích điểm và nhận ưu đãi độc quyền.
     </p>
 
     {% with messages = get_flashed_messages(with_categories=True) %}
@@ -209,7 +205,7 @@
 
     <form method="post" novalidate>
       <div>
-        <label for="ho_ten">Ho ten</label>
+        <label for="ho_ten">Họ tên</label>
         <input id="ho_ten" name="ho_ten" type="text" value="{{ form.ho_ten }}" autocomplete="name" required>
         {% if errors.ho_ten %}
         <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.ho_ten }}</div>
@@ -233,7 +229,7 @@
       </div>
 
       <div>
-        <label for="sdt">So dien thoai</label>
+        <label for="sdt">Số điện thoại</label>
         <input id="sdt" name="sdt" type="tel" value="{{ form.sdt }}" autocomplete="tel">
         {% if errors.sdt %}
         <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.sdt }}</div>
@@ -241,7 +237,7 @@
       </div>
 
       <div>
-        <label for="dia_chi">Dia chi</label>
+        <label for="dia_chi">Địa chỉ</label>
         <textarea id="dia_chi" name="dia_chi" rows="3">{{ form.dia_chi }}</textarea>
         {% if errors.dia_chi %}
         <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.dia_chi }}</div>
@@ -249,7 +245,7 @@
       </div>
 
       <div>
-        <label for="mat_khau">Mat khau</label>
+        <label for="mat_khau">Mật khẩu</label>
         <input id="mat_khau" name="mat_khau" type="password" autocomplete="new-password" required>
         {% if errors.mat_khau %}
         <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.mat_khau }}</div>
@@ -257,7 +253,7 @@
       </div>
 
       <div>
-        <label for="mat_khau_xac_nhan">Xac nhan mat khau</label>
+        <label for="mat_khau_xac_nhan">Xác nhận mật khẩu</label>
         <input id="mat_khau_xac_nhan" name="mat_khau_xac_nhan" type="password" autocomplete="new-password" required>
         {% if errors.mat_khau_xac_nhan %}
         <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.mat_khau_xac_nhan }}</div>
@@ -266,13 +262,13 @@
 
       <button class="btn-primary" type="submit">
         <i class="fas fa-user-plus"></i>
-        <span>Tao tai khoan</span>
+        <span>Tạo tài khoản</span>
       </button>
     </form>
 
     <div class="footer-links">
-      Da co tai khoan?
-      <a href="{{ url_for('khach_hang_dang_nhap') }}">Dang nhap</a>
+      Đã có tài khoản?
+      <a href="{{ url_for('khach_hang_dang_nhap') }}">Đăng nhập</a>
     </div>
   </div>
 </body>

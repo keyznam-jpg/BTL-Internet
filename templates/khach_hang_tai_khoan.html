@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tai khoan khach hang</title>
+  <title>Tài khoản khách hàng</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -118,6 +118,12 @@
       font-weight: 700;
     }
 
+    .stat span {
+      font-size: 14px;
+      color: var(--gray-500);
+      line-height: 1.5;
+    }
+
     .tabs {
       display: flex;
       gap: 10px;
@@ -161,14 +167,25 @@
       gap: 10px;
     }
 
-    .flash i {
-      font-size: 16px;
-    }
+    .flash i { font-size: 16px; }
 
     .flash-success { background: #ecfdf5; color: #047857; border: 1px solid #bbf7d0; }
     .flash-danger { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
     .flash-warning { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
     .flash-info { background: #eff6ff; color: #1d4ed8; border: 1px solid #bfdbfe; }
+
+    .errors-list {
+      list-style: none;
+      padding: 12px 14px;
+      margin: 0 0 20px;
+      border-radius: 14px;
+      background: #fef2f2;
+      color: #b91c1c;
+      border: 1px solid #fecaca;
+      display: grid;
+      gap: 6px;
+      font-size: 14px;
+    }
 
     .section {
       display: none;
@@ -247,9 +264,9 @@
       box-shadow: 0 12px 30px -20px rgba(37, 99, 235, 0.8);
     }
 
-    .btn-secondary {
-      background: var(--gray-100);
-      color: var(--gray-700);
+    .table-wrapper {
+      overflow-x: auto;
+      border-radius: 16px;
     }
 
     table {
@@ -261,17 +278,15 @@
       overflow: hidden;
     }
 
-    .table-wrapper {
-      overflow-x: auto;
-      border-radius: 16px;
-    }
-
     th, td {
       padding: 14px 16px;
       text-align: left;
       border-bottom: 1px solid var(--gray-200);
       font-size: 14px;
+      white-space: nowrap;
     }
+
+    td:last-child { white-space: normal; }
 
     th {
       background: var(--gray-100);
@@ -299,8 +314,14 @@
     }
 
     .status-cho_xac_nhan,
+    .status-waiting,
     .status-dat {
       background: rgba(37, 99, 235, 0.15);
+      color: #1d4ed8;
+    }
+
+    .status-nhan {
+      background: rgba(59, 130, 246, 0.15);
       color: #1d4ed8;
     }
 
@@ -350,59 +371,35 @@
       color: var(--gray-400);
     }
 
-    .errors-list {
-      list-style: none;
-      padding: 12px 14px;
-      margin: 0;
-      border-radius: 14px;
-      background: #fef2f2;
-      color: #b91c1c;
-      border: 1px solid #fecaca;
-      display: grid;
-      gap: 6px;
-      font-size: 14px;
-    }
-
-    .field-error {
-      margin-top: 6px;
-      font-size: 13px;
-      color: var(--danger);
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .loyalty-tip {
-      font-size: 14px;
-      color: var(--gray-500);
-      line-height: 1.5;
-    }
-
     @media (max-width: 768px) {
-      header h1 {
-        font-size: 26px;
-      }
-      .card {
-        padding: 22px;
-      }
+      header h1 { font-size: 26px; }
+      .card { padding: 22px; }
     }
   </style>
 </head>
 <body>
+  {% set trang_thai_labels = {
+    'da_thanh_toan': 'Đã thanh toán',
+    'cho_xac_nhan': 'Chờ xác nhận',
+    'waiting': 'Đang chờ',
+    'dat': 'Đã đặt',
+    'nhan': 'Đang lưu trú',
+    'huy': 'Đã hủy'
+  } %}
   <div class="page">
     <header>
       <h1>
         <i class="fas fa-user-circle"></i>
-        Xin chao, {{ kh.ho_ten or 'Khach hang' }}
+        Xin chào, {{ kh.ho_ten or 'Khách hàng' }}
       </h1>
       <div class="actions">
         <a class="header-btn" href="{{ url_for('khach_hang_dang_xuat') }}">
           <i class="fas fa-arrow-right-from-bracket"></i>
-          Dang xuat
+          Đăng xuất
         </a>
         <a class="header-btn" href="{{ url_for('dat_phong_online') }}">
           <i class="fas fa-bed"></i>
-          Dat phong online
+          Đặt phòng trực tuyến
         </a>
       </div>
     </header>
@@ -410,22 +407,19 @@
     <div class="card">
       <div class="stat-grid">
         <div class="stat">
-          <h3><i class="fas fa-gem"></i>Diem tich luy</h3>
+          <h3><i class="fas fa-gem"></i>Điểm tích lũy</h3>
           <strong>{{ kh.diem_tich_luy or 0 }}</strong>
-          <span class="loyalty-tip">
-            Moi 1 diem quy doi thanh {{ '%.1f' % loyalty_percent_per_point }}% giam gia.
-            Toi da {{ loyalty_max_discount }}% cho moi voucher.
-          </span>
+          <span>Mỗi 1 điểm tương ứng với {{ '%.1f' % loyalty_percent_per_point }}% giảm giá. Tối đa {{ loyalty_max_discount }}% cho một voucher.</span>
         </div>
         <div class="stat">
-          <h3><i class="fas fa-receipt"></i>Lich su dat phong</h3>
+          <h3><i class="fas fa-receipt"></i>Lịch sử đặt phòng</h3>
           <strong>{{ lich_su_dat_phong|length }}</strong>
-          <span class="loyalty-tip">Tong so don da luu lai trong he thong.</span>
+          <span>Tổng số đơn đặt phòng đã được lưu trong hệ thống.</span>
         </div>
         <div class="stat">
-          <h3><i class="fas fa-ticket-alt"></i>Voucher con han</h3>
+          <h3><i class="fas fa-ticket-alt"></i>Voucher còn hiệu lực</h3>
           <strong>{{ vouchers_con_han|length }}</strong>
-          <span class="loyalty-tip">Su dung voucher de nhan uu dai khi dat phong.</span>
+          <span>Sử dụng voucher để nhận ưu đãi khi đặt phòng.</span>
         </div>
       </div>
 
@@ -453,18 +447,18 @@
       {% endif %}
 
       <div class="tabs">
-        <a class="tab-link {% if active_tab == 'thong_tin' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='thong_tin') }}">Thong tin ca nhan</a>
-        <a class="tab-link {% if active_tab == 'lich_su' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='lich_su') }}">Lich su dat phong</a>
-        <a class="tab-link {% if active_tab == 'uu_dai' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='uu_dai') }}">Voucher & tich diem</a>
-        <a class="tab-link {% if active_tab == 'doi_mat_khau' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='doi_mat_khau') }}">Doi mat khau</a>
+        <a class="tab-link {% if active_tab == 'thong_tin' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='thong_tin') }}">Thông tin cá nhân</a>
+        <a class="tab-link {% if active_tab == 'lich_su' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='lich_su') }}">Lịch sử đặt phòng</a>
+        <a class="tab-link {% if active_tab == 'uu_dai' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='uu_dai') }}">Voucher & tích điểm</a>
+        <a class="tab-link {% if active_tab == 'doi_mat_khau' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='doi_mat_khau') }}">Đổi mật khẩu</a>
       </div>
 
       <section class="section {% if active_tab == 'thong_tin' %}active{% endif %}">
-        <form method="post">
+        <form method="post" novalidate>
           <input type="hidden" name="hanh_dong" value="cap_nhat_thong_tin">
           <div class="form-grid">
             <div>
-              <label for="ho_ten">Ho ten</label>
+              <label for="ho_ten">Họ tên</label>
               <input id="ho_ten" name="ho_ten" type="text" value="{{ kh.ho_ten or '' }}" required>
             </div>
             <div>
@@ -476,17 +470,17 @@
               <input id="email" name="email" type="email" value="{{ kh.email or '' }}">
             </div>
             <div>
-              <label for="sdt">So dien thoai</label>
+              <label for="sdt">Số điện thoại</label>
               <input id="sdt" name="sdt" type="tel" value="{{ kh.sdt or '' }}">
             </div>
           </div>
           <div>
-            <label for="dia_chi">Dia chi</label>
+            <label for="dia_chi">Địa chỉ</label>
             <textarea id="dia_chi" name="dia_chi">{{ kh.dia_chi or '' }}</textarea>
           </div>
           <button class="btn btn-primary" type="submit">
             <i class="fas fa-save"></i>
-            <span>Cap nhat thong tin</span>
+            <span>Cập nhật thông tin</span>
           </button>
         </form>
       </section>
@@ -497,15 +491,16 @@
           <table>
             <thead>
               <tr>
-                <th>Ma dat</th>
-                <th>Ngay nhan</th>
-                <th>Ngay tra</th>
-                <th>Trang thai</th>
-                <th>Tong thanh toan</th>
+                <th>Mã đặt</th>
+                <th>Nhận phòng</th>
+                <th>Trả phòng</th>
+                <th>Trạng thái</th>
+                <th>Tổng thanh toán</th>
               </tr>
             </thead>
             <tbody>
               {% for dp in lich_su_dat_phong %}
+              {% set trang_thai = trang_thai_labels.get(dp.trang_thai, dp.trang_thai.replace('_', ' ')) %}
               <tr>
                 <td>#{{ dp.id }}</td>
                 <td>{{ dp.ngay_nhan.strftime('%d/%m/%Y') if dp.ngay_nhan else '-' }}</td>
@@ -513,7 +508,7 @@
                 <td>
                   <span class="status status-{{ dp.trang_thai }}">
                     <i class="fas fa-circle"></i>
-                    {{ dp.trang_thai.replace('_', ' ') }}
+                    {{ trang_thai }}
                   </span>
                 </td>
                 <td>{{ (dp.tong_thanh_toan or 0)|vnd }}</td>
@@ -525,7 +520,7 @@
         {% else %}
         <div class="empty-state">
           <i class="fas fa-calendar-xmark"></i>
-          <p>Chua co lich su dat phong. Hay dat phong de trai nghiem dich vu va tich diem.</p>
+          <p>Bạn chưa có lịch sử đặt phòng. Hãy đặt phòng để trải nghiệm dịch vụ và tích lũy điểm.</p>
         </div>
         {% endif %}
       </section>
@@ -535,14 +530,14 @@
           {% for voucher in vouchers_con_han %}
           <div class="voucher-card">
             <div class="voucher-code">{{ voucher.code }}</div>
-            <div><strong>Giam {{ voucher.discount_percent }}%</strong> cho don dat phong.</div>
-            <div>Trang thai: <strong>Chua su dung</strong></div>
+            <div><strong>Giảm {{ voucher.discount_percent }}%</strong> cho đơn đặt phòng.</div>
+            <div>Trạng thái: <strong>Chưa sử dụng</strong></div>
             <div>
-              Han su dung:
+              Hạn sử dụng:
               {% if voucher.expires_at %}
               {{ voucher.expires_at.strftime('%d/%m/%Y') }}
               {% else %}
-              Khong gioi han
+              Không giới hạn
               {% endif %}
             </div>
           </div>
@@ -552,42 +547,42 @@
         {% if vouchers_con_han|length == 0 %}
         <div class="empty-state" style="margin-top:20px;">
           <i class="fas fa-ticket"></i>
-          <p>Ban chua co voucher nao. Hay doi diem hoac hoan tat don dat phong de nhan uu dai.</p>
+          <p>Bạn chưa có voucher nào khả dụng. Hãy đổi điểm hoặc hoàn tất đặt phòng để nhận thêm ưu đãi.</p>
         </div>
         {% endif %}
 
         <div style="margin-top: 28px;">
-          <h3>Diem tich luy cua ban: {{ kh.diem_tich_luy or 0 }}</h3>
-          <p class="loyalty-tip">
-            Nhap so diem muon doi thanh voucher giam gia. Moi 1 diem giam {{ '%.1f' % loyalty_percent_per_point }}%.
-            Toi da {{ loyalty_max_discount }}% cho mot voucher.
+          <h3>Điểm tích lũy hiện tại: {{ kh.diem_tich_luy or 0 }}</h3>
+          <p class="stat" style="background: var(--gray-50); padding:16px;">
+            Mỗi 1 điểm quy đổi thành {{ '%.1f' % loyalty_percent_per_point }}% giảm giá (tối đa {{ loyalty_max_discount }}% cho một voucher).
+            Vui lòng nhập số điểm muốn đổi để tạo voucher mới.
           </p>
-          <form method="post" style="max-width: 420px; margin-top: 16px;">
+          <form method="post" style="max-width: 420px; margin-top: 16px;" novalidate>
             <input type="hidden" name="hanh_dong" value="doi_diem">
-            <label for="so_diem">So diem muon doi</label>
-            <input id="so_diem" name="so_diem" type="number" min="1" step="1" placeholder="Vi du: 50" required>
+            <label for="so_diem">Số điểm muốn đổi</label>
+            <input id="so_diem" name="so_diem" type="number" min="1" step="1" placeholder="Ví dụ: 50" required>
             <button class="btn btn-primary" type="submit" style="margin-top: 12px;">
               <i class="fas fa-gift"></i>
-              <span>Doi diem lay voucher</span>
+              <span>Đổi điểm lấy voucher</span>
             </button>
           </form>
         </div>
 
         {% if vouchers_khong_con_hieu_luc %}
         <div style="margin-top: 32px;">
-          <h3>Voucher da het han hoac da su dung</h3>
+          <h3>Voucher đã hết hạn hoặc đã sử dụng</h3>
           <div class="voucher-grid">
             {% for voucher, status_text in vouchers_khong_con_hieu_luc %}
             <div class="voucher-card" style="opacity: 0.6;">
               <div class="voucher-code">{{ voucher.code }}</div>
-              <div>Trang thai: {{ status_text }}</div>
-              <div>Giam {{ voucher.discount_percent }}%</div>
+              <div>Trạng thái: {{ status_text }}</div>
+              <div>Giảm {{ voucher.discount_percent }}%</div>
               <div>
-                Han su dung:
+                Hạn sử dụng:
                 {% if voucher.expires_at %}
                 {{ voucher.expires_at.strftime('%d/%m/%Y') }}
                 {% else %}
-                Khong co han
+                Không giới hạn
                 {% endif %}
               </div>
             </div>
@@ -598,23 +593,23 @@
       </section>
 
       <section class="section {% if active_tab == 'doi_mat_khau' %}active{% endif %}">
-        <form method="post" style="max-width: 420px;">
+        <form method="post" style="max-width: 420px;" novalidate>
           <input type="hidden" name="hanh_dong" value="doi_mat_khau">
           <div>
-            <label for="mat_khau_cu">Mat khau hien tai</label>
+            <label for="mat_khau_cu">Mật khẩu hiện tại</label>
             <input id="mat_khau_cu" name="mat_khau_cu" type="password" autocomplete="current-password" required>
           </div>
           <div>
-            <label for="mat_khau_moi">Mat khau moi</label>
+            <label for="mat_khau_moi">Mật khẩu mới</label>
             <input id="mat_khau_moi" name="mat_khau_moi" type="password" autocomplete="new-password" required>
           </div>
           <div>
-            <label for="mat_khau_xac_nhan">Xac nhan mat khau moi</label>
+            <label for="mat_khau_xac_nhan">Xác nhận mật khẩu mới</label>
             <input id="mat_khau_xac_nhan" name="mat_khau_xac_nhan" type="password" autocomplete="new-password" required>
           </div>
           <button class="btn btn-primary" type="submit">
             <i class="fas fa-key"></i>
-            <span>Cap nhat mat khau</span>
+            <span>Cập nhật mật khẩu</span>
           </button>
         </form>
       </section>

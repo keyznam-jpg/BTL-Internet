@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Khoi phuc mat khau khach hang</title>
+  <title>Lấy lại mật khẩu khách hàng</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap');
@@ -134,9 +134,7 @@
       margin-bottom: 18px;
     }
 
-    .alert i {
-      font-size: 16px;
-    }
+    .alert i { font-size: 16px; }
 
     .alert-error {
       background: #fef2f2;
@@ -153,9 +151,9 @@
 </head>
 <body>
   <div class="card">
-    <h1>Khoi phuc mat khau</h1>
+    <h1>Lấy lại mật khẩu</h1>
     <p class="subtitle">
-      Nhap CMND/CCCD va email da dang ky. Neu thong tin khop, he thong se gui mat khau moi ve hop thu cua ban.
+      Nhập CMND/CCCD và email đã đăng ký. Nếu thông tin khớp, hệ thống sẽ gửi mật khẩu mới về hộp thư của bạn.
     </p>
 
     {% with messages = get_flashed_messages(with_categories=True) %}
@@ -183,20 +181,20 @@
       </div>
 
       <div>
-        <label for="email">Email da dang ky</label>
+        <label for="email">Email đã đăng ký</label>
         <input id="email" name="email" type="email" value="{{ form.email }}" required>
       </div>
 
       <button class="btn-primary" type="submit">
         <i class="fas fa-paper-plane"></i>
-        <span>Gui yeu cau</span>
+        <span>Gửi yêu cầu</span>
       </button>
     </form>
 
     <div class="helper-links">
-      <span>Da nhan duoc mat khau moi?</span>
-      <a href="{{ url_for('khach_hang_dang_nhap') }}">Quay lai trang dang nhap</a>
-      <a href="{{ url_for('khach_hang_dang_ky') }}">Tao tai khoan moi</a>
+      <span>Đã nhận được mật khẩu mới?</span>
+      <a href="{{ url_for('khach_hang_dang_nhap') }}">Quay lại trang đăng nhập</a>
+      <a href="{{ url_for('khach_hang_dang_ky') }}">Tạo tài khoản mới</a>
     </div>
   </div>
 </body>

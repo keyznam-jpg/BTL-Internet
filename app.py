@@ -1326,20 +1326,66 @@ def ensure_tables_exist():
 def ensure_customer_email_templates():
     templates = {
         'customer_welcome': {
-            'subject': 'Chào mừng {{ ho_ten }} đến với {{ ten_khach_san }}',
+            'subject': 'Chào mừng {{ ho_ten }} trở thành thành viên {{ ten_khach_san }}',
             'body': """<!DOCTYPE html>
 <html lang="vi">
-  <body style="font-family: Arial, sans-serif; color:#1f2937;">
-    <p>Xin chào {{ ho_ten }},</p>
-    <p>Cảm ơn bạn đã đăng ký tài khoản khách hàng tại <strong>{{ ten_khach_san }}</strong>.</p>
-    <p>Từ nay bạn có thể theo dõi lịch sử đặt phòng, tích điểm và đổi lấy ưu đãi một cách dễ dàng.</p>
-    <p><strong>Thông tin đăng nhập:</strong></p>
-    <ul>
-      <li>CMND/CCCD: <strong>{{ cmnd }}</strong></li>
-      <li>Email: <strong>{{ email or 'Chưa cập nhật' }}</strong></li>
-    </ul>
-    <p>Đừng quên đăng nhập và cập nhật thông tin cá nhân để chúng tôi phục vụ bạn tốt hơn.</p>
-    <p>Trân trọng,<br>{{ ten_khach_san }}</p>
+  <body style="margin:0;background-color:#f8fafc;font-family:'Helvetica Neue',Arial,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 20px 44px -26px rgba(15,23,42,0.32);">
+            <tr>
+              <td style="background:linear-gradient(135deg,#2563eb,#0ea5e9);padding:28px 36px;color:#ffffff;">
+                <h1 style="margin:0;font-size:24px;">Chào mừng thành viên mới</h1>
+                <p style="margin:10px 0 0;font-size:14px;opacity:0.9;">{{ ten_khach_san }}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:32px 36px;">
+                <p style="margin:0 0 16px;font-size:15px;">Xin chào {{ ho_ten }},</p>
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+                  Cảm ơn bạn đã gia nhập cộng đồng thành viên của <strong>{{ ten_khach_san }}</strong>. Từ bây giờ, bạn có thể:
+                </p>
+                <ul style="margin:0 0 20px 20px;padding:0;font-size:15px;line-height:1.6;">
+                  <li>Theo dõi lịch sử đặt phòng và trạng thái đơn hàng.</li>
+                  <li>Tích lũy điểm thưởng và đổi lấy voucher ưu đãi.</li>
+                  <li>Cập nhật thông tin cá nhân để nhận các chương trình dành riêng cho bạn.</li>
+                </ul>
+                <p style="margin:0 0 12px;font-size:15px;font-weight:600;">Thông tin đăng nhập:</p>
+                <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 24px;border-collapse:separate;border-spacing:0 10px;">
+                  <tr>
+                    <td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;">
+                      <span style="display:block;font-size:13px;color:#64748b;">CMND/CCCD</span>
+                      <span style="font-size:16px;font-weight:600;color:#2563eb;">{{ cmnd }}</span>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px;padding:12px 16px;">
+                      <span style="display:block;font-size:13px;color:#64748b;">Email</span>
+                      <span style="font-size:16px;font-weight:600;color:#2563eb;">{{ email or 'Chưa cập nhật' }}</span>
+                    </td>
+                  </tr>
+                </table>
+                {% if tai_khoan_url %}
+                <div style="margin:24px 0;text-align:center;">
+                  <a href="{{ tai_khoan_url }}" style="display:inline-block;padding:12px 28px;border-radius:999px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;">Khám phá tài khoản</a>
+                </div>
+                {% endif %}
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+                  Đừng quên đăng nhập và cập nhật thông tin cá nhân để chúng tôi phục vụ bạn tốt hơn. Nếu cần hỗ trợ, đội ngũ {{ ten_khach_san }} luôn sẵn sàng!
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:22px 36px;background:#f3f4f6;border-top:1px solid #e2e8f0;font-size:13px;color:#64748b;">
+                <p style="margin:0 0 6px;">Trân trọng,<br>{{ ten_khach_san }}</p>
+                <p style="margin:0;">Email được gửi tự động, vui lòng không trả lời thư này.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>"""
         },
@@ -2973,7 +3019,8 @@ def khach_hang_dang_ky():
                                 'ho_ten': kh.ho_ten,
                                 'ten_khach_san': hotel['name'],
                                 'cmnd': kh.cmnd,
-                                'email': kh.email
+                                'email': kh.email,
+                                'tai_khoan_url': url_for('khach_hang_tai_khoan', _external=True)
                             },
                             khachhang_id=kh.id
                         )

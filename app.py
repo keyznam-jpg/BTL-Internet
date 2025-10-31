@@ -3808,15 +3808,6 @@ def dat_phong_online_dat_coc(token):
 def dat_phong_online_request_confirmation(token):
     dp = DatPhong.query.filter_by(chat_token=token).first_or_404()
     wants_json = request.headers.get('X-Requested-With') == 'XMLHttpRequest'
-    can_manage_services = False
-    if current_user.is_authenticated and hasattr(current_user, 'has_permission'):
-        can_manage_services = current_user.has_permission('services.manage')
-        if request.method == 'POST' and not can_manage_services:
-            message = 'Bạn không có quyền quản lý dịch vụ.'
-            if wants_json:
-                return jsonify({'status': 'error', 'message': message}), 403
-            flash(message, 'danger')
-            return redirect(url_for('quan_li_dich_vu'))
     payload = {}
     if request.is_json:
         payload = request.get_json(silent=True) or {}

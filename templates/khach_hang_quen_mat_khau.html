@@ -69,6 +69,12 @@
       margin-bottom: 6px;
     }
 
+    .required::after {
+      content: ' *';
+      color: var(--danger);
+      font-weight: 700;
+    }
+
     input {
       width: 100%;
       border-radius: 10px;
@@ -176,12 +182,12 @@
 
     <form method="post" novalidate>
       <div>
-        <label for="cmnd">CMND / CCCD</label>
+        <label class="required" for="cmnd">CMND / CCCD</label>
         <input id="cmnd" name="cmnd" type="text" value="{{ form.cmnd }}" required>
       </div>
 
       <div>
-        <label for="email">Email đã đăng ký</label>
+        <label class="required" for="email">Email đã đăng ký</label>
         <input id="email" name="email" type="email" value="{{ form.email }}" required>
       </div>
 

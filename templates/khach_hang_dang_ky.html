@@ -68,6 +68,12 @@
       color: var(--gray-900);
     }
 
+    .required::after {
+      content: ' *';
+      color: var(--danger);
+      font-weight: 700;
+    }
+
     input, textarea {
       width: 100%;
       padding: 12px 14px;
@@ -98,9 +104,7 @@
       gap: 6px;
     }
 
-    .field-error i {
-      font-size: 13px;
-    }
+    .field-error i { font-size: 13px; }
 
     .btn-primary {
       margin-top: 6px;
@@ -135,9 +139,7 @@
       margin-left: 6px;
     }
 
-    .footer-links a:hover {
-      text-decoration: underline;
-    }
+    .footer-links a:hover { text-decoration: underline; }
 
     .flash-list {
       list-style: none;
@@ -187,7 +189,7 @@
   <div class="card">
     <h1>Đăng ký tài khoản</h1>
     <p class="description">
-      Tạo tài khoản khách hàng để theo dõi lịch sử đặt phòng, tích điểm và nhận ưu đãi độc quyền.
+      Tạo tài khoản khách hàng để theo dõi lịch sử đặt phòng, tích lũy điểm thưởng và nhận ưu đãi độc quyền.
     </p>
 
     {% with messages = get_flashed_messages(with_categories=True) %}
@@ -205,7 +207,7 @@
 
     <form method="post" novalidate>
       <div>
-        <label for="ho_ten">Họ tên</label>
+        <label class="required" for="ho_ten">Họ tên</label>
         <input id="ho_ten" name="ho_ten" type="text" value="{{ form.ho_ten }}" autocomplete="name" required>
         {% if errors.ho_ten %}
         <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.ho_ten }}</div>
@@ -213,7 +215,7 @@
       </div>
 
       <div>
-        <label for="cmnd">CMND / CCCD</label>
+        <label class="required" for="cmnd">CMND / CCCD</label>
         <input id="cmnd" name="cmnd" type="text" value="{{ form.cmnd }}" autocomplete="off" required>
         {% if errors.cmnd %}
         <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.cmnd }}</div>
@@ -221,7 +223,7 @@
       </div>
 
       <div>
-        <label for="email">Email</label>
+        <label class="required" for="email">Email</label>
         <input id="email" name="email" type="email" value="{{ form.email }}" autocomplete="email" required>
         {% if errors.email %}
         <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.email }}</div>
@@ -245,7 +247,7 @@
       </div>
 
       <div>
-        <label for="mat_khau">Mật khẩu</label>
+        <label class="required" for="mat_khau">Mật khẩu</label>
         <input id="mat_khau" name="mat_khau" type="password" autocomplete="new-password" required>
         {% if errors.mat_khau %}
         <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.mat_khau }}</div>
@@ -253,7 +255,7 @@
       </div>
 
       <div>
-        <label for="mat_khau_xac_nhan">Xác nhận mật khẩu</label>
+        <label class="required" for="mat_khau_xac_nhan">Xác nhận mật khẩu</label>
         <input id="mat_khau_xac_nhan" name="mat_khau_xac_nhan" type="password" autocomplete="new-password" required>
         {% if errors.mat_khau_xac_nhan %}
         <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.mat_khau_xac_nhan }}</div>

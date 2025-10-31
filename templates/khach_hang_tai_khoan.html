@@ -364,6 +364,46 @@
       background: linear-gradient(135deg, rgba(37, 99, 235, 0.08), rgba(16, 185, 129, 0.08));
     }
 
+    .voucher-pagination {
+      display: none;
+      margin-top: 18px;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .voucher-pagination button {
+      border: none;
+      background: var(--gray-100);
+      color: var(--gray-600);
+      padding: 8px 14px;
+      border-radius: 999px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    }
+
+    .voucher-pagination .page-info {
+      font-weight: 600;
+      color: var(--gray-700);
+      padding: 4px 12px;
+    }
+
+    .voucher-pagination button:hover:not([disabled]) {
+      background: rgba(37, 99, 235, 0.12);
+      color: var(--primary);
+      transform: translateY(-1px);
+    }
+
+    .voucher-pagination button:disabled,
+    .voucher-pagination button.active {
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      color: #ffffff;
+      cursor: default;
+      box-shadow: 0 14px 28px -24px rgba(37, 99, 235, 0.7);
+    }
+
     .voucher-code {
       font-family: 'Courier New', Courier, monospace;
       font-size: 18px;
@@ -544,9 +584,9 @@
       </section>
 
       <section class="section {% if active_tab == 'uu_dai' %}active{% endif %}">
-        <div class="voucher-grid">
+        <div class="voucher-grid" id="active-voucher-list">
           {% for voucher in vouchers_con_han %}
-          <div class="voucher-card">
+          <div class="voucher-card" data-index="{{ loop.index0 }}">
             <div class="voucher-code">{{ voucher.code }}</div>
             <div><strong>Giảm {{ voucher.discount_percent }}%</strong> cho đơn đặt phòng.</div>
             <div>Trạng thái: <strong>Chưa sử dụng</strong></div>
@@ -561,6 +601,7 @@
           </div>
           {% endfor %}
         </div>
+        <div class="voucher-pagination" id="active-voucher-pagination"></div>
 
         {% if vouchers_con_han|length == 0 %}
         <div class="empty-state" style="margin-top:20px;">
@@ -589,9 +630,9 @@
         {% if vouchers_khong_con_hieu_luc %}
         <div style="margin-top: 32px;">
           <h3>Voucher đã hết hạn hoặc đã sử dụng</h3>
-          <div class="voucher-grid">
+          <div class="voucher-grid" id="expired-voucher-list">
             {% for voucher, status_text in vouchers_khong_con_hieu_luc %}
-            <div class="voucher-card" style="opacity: 0.6;">
+            <div class="voucher-card" style="opacity: 0.6;" data-index="{{ loop.index0 }}">
               <div class="voucher-code">{{ voucher.code }}</div>
               <div>Trạng thái: {{ status_text }}</div>
               <div>Giảm {{ voucher.discount_percent }}%</div>
@@ -606,8 +647,10 @@
             </div>
             {% endfor %}
           </div>
+          <div class="voucher-pagination" id="expired-voucher-pagination"></div>
         </div>
         {% endif %}
+
       </section>
 
       <section class="section {% if active_tab == 'doi_mat_khau' %}active{% endif %}">
@@ -632,6 +675,59 @@
         </form>
       </section>
     </div>
-  </div>
+  </div>  <script>
+    document.addEventListener('DOMContentLoaded', function () {
+      setupVoucherPagination('#active-voucher-list', '#active-voucher-pagination');
+      setupVoucherPagination('#expired-voucher-list', '#expired-voucher-pagination');
+    });
+
+    function setupVoucherPagination(listSelector, paginationSelector, pageSize = 4) {
+      const list = document.querySelector(listSelector);
+      const pagination = document.querySelector(paginationSelector);
+      if (!list || !pagination) { return; }
+      const items = Array.from(list.querySelectorAll('.voucher-card'));
+      if (items.length <= pageSize) {
+        pagination.style.display = 'none';
+        return;
+      }
+
+      let currentPage = 1;
+      const totalPages = Math.ceil(items.length / pageSize);
+
+      function createButton(label, targetPage, disabled = false, active = false) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.textContent = label;
+        if (disabled) { btn.disabled = true; }
+        if (active) { btn.classList.add('active'); }
+        if (!disabled && !active) {
+          btn.addEventListener('click', () => render(targetPage));
+        }
+        return btn;
+      }
+
+      function render(page) {
+        currentPage = Math.max(1, Math.min(page, totalPages));
+        items.forEach((item, index) => {
+          const shouldShow = index >= (currentPage - 1) * pageSize && index < currentPage * pageSize;
+          item.style.display = shouldShow ? '' : 'none';
+        });
+        pagination.innerHTML = '';
+        pagination.style.display = 'flex';
+        pagination.appendChild(createButton('Trước', currentPage - 1, currentPage === 1));
+        const info = document.createElement('span');
+        info.className = 'page-info';
+        info.textContent = `Trang ${currentPage}/${totalPages}`;
+        pagination.appendChild(info);
+        for (let pageNumber = 1; pageNumber <= totalPages; pageNumber++) {
+          const isCurrent = pageNumber === currentPage;
+          pagination.appendChild(createButton(pageNumber.toString(), pageNumber, false, isCurrent));
+        }
+        pagination.appendChild(createButton('Sau', currentPage + 1, currentPage === totalPages));
+      }
+
+      render(1);
+    }
+  </script>
 </body>
 </html>

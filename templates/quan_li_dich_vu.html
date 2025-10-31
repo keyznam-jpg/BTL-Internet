@@ -172,10 +172,10 @@
             <td class="price">{{ dv.gia|vnd }}</td>
             {% if can_manage_services %}
             <td class="actions">
-              <button class="btn-edit" onclick="editService({{ dv.id }}, '{{ dv.ten }}', {{ dv.gia }}, {{ dv.loai_id }})" title="Chỉnh sửa">
+              <button class="btn-edit" type="button" onclick="editService({{ dv.id }}, '{{ dv.ten }}', {{ dv.gia }}, {{ dv.loai_id }})" title="Chỉnh sửa">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="btn-delete" onclick="deleteService({{ dv.id }}, '{{ dv.ten }}')" title="Xóa">
+              <button class="btn-delete" type="button" onclick="deleteService({{ dv.id }}, '{{ dv.ten }}')" title="Xóa">
                 <i class="fas fa-trash-alt"></i>
               </button>
             </td>
@@ -951,10 +951,10 @@
       </td>
       <td class="price">${formatCurrency(data.gia)}</td>
       <td class="actions">
-        <button class="btn-edit" onclick="editService(${data.id}, '${data.ten}', ${data.gia}, ${data.loai_id})" title="Chỉnh sửa">
+        <button class="btn-edit" type="button" onclick="editService(${data.id}, '${data.ten}', ${data.gia}, ${data.loai_id})" title="Chỉnh sửa">
           <i class="fas fa-edit"></i>
         </button>
-        <button class="btn-delete" onclick="deleteService(${data.id}, '${data.ten}')" title="Xóa">
+        <button class="btn-delete" type="button" onclick="deleteService(${data.id}, '${data.ten}')" title="Xóa">
           <i class="fas fa-trash-alt"></i>
         </button>
       </td>
@@ -1005,6 +1005,9 @@
       }
     });
   });
+  window.editService = editService;
+  window.deleteService = deleteService;
+  window.resetForm = resetForm;
 </script>
 {% endblock %}
 

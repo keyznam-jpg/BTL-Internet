@@ -1344,26 +1344,69 @@ def ensure_customer_email_templates():
 </html>"""
         },
         'customer_password_reset': {
-            'subject': 'Mật khẩu mới cho tài khoản khách hàng tại {{ ten_khach_san }}',
+            'subject': 'Yêu cầu đặt lại mật khẩu tại {{ ten_khach_san }}',
             'body': """<!DOCTYPE html>
 <html lang="vi">
-  <body style="font-family: Arial, sans-serif; color:#1f2937;">
-    <p>Xin chào {{ ho_ten }},</p>
-    <p>Chúng tôi đã nhận được yêu cầu khôi phục mật khẩu của bạn. Dưới đây là mật khẩu đăng nhập mới:</p>
-    <p style="font-size: 18px; font-weight: 600;">Mật khẩu mới: <span style="color:#047857;">{{ mat_khau_moi }}</span></p>
-    <p>Vui lòng đăng nhập và thay đổi mật khẩu ngay sau khi truy cập để đảm bảo an toàn.</p>
-    <p>Nếu bạn không thực hiện yêu cầu này, hãy liên hệ ngay với chúng tôi để được hỗ trợ.</p>
-    <p>Trân trọng,<br>{{ ten_khach_san }}</p>
+  <body style="margin:0;background-color:#f3f4f6;font-family:'Helvetica Neue',Arial,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;background-color:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 18px 40px -22px rgba(15,23,42,0.35);">
+            <tr>
+              <td style="background:linear-gradient(135deg,#2563eb,#1d4ed8);padding:24px 32px;color:#ffffff;">
+                <h1 style="margin:0;font-size:22px;">Yêu cầu đặt lại mật khẩu</h1>
+                <p style="margin:8px 0 0;font-size:14px;opacity:0.85;">{{ ten_khach_san }}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:28px 32px;">
+                <p style="margin:0 0 16px;font-size:15px;">Xin chào {{ ho_ten }},</p>
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+                  Chúng tôi vừa nhận được yêu cầu đặt lại mật khẩu cho tài khoản khách hàng của bạn tại {{ ten_khach_san }}.
+                </p>
+                <p style="margin:0 0 12px;font-size:15px;line-height:1.6;">Mật khẩu tạm thời của bạn là:</p>
+                <div style="margin:0 0 24px;padding:16px;border-radius:12px;background:#f8fafc;border:1px solid #e2e8f0;text-align:center;">
+                  <span style="display:inline-block;font-size:20px;font-weight:700;letter-spacing:1px;color:#2563eb;">{{ mat_khau_moi }}</span>
+                </div>
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+                  Vui lòng đăng nhập bằng mật khẩu trên và đổi sang mật khẩu mới ngay sau khi truy cập để đảm bảo an toàn.
+                </p>
+                {% if dang_nhap_url %}
+                <div style="margin:24px 0;text-align:center;">
+                  <a href="{{ dang_nhap_url }}" style="display:inline-block;padding:12px 24px;border-radius:999px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;">Đăng nhập ngay</a>
+                </div>
+                {% endif %}
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+                  Nếu bạn không gửi yêu cầu này, hãy liên hệ với chúng tôi để được hỗ trợ và bảo vệ tài khoản.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:20px 32px;background:#f3f4f6;border-top:1px solid #e2e8f0;font-size:13px;color:#64748b;">
+                <p style="margin:0 0 8px;">Trân trọng,<br>{{ ten_khach_san }}</p>
+                <p style="margin:0;">Email được gửi tự động, vui lòng không trả lời thư này.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
   </body>
 </html>"""
         }
     }
-    created = False
+    changed = False
     for key, tpl in templates.items():
-        if not EmailTemplate.query.filter_by(key=key).first():
+        existing = EmailTemplate.query.filter_by(key=key).first()
+        if existing:
+            if existing.subject != tpl['subject'] or existing.body != tpl['body']:
+                existing.subject = tpl['subject']
+                existing.body = tpl['body']
+                changed = True
+        else:
             db.session.add(EmailTemplate(key=key, subject=tpl['subject'], body=tpl['body']))
-            created = True
-    if created:
+            changed = True
+    if changed:
         db.session.commit()
 
 
@@ -3046,7 +3089,8 @@ def khach_hang_quen_mat_khau():
                                 {
                                     'ho_ten': kh.ho_ten,
                                     'ten_khach_san': hotel['name'],
-                                    'mat_khau_moi': new_password
+                                    'mat_khau_moi': new_password,
+                                    'dang_nhap_url': url_for('khach_hang_dang_nhap', _external=True)
                                 },
                                 khachhang_id=kh.id
                             )

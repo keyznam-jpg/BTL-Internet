@@ -1389,6 +1389,93 @@ def ensure_customer_email_templates():
   </body>
 </html>"""
         },
+        'customer_account_locked': {
+            'subject': 'Tài khoản của bạn tại {{ ten_khach_san }} đã bị khóa',
+            'body': """<!DOCTYPE html>
+<html lang="vi">
+  <body style="margin:0;background-color:#fff7ed;font-family:'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 20px 44px -28px rgba(180,83,9,0.4);">
+            <tr>
+              <td style="background:linear-gradient(135deg,#f97316,#fb923c);padding:26px 34px;color:#ffffff;">
+                <h1 style="margin:0;font-size:22px;">Thông báo khóa tài khoản</h1>
+                <p style="margin:8px 0 0;font-size:14px;opacity:0.9;">{{ ten_khach_san }}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px 34px;">
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">Xin chào {{ ho_ten }},</p>
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+                  Tài khoản khách hàng của bạn tại <strong>{{ ten_khach_san }}</strong> đã tạm thời bị khóa để đảm bảo an toàn.
+                </p>
+                <div style="margin:0 0 20px;padding:16px;border-radius:16px;background:rgba(251, 191, 36, 0.12);border:1px solid rgba(251, 146, 60, 0.35);">
+                  <strong style="display:block;margin-bottom:8px;font-size:15px;">Lý do:</strong>
+                  <span style="font-size:14px;line-height:1.6;">{{ ly_do }}</span>
+                </div>
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+                  Nếu bạn cần hỗ trợ thêm hoặc muốn mở lại tài khoản, vui lòng liên hệ với chúng tôi qua các kênh hỗ trợ của khách sạn.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:20px 34px;background:#fff7ed;border-top:1px solid rgba(251, 146, 60, 0.2);font-size:13px;color:#b45309;">
+                <p style="margin:0;">Trân trọng,<br>{{ ten_khach_san }}</p>
+                <p style="margin:8px 0 0;font-size:12px;opacity:0.85;">Email được gửi tự động, vui lòng không trả lời thư này.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>"""
+        },
+        'customer_account_unlocked': {
+            'subject': 'Tài khoản của bạn tại {{ ten_khach_san }} đã được mở khóa',
+            'body': """<!DOCTYPE html>
+<html lang="vi">
+  <body style="margin:0;background-color:#ecfeff;font-family:'Helvetica Neue',Arial,sans-serif;color:#0f172a;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="padding:32px 0;">
+      <tr>
+        <td align="center">
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background-color:#ffffff;border-radius:18px;overflow:hidden;box-shadow:0 20px 44px -26px rgba(14,165,233,0.35);">
+            <tr>
+              <td style="background:linear-gradient(135deg,#0ea5e9,#2563eb);padding:26px 34px;color:#ffffff;">
+                <h1 style="margin:0;font-size:22px;">Tài khoản đã hoạt động trở lại</h1>
+                <p style="margin:8px 0 0;font-size:14px;opacity:0.9;">{{ ten_khach_san }}</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:30px 34px;">
+                <p style="margin:0 0 16px;font-size:15px;">Xin chào {{ ho_ten }},</p>
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.6;">
+                  Tài khoản khách hàng của bạn tại <strong>{{ ten_khach_san }}</strong> đã được mở khóa. Bạn có thể đăng nhập và sử dụng các tiện ích như trước đây.
+                </p>
+                {% if dang_nhap_url %}
+                <div style="text-align:center;margin:24px 0;">
+                  <a href="{{ dang_nhap_url }}" style="display:inline-block;padding:12px 26px;border-radius:999px;background:#2563eb;color:#ffffff;text-decoration:none;font-weight:600;">Đăng nhập ngay</a>
+                </div>
+                {% endif %}
+                <p style="margin:0;font-size:15px;line-height:1.6;">
+                  Nếu bạn cần thêm hỗ trợ, đừng ngần ngại liên hệ với chúng tôi. Chúc bạn có những trải nghiệm tuyệt vời tại {{ ten_khach_san }}!
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:20px 34px;background:#ecfeff;border-top:1px solid rgba(14,165,233,0.25);font-size:13px;color:#1e3a8a;">
+                <p style="margin:0;">Trân trọng,<br>{{ ten_khach_san }}</p>
+                <p style="margin:8px 0 0;font-size:12px;opacity:0.85;">Email được gửi tự động, vui lòng không trả lời thư này.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>"""
+        },
         'customer_password_reset': {
             'subject': 'Yêu cầu đặt lại mật khẩu tại {{ ten_khach_san }}',
             'body': """<!DOCTYPE html>
@@ -5164,14 +5251,64 @@ def quan_ly_tai_khoan_khach_hang():
 def cap_nhat_trang_thai_khach_hang(kh_id):
     kh = KhachHang.query.get_or_404(kh_id)
     trang_thai = request.form.get('trang_thai')
+    ly_do = (request.form.get('ly_do') or '').strip()
+    redirect_to = request.form.get('redirect_to')
+
     if trang_thai not in {'hoat_dong', 'khoa'}:
         flash('Trạng thái tài khoản không hợp lệ.', 'danger')
-    else:
-        kh.trang_thai_tai_khoan = trang_thai
+        return _redirect_after_status_change(redirect_to)
+
+    try:
+        hotel = get_hotel_profile()
+    except Exception:
+        hotel = {'name': 'Khách sạn'}
+
+    if trang_thai == 'khoa':
+        if not ly_do:
+            flash('Vui lòng nhập lý do khóa tài khoản.', 'warning')
+            return _redirect_after_status_change(redirect_to)
+        kh.trang_thai_tai_khoan = 'khoa'
         kh.ngay_cap_nhat = datetime.now()
         db.session.commit()
-        flash('Đã cập nhật trạng thái tài khoản khách hàng.', 'success')
-    redirect_to = request.form.get('redirect_to')
+        if kh.email:
+            try:
+                send_email_with_template(
+                    'customer_account_locked',
+                    kh.email,
+                    {
+                        'ho_ten': kh.ho_ten,
+                        'ten_khach_san': hotel.get('name', 'Khách sạn'),
+                        'ly_do': ly_do
+                    },
+                    khachhang_id=kh.id
+                )
+            except Exception as exc:
+                app.logger.warning('Không thể gửi email khóa tài khoản: %s', exc)
+        flash('Đã khóa tài khoản khách hàng và gửi thông báo.', 'success')
+    else:
+        kh.trang_thai_tai_khoan = 'hoat_dong'
+        kh.ngay_cap_nhat = datetime.now()
+        db.session.commit()
+        if kh.email:
+            try:
+                send_email_with_template(
+                    'customer_account_unlocked',
+                    kh.email,
+                    {
+                        'ho_ten': kh.ho_ten,
+                        'ten_khach_san': hotel.get('name', 'Khách sạn'),
+                        'dang_nhap_url': url_for('khach_hang_dang_nhap', _external=True)
+                    },
+                    khachhang_id=kh.id
+                )
+            except Exception as exc:
+                app.logger.warning('Không thể gửi email mở khóa tài khoản: %s', exc)
+        flash('Đã mở khóa tài khoản khách hàng và gửi thông báo.', 'success')
+
+    return _redirect_after_status_change(redirect_to)
+
+
+def _redirect_after_status_change(redirect_to):
     if redirect_to:
         parsed = urlparse(redirect_to)
         if not parsed.netloc and not parsed.scheme:

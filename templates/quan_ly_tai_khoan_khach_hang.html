@@ -53,13 +53,14 @@
         </td>
         <td>{{ kh.lan_dang_nhap_cuoi|fmt_dt if kh.lan_dang_nhap_cuoi else 'Chưa đăng nhập' }}</td>
         <td>
-          <form method="post" action="{{ url_for('cap_nhat_trang_thai_khach_hang', kh_id=kh.id) }}" style="display:flex; gap:6px;">
+          <form method="post" action="{{ url_for('cap_nhat_trang_thai_khach_hang', kh_id=kh.id) }}" style="display:flex; gap:6px; align-items:center;">
             <input type="hidden" name="redirect_to" value="{{ request.full_path }}">
             {% if kh.trang_thai_tai_khoan == 'khoa' %}
               <input type="hidden" name="trang_thai" value="hoat_dong">
               <button type="submit" class="btn" style="background:#2e7d32; color:#fff; padding:6px 12px; border:none; border-radius:6px; cursor:pointer;">Mở khóa</button>
             {% else %}
               <input type="hidden" name="trang_thai" value="khoa">
+              <input type="text" name="ly_do" placeholder="Lý do khóa..." required style="padding:6px 10px; border-radius:6px; border:1px solid #c8e6c9; min-width:200px;">
               <button type="submit" class="btn" style="background:#c62828; color:#fff; padding:6px 12px; border:none; border-radius:6px; cursor:pointer;">Khóa</button>
             {% endif %}
           </form>

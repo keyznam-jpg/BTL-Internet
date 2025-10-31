@@ -16,7 +16,7 @@ Hệ thống đăng nhập là cửa ngõ đầu tiên mà người dùng phải
 
 Có hai loại tài khoản chính trong hệ thống:
 - **Admin**: Có quyền truy cập đầy đủ tất cả các chức năng
-- **Nhân viên**: Có quyền hạn chế, không thể truy cập một số chức năng quản lý hệ thống
+- **Nhân viên**: Có quyền hạn chế dựa trên phân quyền chi tiết
 
 ### 1.2. Giao diện đăng nhập
 
@@ -39,14 +39,14 @@ Trang đăng nhập có thiết kế đơn giản nhưng chuyên nghiệp với:
 
 Hệ thống cung cấp các tài khoản mẫu để dễ dàng testing:
 - Admin: username "admin", password "admin"
-- Nhân viên: "nam"/"123", "keyz"/"123", "hoang"/"123", "hung"/"123"
+- Nhân viên: "nam"/"123", "hoang"/"123", "hung"/"123"
 
 ### 1.5. Bảo mật đăng nhập
 
-- Mật khẩu được hash bằng bcrypt trước khi lưu vào database
+- Mật khẩu được hash bằng werkzeug.security trước khi lưu vào database
 - Session timeout tự động sau một thời gian không hoạt động
-- Rate limiting để ngăn chặn brute force attacks
 - CSRF protection cho các form
+- Role-based access control với permissions chi tiết
 
 ### 1.6. Đăng xuất
 
@@ -107,28 +107,31 @@ Sidebar bên trái chứa menu điều hướng với các nhóm chức năng:
    - Đặt phòng
    - Đặt phòng online
    - Nhận & Trả phòng
+   - Booking chờ
 
 3. **Khách hàng**
    - Tin nhắn
+   - Quản lý Khách hàng
+   - Tài khoản khách hàng
 
-4. **Dịch vụ**
-   - Quản lý dịch vụ
-   - Quản lý hóa đơn
-
-5. **Thanh toán**
+4. **Dịch vụ & Tài chính**
+   - Dịch vụ & Thanh toán
+   - Quản lý Hóa đơn
    - Thanh toán chưa hoàn tất
 
-6. **Báo cáo**
-   - Thống kê doanh thu
-   - Thống kê khách hàng
-
-7. **Quản lý**
-   - Nhân viên
-   - Lương thưởng
-
-8. **Cài đặt**
-   - Cài đặt email
+5. **Quản trị Nhân sự**
+   - Quản lý Nhân viên
    - Cài đặt lương thưởng
+
+6. **Vận hành & Cấu hình**
+   - Quản lý Vai trò
+   - Cấu hình Email
+   - Lịch sử Email
+   - Quản lý Dịch vụ
+
+7. **Thống kê & Báo cáo**
+   - Thống kê Doanh thu
+   - Thống kê Khách hàng
 
 ### 2.4. Thông báo toast
 
@@ -327,7 +330,7 @@ Hệ thống hỗ trợ hai phương thức thanh toán chính:
 
 #### 6.1.1. Cấu trúc dịch vụ
 
-- Phân loại dịch vụ (ăn uống, giặt ủi, spa, v.v.)
+- Phân loại dịch vụ (ăn uống, giặt ủi, khác)
 - Tên dịch vụ
 - Giá cả
 - Mô tả
@@ -350,7 +353,6 @@ Hệ thống hỗ trợ hai phương thức thanh toán chính:
 #### 6.2.2. Trạng thái dịch vụ
 
 - Chưa thanh toán
-- Chờ xác nhận
 - Đã thanh toán
 
 ### 6.3. Thanh toán dịch vụ
@@ -483,7 +485,7 @@ Hệ thống hỗ trợ hai phương thức thanh toán chính:
 - Tên đầy đủ
 - Ngày vào làm
 - Ảnh đại diện
-- Loại tài khoản (admin/nhanvien)
+- Vai trò (admin/nhanvien)
 
 #### 10.1.2. Chức năng quản lý
 
@@ -610,38 +612,44 @@ Hệ thống hỗ trợ hai phương thức thanh toán chính:
 - Thời hạn voucher
 - Tự động tạo voucher
 
-### 12.4. Cấu hình hệ thống khác
+### 12.4. Quản lý vai trò
 
-- Tỷ lệ cọc
-- Thông tin ngân hàng VietQR
-- Cài đặt chung
+- Tạo và chỉnh sửa vai trò
+- Phân quyền chi tiết cho từng vai trò
+- Gán vai trò cho nhân viên
+
+### 12.5. Quản lý dịch vụ
+
+- Thêm/sửa/xóa danh mục dịch vụ
+- Quản lý loại dịch vụ
+- Cập nhật giá dịch vụ
 
 ## 13. BẢO MẬT VÀ AN TOÀN
 
 ### 13.1. Bảo mật dữ liệu
 
-- Mã hóa mật khẩu (bcrypt)
-- Sanitize input để chống SQL injection
-- CSRF protection
-- Rate limiting
+- Mã hóa mật khẩu (werkzeug.security)
+- SQLAlchemy parameterized queries chống SQL injection
+- CSRF protection cho forms
+- Input validation và sanitization
 
 ### 13.2. Quản lý phiên
 
-- Session timeout
-- Secure cookies
-- Token-based authentication cho API
+- Session timeout tự động
+- Flask-Login session management
+- Secure token cho payment sessions
 
-### 13.3. Sao lưu dữ liệu
+### 13.3. Phân quyền
 
-- Script backup tự động
-- Backup database MySQL
-- Lưu trữ file upload
+- Role-based access control
+- Permission-based system
+- Personal permissions cho từng user
 
 ### 13.4. Giám sát hệ thống
 
 - Log các hoạt động quan trọng
-- Monitoring performance
-- Alert khi có lỗi
+- Error handling
+- File upload security
 
 ## 14. HƯỚNG DẪN SỬ DỤNG CHI TIẾT
 
@@ -705,61 +713,57 @@ Hệ thống hỗ trợ hai phương thức thanh toán chính:
 
 ## 15. PHỤ LỤC
 
-### 15.1. Danh sách API endpoints
+### 15.1. Database schema chi tiết
 
-#### Authentication
-- POST /login
-- GET /logout
+#### Bảng chính:
+- **role**: Quản lý vai trò và quyền
+- **role_permission**: Liên kết quyền với vai trò
+- **user_permission**: Quyền cá nhân của user
+- **nguoidung**: Thông tin nhân viên
+- **loaiphong**: Loại phòng (Tiêu chuẩn, Superior, Deluxe, Suite)
+- **phong**: Thông tin phòng
+- **khachhang**: Thông tin khách hàng
+- **datphong**: Đặt phòng
+- **dichvuloai**: Loại dịch vụ
+- **dichvu**: Danh mục dịch vụ
+- **sudungdv**: Sử dụng dịch vụ
+- **tinnhan**: Chat messages
+- **payment_session**: Session thanh toán
+- **luongthuongcauhinh**: Cấu hình thưởng
+- **luongnhanvien**: Lương nhân viên
+- **voucher**: Mã giảm giá
+- **hethongcauhinh**: Cấu hình hệ thống
+- **emailtemplate**: Template email
+- **email_log**: Lịch sử email
+- **attendance**: Chấm công
 
-#### Rooms
-- GET /api/rooms
-- POST /api/rooms/{id}/book
-- PUT /api/rooms/{id}/checkin
+#### Các trường quan trọng:
+- **datphong**: id, khachhang_id, phong_id, nhanvien_id, ngay_nhan, ngay_tra, trang_thai, tien_coc, tien_phong, tien_dv, tong_thanh_toan, chat_token, payment_token, voucher_id
+- **khachhang**: id, ho_ten, cmnd, sdt, email, dia_chi, mat_khau_hash, diem_tich_luy
+- **nguoidung**: id, ten_dang_nhap, mat_khau, loai, role_id, ten, ngay_vao_lam, anh_dai_dien
 
-#### Payments
-- POST /api/payments
-- GET /api/payments/{token}
-- PUT /api/payments/{token}/confirm
-
-### 15.2. Database schema chi tiết
-
-#### Bảng nguoidung
-- id: INT PRIMARY KEY
-- ten_dang_nhap: VARCHAR(50) UNIQUE
-- mat_khau: VARCHAR(128)
-- loai: VARCHAR(20)
-- ten: VARCHAR(100)
-- ngay_vao_lam: DATE
-- anh_dai_dien: VARCHAR(255)
-
-#### Bảng datphong
-- id: INT PRIMARY KEY
-- khachhang_id: INT FK
-- phong_id: INT FK
-- nhanvien_id: INT FK
-- ngay_nhan: DATETIME
-- ngay_tra: DATETIME
-- trang_thai: VARCHAR(20)
-- tien_coc: BIGINT
-- tong_thanh_toan: BIGINT
-- phuong_thuc_thanh_toan: VARCHAR(20)
-
-### 15.3. Cấu hình production
+### 15.2. Cấu hình production
 
 #### Environment variables
 ```bash
 MYSQL_HOST=localhost
+MYSQL_PORT=3306
 MYSQL_USER=root
 MYSQL_PASSWORD=your_password
-MYSQL_DB=khachsan
+MYSQL_DB=Internet
 SECRET_KEY=your_secret_key
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USERNAME=your_email
 SMTP_PASSWORD=your_app_password
+VIETQR_BANK_ID=970423
+VIETQR_ACCOUNT_NO=99992162001
+VIETQR_BANK_NAME=TPBank
+VIETQR_ACCOUNT_NAME=Khách sạn PTIT
+DEPOSIT_PERCENT=0.3
 ```
 
-#### Nginx config
+#### Nginx config (tùy chọn)
 ```nginx
 server {
     listen 80;
@@ -772,16 +776,11 @@ server {
 }
 ```
 
-#### SSL certificate
-- Sử dụng Let's Encrypt
-- Auto-renew certificate
-- Force HTTPS redirect
-
 ## KẾT LUẬN
 
 Hệ thống quản lý khách sạn PTIT là một giải pháp toàn diện, hiện đại và dễ sử dụng cho các khách sạn muốn số hóa quy trình quản lý. Với các tính năng phong phú từ đặt phòng online, thanh toán QR, chat real-time đến quản lý nhân viên và báo cáo thống kê, hệ thống giúp nâng cao hiệu quả kinh doanh và trải nghiệm khách hàng.
 
-Hệ thống được xây dựng trên nền tảng công nghệ vững chắc với Python Flask, MySQL và các thư viện hiện đại, đảm bảo tính ổn định, bảo mật và khả năng mở rộng. Giao diện thân thiện, dễ sử dụng cùng với tài liệu hướng dẫn chi tiết giúp nhân viên có thể làm quen và sử dụng hệ thống một cách nhanh chóng.
+Hệ thống được xây dựng trên nền tảng công nghệ vững chắc với Python Flask 3.0.0, MySQL và các thư viện hiện đại, đảm bảo tính ổn định, bảo mật và khả năng mở rộng. Giao diện thân thiện, dễ sử dụng cùng với tài liệu hướng dẫn chi tiết giúp nhân viên có thể làm quen và sử dụng hệ thống một cách nhanh chóng.
 
 Chúng tôi cam kết sẽ tiếp tục phát triển và cải thiện hệ thống dựa trên phản hồi từ người dùng, đồng thời nghiên cứu và tích hợp các công nghệ mới để đáp ứng nhu cầu ngày càng cao của thị trường khách sạn.
 
@@ -789,4 +788,4 @@ Cảm ơn bạn đã quan tâm đến hệ thống quản lý khách sạn PTIT!
 
 ---
 
-*Tài liệu này được tạo tự động dựa trên phân tích mã nguồn và chức năng của hệ thống. Cập nhật lần cuối: Tháng 10/2025*
+*Tài liệu này được cập nhật dựa trên mã nguồn thực tế của hệ thống. Cập nhật lần cuối: Tháng 10/2025*

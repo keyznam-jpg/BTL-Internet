@@ -97,9 +97,12 @@ Hệ thống được thiết kế để đáp ứng nhu cầu của các khách
 - **openpyxl**: Xuất Excel
 - **reportlab**: Tạo PDF
 - **APScheduler**: Background jobs
-- **qrcode[pil]**: Tạo QR code
+- **qrcode[pil]**: Tạo QR code VietQR
 - **python-dotenv**: Quản lý environment variables
+- **werkzeug**: Password hashing và utilities
 - **email**: Gửi email với MIME support
+- **unicodedata**: Xử lý tiếng Việt
+- **calendar**: Tính toán ngày tháng
 
 ## 📸 Ảnh chụp demo dự án
 
@@ -197,6 +200,14 @@ Hệ thống được thiết kế để đáp ứng nhu cầu của các khách
 
 *Hiển thị chi tiết hóa đơn và thanh toán cho khách hàng*
 
+### 24. Đăng nhập khách hàng
+![Đăng nhập khách hàng](screenshots/Dangnhapkhachhang.png)
+*Giao diện đăng nhập dành cho khách hàng với form đăng ký và đăng nhập*
+
+### 25. Trang khách hàng
+![Trang khách hàng](screenshots/Trangkhachhang.png)
+*Giao diện chính cho khách hàng với các chức năng đặt phòng và quản lý tài khoản*
+
 ### Yêu cầu hệ thống
 - **Python**: 3.8 hoặc cao hơn
 - **MySQL**: 5.7 hoặc cao hơn
@@ -238,11 +249,21 @@ MYSQL_USER=root
 MYSQL_PASSWORD=your_password
 MYSQL_DB=Internet
 
+# VietQR Configuration
+VIETQR_BANK_ID=970423
+VIETQR_ACCOUNT_NO=99992162001
+VIETQR_BANK_NAME=TPBank
+VIETQR_ACCOUNT_NAME=Khách sạn PTIT
+DEPOSIT_PERCENT=0.3
+
 # Email SMTP (tùy chọn)
 SMTP_SERVER=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USERNAME=your_email@gmail.com
 SMTP_PASSWORD=your_app_password
+
+# Security
+SECRET_KEY=your_secret_key
 ```
 
 ### 6. Chạy ứng dụng
@@ -258,7 +279,16 @@ run.bat
 
 ### 7. Backup database (khuyến nghị)
 ```cmd
-backup.bat
+mysqldump -u root -p Internet > backup_$(date +%Y%m%d_%H%M%S).sql
+```
+Hoặc tạo script backup.bat với nội dung:
+```cmd
+@echo off
+for /f "tokens=2 delims==" %%i in ('wmic os get localdatetime /value') do set datetime=%%i
+set datetime=%datetime:~0,8%_%datetime:~8,6%
+mysqldump -u root -p Internet > backup_%datetime%.sql
+echo Backup completed: backup_%datetime%.sql
+pause
 ```
 
 ## 👤 Tài khoản mặc định
@@ -272,7 +302,7 @@ backup.bat
 - **Username**: `hoang`, **Password**: `123`
 - **Username**: `hung`, **Password**: `123`
 
-## 🔗 API Endpoints chính
+## 🔗 Routes chính (Web Interface)
 
 ### Authentication
 - `GET/POST /login` - Đăng nhập hệ thống
@@ -286,14 +316,17 @@ backup.bat
 - `GET/POST /dat-phong` - Đặt phòng offline
 - `GET/POST /dat-phong-online` - Đặt phòng online
 - `GET/POST /nhan-phong` - Nhận/trả phòng
+- `GET /quan-ly-booking-cho` - Quản lý booking chờ
 
 ### Thanh toán
 - `GET /thanh-toan-chua-hoan-tat` - Danh sách thanh toán pending
 - `GET/POST /thanh-toan-dv/<id>` - Thanh toán dịch vụ
+- `GET /dich-vu-thanh-toan` - Dịch vụ & thanh toán
 
 ### Khách hàng & Giao tiếp
 - `GET /tin-nhan` - Quản lý tin nhắn
 - `GET /khach-hang` - Danh sách khách hàng
+- `GET /quan-ly-tai-khoan-khach-hang` - Tài khoản khách hàng
 
 ### Báo cáo
 - `GET /thong-ke-doanh-thu` - Thống kê doanh thu
@@ -308,17 +341,21 @@ backup.bat
 ### Cài đặt
 - `GET /cai-dat-email` - Cấu hình email
 - `GET /cai-dat-luong-thuong` - Cấu hình lương thưởng
+- `GET /quan-ly-vai-tro` - Quản lý vai trò
+- `GET /quan-li-dich-vu` - Quản lý dịch vụ
+- `GET /lich-su-email` - Lịch sử email
 
 ## 🔒 Bảo mật
 
 - **Authentication**: Flask-Login với session management
-- **Authorization**: Role-based access control (admin/nhanvien)
+- **Authorization**: Role-based access control với permissions chi tiết
+- **Password Hashing**: werkzeug.security cho mật khẩu
 - **Input Validation**: Sanitize và validate tất cả user input
 - **SQL Injection Protection**: SQLAlchemy parameterized queries
 - **CSRF Protection**: Token validation cho forms
-- **Rate Limiting**: Flask-Limiter chống brute force
-- **Session Security**: Timeout cho sensitive operations
+- **Session Security**: Timeout cho sensitive operations (5 phút cho thanh toán)
 - **File Upload Security**: Secure filename và type validation
+- **Payment Sessions**: Token-based với expiration time
 
 ## 📝 Giấy phép
 
@@ -330,7 +367,7 @@ Dự án này được phát triển cho mục đích học tập và nghiên c�
 - **Trường**: Học viện Công nghệ Bưu chính Viễn thông (PTIT)
 - **Môn học**: Internet và Giao thức
 - **Năm**: 2025
-- **GitHub**: [https://github.com/keyznam-jpg]
+- **GitHub**: [https://github.com/keyznam-jpg/BTL-Internet]
 
 ---
 

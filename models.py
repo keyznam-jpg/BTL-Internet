@@ -133,6 +133,17 @@ class KhachHang(db.Model):
     sdt    = db.Column(db.String(30))
     email  = db.Column(db.String(120))
     dia_chi = db.Column(db.String(200))
+    mat_khau_hash = db.Column(db.String(255))
+    diem_tich_luy = db.Column(db.Integer, default=0)
+    ngay_dang_ky = db.Column(db.DateTime)
+    ngay_cap_nhat = db.Column(db.DateTime)
+    lan_dang_nhap_cuoi = db.Column(db.DateTime)
+    trang_thai_tai_khoan = db.Column(db.String(20), default='hoat_dong')
+    deleted_at = db.Column(db.DateTime)
+    deleted_reason = db.Column(db.String(255))
+    deleted_by = db.Column(db.Integer, db.ForeignKey("nguoidung.id"))
+
+    deleted_by_user = db.relationship('NguoiDung', foreign_keys=[deleted_by])
 
 class DatPhong(db.Model):
     __tablename__ = "datphong"

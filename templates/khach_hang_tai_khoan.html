@@ -509,6 +509,7 @@
         <a class="tab-link {% if active_tab == 'lich_su' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='lich_su') }}">Lịch sử đặt phòng</a>
         <a class="tab-link {% if active_tab == 'uu_dai' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='uu_dai') }}">Voucher & tích điểm</a>
         <a class="tab-link {% if active_tab == 'doi_mat_khau' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='doi_mat_khau') }}">Đổi mật khẩu</a>
+        <a class="tab-link {% if active_tab == 'xoa_tai_khoan' %}active{% endif %}" href="{{ url_for('khach_hang_tai_khoan', tab='xoa_tai_khoan') }}">Xóa tài khoản</a>
       </div>
 
       <section class="section {% if active_tab == 'thong_tin' %}active{% endif %}">
@@ -674,6 +675,29 @@
           </button>
         </form>
       </section>
+
+      <section class="section {% if active_tab == 'xoa_tai_khoan' %}active{% endif %}">
+        <form method="post" style="max-width: 480px;" novalidate>
+          <input type="hidden" name="hanh_dong" value="xoa_tai_khoan">
+          <div style="margin-bottom:16px;padding:16px;border-radius:12px;background:rgba(244,63,94,0.12);border:1px solid rgba(244,63,94,0.35);color:#b91c1c;">
+            <p style="margin:0;font-size:14px;line-height:1.6;">Hành động này sẽ xóa quyền đăng nhập của bạn. Lịch sử đặt phòng vẫn được giữ lại để đối soát và hỗ trợ dịch vụ sau này.</p>
+          </div>
+          <div>
+            <label for="mat_khau_xoa">Mật khẩu hiện tại</label>
+            <input id="mat_khau_xoa" name="mat_khau_xoa" type="password" autocomplete="current-password" required>
+          </div>
+          <div>
+            <label for="ly_do_xoa_tk">Lý do (tùy chọn)</label>
+            <textarea id="ly_do_xoa_tk" name="ly_do_xoa" rows="3" placeholder="Chia sẻ lý do để chúng tôi cải thiện dịch vụ."></textarea>
+          </div>
+          <button class="btn" type="submit" style="background:#b71c1c; color:#fff; padding:10px 18px; border:none; border-radius:8px; cursor:pointer;" onclick="return confirm('Bạn chắc chắn muốn xóa tài khoản?');">
+            <i class="fas fa-user-slash"></i>
+            <span>Xóa tài khoản</span>
+          </button>
+        </form>
+        <p class="muted" style="max-width:480px;margin-top:12px;">Bạn có thể đăng ký lại bất kỳ lúc nào bằng thông tin cá nhân này. Nếu cần hỗ trợ, vui lòng liên hệ với chúng tôi.</p>
+      </section>
+
     </div>
   </div>  <script>
     document.addEventListener('DOMContentLoaded', function () {
@@ -731,3 +755,4 @@
   </script>
 </body>
 </html>
+

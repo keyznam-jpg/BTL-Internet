@@ -103,7 +103,11 @@ CREATE TABLE khachhang(
   ngay_dang_ky DATETIME,
   ngay_cap_nhat DATETIME,
   lan_dang_nhap_cuoi DATETIME,
-  trang_thai_tai_khoan VARCHAR(20) DEFAULT 'hoat_dong'
+  trang_thai_tai_khoan VARCHAR(20) DEFAULT 'hoat_dong',
+  deleted_at DATETIME,
+  deleted_reason VARCHAR(255),
+  deleted_by INT,
+  FOREIGN KEY (deleted_by) REFERENCES nguoidung(id)
 );
 CREATE INDEX idx_khachhang_cmnd ON khachhang(cmnd);
 CREATE INDEX idx_khachhang_email ON khachhang(email);

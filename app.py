@@ -154,9 +154,10 @@ PERMISSION_GROUPS = [
         'customers',
         'Khách hàng & ưu đãi',
         [
-            ('customers.view', 'Quản lý hồ sơ khách hàng'),
-            ('customers.export', 'Xuất dữ liệu khách hàng'),
-            ('customers.vouchers', 'Cấu hình voucher & khuyến mãi'),
+            ('customers.view', 'Qu???n lA? h??" s?? khA?ch hA?ng'),
+            ('customers.export', 'Xu???t d??_ li???u khA?ch hA?ng'),
+            ('customers.manage_accounts', 'XA3a ho???c v??- hi???u hA?a tA?i kho???n khA?ch hA?ng'),
+            ('customers.vouchers', 'C???u hA?nh voucher & khuy???n mA?i'),
         ],
     ),
     (
@@ -287,8 +288,12 @@ def customer_login_required(fn):
         if not current_user.is_authenticated or not getattr(current_user, 'is_customer', False):
             flash('Vui lòng đăng nhập tài khoản khách hàng để tiếp tục.', 'warning')
             return redirect(url_for('khach_hang_dang_nhap', next=request.url))
-        if getattr(current_user, 'trang_thai_tai_khoan', 'hoat_dong') == 'khoa':
-            flash('Tài khoản của bạn đang bị khóa. Vui lòng liên hệ lễ tân để được hỗ trợ.', 'danger')
+        status = getattr(current_user, 'trang_thai_tai_khoan', 'hoat_dong')
+        if status in {'khoa', 'da_xoa'}:
+            if status == 'da_xoa':
+                flash('Tai khoan cua ban da bi xoa. Vui long lien he ho tro hoac dang ky lai.', 'danger')
+            else:
+                flash('Tai khoan cua ban dang bi khoa. Vui long lien he ho tro.', 'danger')
             logout_user()
             return redirect(url_for('khach_hang_dang_nhap'))
         return fn(*args, **kwargs)
@@ -615,7 +620,11 @@ class KhachHang(db.Model):
     ngay_dang_ky = db.Column(db.DateTime)
     ngay_cap_nhat = db.Column(db.DateTime)
     lan_dang_nhap_cuoi = db.Column(db.DateTime)
-    trang_thai_tai_khoan = db.Column(db.String(20), default='hoat_dong')  # hoat_dong, khoa
+    trang_thai_tai_khoan = db.Column(db.String(20), default='hoat_dong')  # hoat_dong, khoa, da_xoa
+    deleted_at = db.Column(db.DateTime)
+    deleted_reason = db.Column(db.String(255))
+    deleted_by = db.Column(db.Integer, db.ForeignKey("nguoidung.id"))
+    deleted_by_user = db.relationship('NguoiDung', foreign_keys=[deleted_by])
 
     def set_password(self, raw_password):
         if not raw_password:
@@ -702,7 +711,7 @@ class CustomerUser(UserMixin):
 
     @property
     def is_active(self):
-        return self.khachhang.trang_thai_tai_khoan != 'khoa'
+        return self.khachhang.trang_thai_tai_khoan not in {'khoa', 'da_xoa'}
 
     def __getattr__(self, item):
         return getattr(self.khachhang, item)
@@ -1331,6 +1340,15 @@ def ensure_tables_exist():
             if 'trang_thai_tai_khoan' not in columns:
                 with db.engine.connect() as conn:
                     conn.execute(text("ALTER TABLE khachhang ADD COLUMN trang_thai_tai_khoan VARCHAR(20) DEFAULT 'hoat_dong'"))
+            if 'deleted_at' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE khachhang ADD COLUMN deleted_at DATETIME NULL'))
+            if 'deleted_reason' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE khachhang ADD COLUMN deleted_reason VARCHAR(255) NULL'))
+            if 'deleted_by' not in columns:
+                with db.engine.connect() as conn:
+                    conn.execute(text('ALTER TABLE khachhang ADD COLUMN deleted_by INT NULL'))
             columns_datphong = {col['name'] for col in inspector.get_columns('datphong')}
             if 'created_at' not in columns_datphong:
                 with db.engine.connect() as conn:
@@ -1500,6 +1518,52 @@ def ensure_customer_email_templates():
         </td>
       </tr>
     </table>
+  </body>
+</html>"""
+        },
+        'customer_account_deleted': {
+            'subject': 'Tai khoan cua ban tai {{ ten_khach_san }} da bi xoa',
+            'body': """<!DOCTYPE html>
+<html lang="vi">
+  <body style="margin:0;background-color:#fff5f5;font-family:'Helvetica Neue',Arial,sans-serif;color:#1f2937;">
+    <div style="max-width:640px;margin:0 auto;padding:28px;">
+      <div style="background:#ffffff;border-radius:16px;padding:28px;box-shadow:0 18px 38px -24px rgba(190,24,60,0.25);">
+        <h1 style="margin:0 0 12px;color:#b91c1c;font-size:22px;">Tai khoan da bi xoa</h1>
+        <p style="margin:0 0 12px;font-size:15px;line-height:1.6;">Xin chao {{ ho_ten }},</p>
+        <p style="margin:0 0 12px;font-size:15px;line-height:1.6;">Tai khoan khach hang cua ban tai <strong>{{ ten_khach_san }}</strong> da bi xoa boi quan tri vien.</p>
+        {% if ly_do %}
+        <div style="margin:16px 0;padding:16px;border-radius:12px;background:rgba(248,113,113,0.12);border:1px solid rgba(248,113,113,0.35);">
+          <strong style="display:block;margin-bottom:6px;">Ly do:</strong>
+          <span style="font-size:14px;line-height:1.6;">{{ ly_do }}</span>
+        </div>
+        {% endif %}
+        <p style="margin:0;font-size:15px;line-height:1.6;">Neu ban can ho tro them, vui long lien he lai voi chung toi.</p>
+      </div>
+      <p style="margin:18px 0 0;font-size:12px;color:#b91c1c;text-align:center;">Email duoc gui tu dong, vui long khong tra loi.</p>
+    </div>
+  </body>
+</html>"""
+        },
+        'customer_account_self_deleted': {
+            'subject': 'Ban da xoa tai khoan tai {{ ten_khach_san }}',
+            'body': """<!DOCTYPE html>
+<html lang="vi">
+  <body style="margin:0;background-color:#ecfdf5;font-family:'Helvetica Neue',Arial,sans-serif;color:#065f46;">
+    <div style="max-width:640px;margin:0 auto;padding:28px;">
+      <div style="background:#ffffff;border-radius:16px;padding:28px;box-shadow:0 18px 38px -24px rgba(5,150,105,0.25);">
+        <h1 style="margin:0 0 12px;color:#047857;font-size:22px;">Xac nhan xoa tai khoan</h1>
+        <p style="margin:0 0 12px;font-size:15px;line-height:1.6;">Xin chao {{ ho_ten }},</p>
+        <p style="margin:0 0 12px;font-size:15px;line-height:1.6;">Chung toi da ghi nhan yeu cau xoa tai khoan cua ban tai <strong>{{ ten_khach_san }}</strong>.</p>
+        {% if ly_do %}
+        <div style="margin:16px 0;padding:16px;border-radius:12px;background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.35);color:#047857;">
+          <strong style="display:block;margin-bottom:6px;">Ly do ban cung cap:</strong>
+          <span style="font-size:14px;line-height:1.6;">{{ ly_do }}</span>
+        </div>
+        {% endif %}
+        <p style="margin:0;font-size:15px;line-height:1.6;">Ban co the dang ky lai bat ky luc nao bang CMND/CCCD va email nay neu muon. Neu can ho tro, hay lien he voi chung toi.</p>
+      </div>
+      <p style="margin:18px 0 0;font-size:12px;color:#047857;text-align:center;">Email duoc gui tu dong, vui long khong tra loi.</p>
+    </div>
   </body>
 </html>"""
         },
@@ -3282,6 +3346,9 @@ def khach_hang_dang_nhap_google_callback():
     if kh.trang_thai_tai_khoan == 'khoa':
         flash('Tài khoản của bạn đang bị khóa. Vui lòng liên hệ hỗ trợ.', 'danger')
         return redirect(url_for('khach_hang_dang_nhap'))
+    if kh.trang_thai_tai_khoan == 'da_xoa':
+        flash('Tài khoản của bạn đã bị xóa. Bạn có thể đăng ký lại nếu muốn tiếp tục sử dụng.', 'danger')
+        return redirect(url_for('khach_hang_dang_nhap'))
 
     # Cập nhật thông tin đăng nhập
     now = datetime.now()
@@ -3337,7 +3404,9 @@ def khach_hang_dang_nhap():
             elif not kh.co_tai_khoan:
                 error = 'CMND/CCCD này chưa được đăng ký tài khoản khách hàng.'
             elif kh.trang_thai_tai_khoan == 'khoa':
-                error = 'Tài khoản của bạn đang bị khóa. Vui lòng liên hệ lễ tân để được hỗ trợ.'
+                error = 'Tài khoản của bạn đang bị khóa. Vui lòng liên hệ hỗ trợ.'
+            elif kh.trang_thai_tai_khoan == 'da_xoa':
+                error = 'Tài khoản của bạn đã bị xóa. Bạn có thể đăng ký lại hoặc liên hệ hỗ trợ nếu cần.'
             elif not kh.check_password(mat_khau):
                 error = 'Mật khẩu không chính xác.'
             else:
@@ -3482,6 +3551,47 @@ def khach_hang_tai_khoan():
                 flash('Đã đổi mật khẩu thành công.', 'success')
                 return redirect(url_for('khach_hang_tai_khoan', tab='doi_mat_khau'))
             active_tab = 'doi_mat_khau'
+
+        elif action == 'xoa_tai_khoan':
+            mat_khau_xoa = request.form.get('mat_khau_xoa') or ''
+            ly_do_xoa = (request.form.get('ly_do_xoa') or '').strip()
+            if not kh.check_password(mat_khau_xoa):
+                errors['mat_khau_xoa'] = 'Mat khau khong chinh xac.'
+            if not errors:
+                ly_do_short = ly_do_xoa[:255] if ly_do_xoa else None
+                kh.deleted_at = datetime.now()
+                kh.deleted_reason = ly_do_short
+                kh.deleted_by = None
+                kh.trang_thai_tai_khoan = 'da_xoa'
+                kh.mat_khau_hash = None
+                kh.ngay_cap_nhat = datetime.now()
+                try:
+                    db.session.commit()
+                except Exception as exc:
+                    db.session.rollback()
+                    app.logger.error('Không thể xóa tài khoản khách hàng %s: %s', kh.id, exc)
+                    flash('Không thể xóa tài khoản ngay lúc này. Vui lòng thử lại.', 'danger')
+                    return redirect(url_for('khach_hang_tai_khoan', tab='xoa_tai_khoan'))
+
+                if kh.email:
+                    try:
+                        hotel = get_hotel_profile()
+                        send_email_with_template(
+                            'customer_account_self_deleted',
+                            kh.email,
+                            {
+                                'ho_ten': kh.ho_ten,
+                                'ten_khach_san': hotel.get('name', 'Khach san'),
+                                'ly_do': ly_do_short
+                            },
+                            khachhang_id=kh.id
+                        )
+                    except Exception as exc:
+                        app.logger.warning('Không thể gửi email từ xóa tài khoản cho %s: %s', kh.email, exc)
+                logout_user()
+                flash('Tài khoản của bạn đã được xóa thành công.', 'success')
+                return redirect(url_for('khach_hang_dang_nhap'))
+            active_tab = 'xoa_tai_khoan'
 
         elif action == 'doi_diem':
             try:
@@ -5410,6 +5520,11 @@ def khach_hang():
 def quan_ly_tai_khoan_khach_hang():
     keyword = (request.args.get('q') or '').strip()
     trang_thai = request.args.get('trang_thai') or ''
+    
+    # Pagination parameters
+    page = request.args.get('page', 1, type=int)
+    per_page = 3  # 3 customers per page
+    
     query = KhachHang.query.filter(KhachHang.mat_khau_hash.isnot(None))
     if keyword:
         like_pattern = f"%{keyword}%"
@@ -5422,15 +5537,26 @@ def quan_ly_tai_khoan_khach_hang():
         )
     if trang_thai in {'hoat_dong', 'khoa'}:
         query = query.filter(KhachHang.trang_thai_tai_khoan == trang_thai)
-    accounts = query.order_by(
+    
+    # Get all accounts for stats
+    all_accounts = query.all()
+    
+    # Apply pagination
+    query = query.order_by(
         KhachHang.trang_thai_tai_khoan.asc(),
         case((KhachHang.ngay_cap_nhat.is_(None), 1), else_=0),
         KhachHang.ngay_cap_nhat.desc(),
         KhachHang.ho_ten.asc()
-    ).all()
+    )
+    
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+    accounts = pagination.items
+    
     return render_template(
         'quan_ly_tai_khoan_khach_hang.html',
         accounts=accounts,
+        all_accounts=all_accounts,
+        pagination=pagination,
         keyword=keyword,
         selected_status=trang_thai
     )
@@ -5505,6 +5631,57 @@ def _redirect_after_status_change(redirect_to):
         if not parsed.netloc and not parsed.scheme:
             return redirect(redirect_to)
     return redirect(url_for('quan_ly_tai_khoan_khach_hang'))
+
+
+@app.route('/quan-ly-tai-khoan-khach-hang/<int:kh_id>/xoa', methods=['POST'])
+@login_required
+@permission_required('customers.manage_accounts')
+def xoa_tai_khoan_khach_hang(kh_id):
+    kh = KhachHang.query.get_or_404(kh_id)
+    redirect_to = request.form.get('redirect_to')
+    ly_do = (request.form.get('ly_do_xoa') or '').strip()
+
+    if not ly_do:
+        flash('Vui lòng nhập lý do xóa tài khoản.', 'warning')
+        return _redirect_after_status_change(redirect_to)
+
+    if not kh.co_tai_khoan:
+        flash('Tài khoản này đã được xóa hoặc không có thông tin đăng nhập.', 'info')
+        return _redirect_after_status_change(redirect_to)
+
+    kh.deleted_at = datetime.now()
+    kh.deleted_reason = ly_do
+    kh.deleted_by = current_user.id if getattr(current_user, 'id', None) else None
+    kh.trang_thai_tai_khoan = 'da_xoa'
+    kh.mat_khau_hash = None
+    kh.ngay_cap_nhat = datetime.now()
+
+    try:
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.error('Không thể xóa tài khoản khách hàng %s: %s', kh.id, exc)
+        flash('Không thể xóa tài khoản ngay lúc này. Vui lòng thử lại.', 'danger')
+        return _redirect_after_status_change(redirect_to)
+
+    if kh.email:
+        try:
+            hotel = get_hotel_profile()
+            send_email_with_template(
+                'customer_account_deleted',
+                kh.email,
+                {
+                    'ho_ten': kh.ho_ten,
+                    'ten_khach_san': hotel.get('name', 'Khách sạn'),
+                    'ly_do': ly_do
+                },
+                khachhang_id=kh.id
+            )
+        except Exception as exc:
+            app.logger.warning('Không thể gửi email xóa tài khoản cho %s: %s', kh.email, exc)
+
+    flash('Đã xóa tài khoản khách hàng và thông báo tới khách hàng.', 'success')
+    return _redirect_after_status_change(redirect_to)
 
 @app.route('/thong-tin-ca-nhan', methods=['GET', 'POST'])
 @login_required

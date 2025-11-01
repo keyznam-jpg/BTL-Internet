@@ -153,6 +153,47 @@
       text-decoration: underline;
     }
 
+    .separator {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 20px 0 12px;
+      font-size: 13px;
+      text-transform: uppercase;
+      color: var(--gray-400);
+      letter-spacing: 0.08em;
+    }
+
+    .separator::before,
+    .separator::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--gray-100);
+    }
+
+    .btn-google {
+      display: inline-flex;
+      width: 100%;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      padding: 12px 16px;
+      border-radius: 999px;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      font-weight: 600;
+      color: var(--gray-600);
+      text-decoration: none;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    }
+
+    .btn-google:hover {
+      transform: translateY(-1px);
+      border-color: #cbd5f5;
+      box-shadow: 0 10px 25px -22px rgba(37, 99, 235, 0.9);
+    }
+
     .flash-box {
       margin-bottom: 20px;
       border-radius: 12px;
@@ -220,6 +261,16 @@
         <span>Đăng nhập</span>
       </button>
     </form>
+
+    {% if config.get('GOOGLE_OAUTH_ENABLED') %}
+    <div class="separator">
+      <span>Hoặc</span>
+    </div>
+    <a class="btn-google" href="{{ url_for('khach_hang_dang_nhap_google', next=request.args.get('next')) }}">
+      <i class="fab fa-google"></i>
+      <span>Đăng nhập bằng Google</span>
+    </a>
+    {% endif %}
 
     <div class="support-link">
       Chưa có tài khoản?

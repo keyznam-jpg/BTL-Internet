@@ -246,6 +246,7 @@
         {% endif %}
       </div>
 
+      {% if not is_from_google %}
       <div>
         <label class="required" for="mat_khau">Mật khẩu</label>
         <input id="mat_khau" name="mat_khau" type="password" autocomplete="new-password" required>
@@ -261,10 +262,17 @@
         <div class="field-error"><i class="fas fa-circle-exclamation"></i>{{ errors.mat_khau_xac_nhan }}</div>
         {% endif %}
       </div>
+      {% else %}
+      <div style="background: #e3f2fd; padding: 12px; border-radius: 8px; border-left: 4px solid #2196f3; margin-bottom: 12px;">
+        <i class="fab fa-google" style="color: #4285f4;"></i>
+        <strong>Đăng ký bằng Google</strong><br>
+        <small style="color: #666;">Bạn sẽ đăng nhập bằng tài khoản Google, không cần mật khẩu.</small>
+      </div>
+      {% endif %}
 
       <button class="btn-primary" type="submit">
         <i class="fas fa-user-plus"></i>
-        <span>Tạo tài khoản</span>
+        <span>{{ 'Hoàn tất đăng ký' if is_from_google else 'Tạo tài khoản' }}</span>
       </button>
     </form>
 

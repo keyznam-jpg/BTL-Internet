@@ -5,10 +5,11 @@ import math
 import json
 import re
 import smtplib
+import hashlib
 from functools import wraps
 from urllib.parse import quote, urlencode, urljoin, urlparse
 import uuid # Library to create unique tokens
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, send_file, session
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import (
     LoginManager, login_user, login_required, logout_user, UserMixin, current_user, AnonymousUserMixin
@@ -39,6 +40,7 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from flask_caching import Cache
 from flask_migrate import Migrate
 from flask_compress import Compress
+from authlib.integrations.flask_client import OAuth
 
 # Initialize Cache
 # cache = Cache(app, config={'CACHE_TYPE': 'simple'})  # Use 'redis' if Redis available  # Moved below
@@ -78,6 +80,12 @@ else:
 support_email = os.getenv("SUPPORT_EMAIL", "").strip()
 app.config["SUPPORT_EMAIL"] = support_email or None
 
+google_client_id = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+google_client_secret = os.getenv("GOOGLE_CLIENT_SECRET", "").strip()
+app.config["GOOGLE_CLIENT_ID"] = google_client_id or None
+app.config["GOOGLE_CLIENT_SECRET"] = google_client_secret or None
+app.config["GOOGLE_OAUTH_ENABLED"] = bool(app.config["GOOGLE_CLIENT_ID"] and app.config["GOOGLE_CLIENT_SECRET"])
+
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_port=1)
 
 # Initialize Cache
@@ -90,6 +98,21 @@ if app.debug:
 
 # Initialize Compress
 compress = Compress(app)
+
+oauth = OAuth(app)
+if app.config["GOOGLE_OAUTH_ENABLED"]:
+    oauth.register(
+        name="google",
+        client_id=app.config["GOOGLE_CLIENT_ID"],
+        client_secret=app.config["GOOGLE_CLIENT_SECRET"],
+        server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+        client_kwargs={
+            "scope": "openid email profile",
+        },
+    )
+    app.logger.info("Google OAuth is enabled and configured.")
+else:
+    app.logger.info("Google OAuth is disabled; missing GOOGLE_CLIENT_ID/GOOGLE_CLIENT_SECRET.")
 
 PAYMENT_METHODS = [
     ('cash', 'Tiền mặt'),
@@ -1052,11 +1075,15 @@ def get_current_customer():
 
 def resolve_next_url(default_endpoint='khach_hang_tai_khoan'):
     next_url = request.args.get('next') or request.form.get('next')
-    if next_url:
-        parsed = urlparse(next_url)
-        if not parsed.netloc and not parsed.scheme:
-            return next_url
+    if next_url and is_safe_local_url(next_url):
+        return next_url
     return url_for(default_endpoint)
+
+def is_safe_local_url(target):
+    if not target:
+        return False
+    parsed = urlparse(target)
+    return not parsed.netloc and not parsed.scheme
 
 def normalize_email(email_value):
     if not email_value:
@@ -3032,6 +3059,13 @@ def khach_hang_dang_ky():
     }
     errors = {}
 
+    prefill = None
+    if request.method != 'POST':
+        prefill = session.pop('google_registration', None)
+        if prefill:
+            form['ho_ten'] = prefill.get('name') or form['ho_ten']
+            form['email'] = prefill.get('email') or form['email']
+
     if request.method == 'POST':
         ho_ten = (request.form.get('ho_ten') or '').strip()
         cmnd = (request.form.get('cmnd') or '').strip()
@@ -3043,6 +3077,10 @@ def khach_hang_dang_ky():
         mat_khau_xac_nhan = request.form.get('mat_khau_xac_nhan') or ''
         form.update({'ho_ten': ho_ten, 'cmnd': cmnd, 'email': email_raw, 'sdt': sdt, 'dia_chi': dia_chi})
 
+        # Kiểm tra xem có đang đăng ký từ Google không
+        google_reg = session.get('google_registration')
+        is_google_registration = google_reg and google_reg.get('email') == email_raw
+
         if not ho_ten:
             errors['ho_ten'] = 'Vui lòng nhập họ tên đầy đủ.'
         if not cmnd:
@@ -3053,10 +3091,13 @@ def khach_hang_dang_ky():
             errors['email'] = 'Vui lòng nhập email để nhận thông tin.'
         elif not re.fullmatch(r'[^@\s]+@[^@\s]+\.[^@\s]+', email_raw):
             errors['email'] = 'Địa chỉ email không hợp lệ.'
-        if len(mat_khau) < 8:
-            errors['mat_khau'] = 'Mật khẩu phải có tối thiểu 8 ký tự.'
-        if mat_khau != mat_khau_xac_nhan:
-            errors['mat_khau_xac_nhan'] = 'Mật khẩu xác nhận chưa khớp.'
+        
+        # Nếu không phải đăng ký từ Google, bắt buộc phải có mật khẩu
+        if not is_google_registration:
+            if len(mat_khau) < 8:
+                errors['mat_khau'] = 'Mật khẩu phải có tối thiểu 8 ký tự.'
+            if mat_khau != mat_khau_xac_nhan:
+                errors['mat_khau_xac_nhan'] = 'Mật khẩu xác nhận chưa khớp.'
 
         existing = KhachHang.query.filter_by(cmnd=cmnd).first() if cmnd else None
         if existing and existing.co_tai_khoan:
@@ -3082,7 +3123,13 @@ def khach_hang_dang_ky():
                 kh.email = email_normalized or None
                 kh.sdt = sdt or None
                 kh.dia_chi = dia_chi or None
-                kh.set_password(mat_khau)
+                
+                # Nếu đăng ký từ Google và không có mật khẩu, không set password
+                if is_google_registration and not mat_khau:
+                    kh.mat_khau_hash = None  # Đăng nhập chỉ qua Google
+                else:
+                    kh.set_password(mat_khau)
+                
                 kh.trang_thai_tai_khoan = 'hoat_dong'
                 kh.diem_tich_luy = kh.diem_tich_luy or 0
                 now = datetime.now()
@@ -3096,6 +3143,10 @@ def khach_hang_dang_ky():
                     for dp in thanh_toan_truoc:
                         points_added += award_loyalty_points_for_booking(dp)
                 db.session.commit()
+                
+                # Xóa session google_registration sau khi hoàn tất
+                session.pop('google_registration', None)
+                
                 if kh.email:
                     try:
                         hotel = get_hotel_profile()
@@ -3123,7 +3174,137 @@ def khach_hang_dang_ky():
                 db.session.rollback()
                 flash('Không thể đăng ký tài khoản. Vui lòng thử lại sau ít phút.', 'danger')
 
-    return render_template('khach_hang_dang_ky.html', form=form, errors=errors)
+    # Kiểm tra xem có session Google không để hiển thị form phù hợp
+    google_reg = session.get('google_registration')
+    is_from_google = bool(google_reg)
+    
+    return render_template('khach_hang_dang_ky.html', form=form, errors=errors, is_from_google=is_from_google, google_data=google_reg)
+
+
+@app.route('/khach-hang/dang-nhap/google')
+def khach_hang_dang_nhap_google():
+    if not app.config.get('GOOGLE_OAUTH_ENABLED'):
+        flash('Chức năng đăng nhập bằng Google chưa được cấu hình.', 'warning')
+        return redirect(url_for('khach_hang_dang_nhap'))
+    if current_user.is_authenticated:
+        if getattr(current_user, 'is_customer', False):
+            return redirect(url_for('khach_hang_tai_khoan'))
+        flash('Bạn đang đăng nhập bằng tài khoản nhân viên.', 'info')
+        return redirect(url_for('dashboard'))
+
+    next_url = request.args.get('next')
+    if is_safe_local_url(next_url):
+        session['google_login_next'] = next_url
+    redirect_uri = url_for('khach_hang_dang_nhap_google_callback', _external=True)
+    app.logger.info(f'Redirect URI for Google OAuth: {redirect_uri}')
+    try:
+        return oauth.google.authorize_redirect(redirect_uri)
+    except Exception as exc:
+        app.logger.error('Khởi tạo đăng nhập Google thất bại: %s', exc, exc_info=True)
+        flash('Không thể kết nối tới Google. Vui lòng thử lại sau.', 'danger')
+        return redirect(url_for('khach_hang_dang_nhap'))
+
+
+@app.route('/khach-hang/dang-nhap/google/callback')
+def khach_hang_dang_nhap_google_callback():
+    if not app.config.get('GOOGLE_OAUTH_ENABLED'):
+        flash('Chức năng đăng nhập bằng Google chưa được cấu hình.', 'warning')
+        return redirect(url_for('khach_hang_dang_nhap'))
+
+    try:
+        app.logger.info('Đang yêu cầu token từ Google...')
+        token = oauth.google.authorize_access_token()
+        app.logger.info('Nhận token thành công từ Google')
+    except Exception as exc:
+        app.logger.error('Google OAuth token exchange failed: %s', exc, exc_info=True)
+        flash('Không thể xác thực với Google. Vui lòng thử lại.', 'danger')
+        return redirect(url_for('khach_hang_dang_nhap'))
+
+    # Lấy thông tin user từ token
+    user_info = None
+    try:
+        app.logger.info('Đang lấy userinfo từ token...')
+        # Authlib tự động lấy userinfo khi có token
+        user_info = token.get('userinfo')
+        if user_info:
+            app.logger.info(f'Lấy userinfo từ token thành công: {user_info.get("email")}')
+    except Exception as exc:
+        app.logger.warning('Không thể lấy userinfo từ token: %s', exc)
+        user_info = None
+
+    # Nếu không có trong token, gọi API userinfo
+    if not user_info:
+        try:
+            app.logger.info('Đang gọi Google userinfo API...')
+            resp = oauth.google.get('https://www.googleapis.com/oauth2/v3/userinfo')
+            if resp.status_code == 200:
+                user_info = resp.json()
+                app.logger.info(f'Lấy userinfo từ API thành công: {user_info.get("email")}')
+            else:
+                app.logger.error(f'Google userinfo API trả về lỗi: {resp.status_code}')
+        except Exception as exc:
+            app.logger.error('Google userinfo request failed: %s', exc)
+
+    if not user_info:
+        flash('Không đọc được thông tin người dùng từ Google.', 'danger')
+        return redirect(url_for('khach_hang_dang_nhap'))
+
+    email = user_info.get('email')
+    if not email:
+        flash('Google không cung cấp email. Không thể đăng nhập.', 'danger')
+        return redirect(url_for('khach_hang_dang_nhap'))
+
+    email_normalized = normalize_email(email)
+    if not email_normalized:
+        flash('Không thể chuẩn hóa email Google.', 'danger')
+        return redirect(url_for('khach_hang_dang_nhap'))
+
+    if user_info.get('email_verified') is False:
+        flash('Email Google của bạn chưa được xác minh.', 'danger')
+        return redirect(url_for('khach_hang_dang_nhap'))
+
+    kh = KhachHang.query.filter(func.lower(KhachHang.email) == email_normalized).first()
+    
+    # Nếu chưa có tài khoản, chuyển đến trang đăng ký để điền CMND/CCCD
+    if not kh:
+        # Lưu thông tin Google vào session để tự động điền form
+        session['google_registration'] = {
+            'email': email,
+            'name': user_info.get('name') or '',
+            'picture': user_info.get('picture'),
+            'email_verified': True
+        }
+        flash('Email này chưa có tài khoản. Vui lòng hoàn tất đăng ký bằng cách điền CMND/CCCD.', 'warning')
+        app.logger.info(f'Email Google chưa có tài khoản, chuyển đến đăng ký: {email_normalized}')
+        return redirect(url_for('khach_hang_dang_ky'))
+
+    # Tài khoản đã có - kiểm tra trạng thái
+    if kh.trang_thai_tai_khoan == 'khoa':
+        flash('Tài khoản của bạn đang bị khóa. Vui lòng liên hệ hỗ trợ.', 'danger')
+        return redirect(url_for('khach_hang_dang_nhap'))
+
+    # Cập nhật thông tin đăng nhập
+    now = datetime.now()
+    kh.lan_dang_nhap_cuoi = now
+    kh.ngay_cap_nhat = now
+    if not kh.ho_ten and user_info.get('name'):
+        kh.ho_ten = user_info.get('name')
+    if not kh.email:
+        kh.email = email_normalized
+    try:
+        db.session.commit()
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.error('Cập nhật hồ sơ khách hàng khi đăng nhập Google thất bại: %s', exc)
+        flash('Không thể cập nhật thông tin tài khoản. Vui lòng thử lại.', 'danger')
+        return redirect(url_for('khach_hang_dang_nhap'))
+
+    login_user(CustomerUser(kh))
+    flash('Đăng nhập Google thành công.', 'success')
+    next_url = session.pop('google_login_next', None)
+    if not is_safe_local_url(next_url):
+        next_url = url_for('khach_hang_tai_khoan')
+    return redirect(next_url)
 
 
 @app.route('/khach-hang/dang-nhap', methods=['GET', 'POST'])
@@ -4397,7 +4578,8 @@ def thanh_toan_dv(dat_id):
             return redirect(url_for('thanh_toan_dv', dat_id=dat_id))
 
         if payment_method == 'cash':
-            # Create payment session for invoice display
+            # Clear any pending QR attempts so they no longer appear as unfinished payments
+            invalidate_payment_sessions('service', dat_id)
             payment_token = uuid.uuid4().hex
             create_payment_session(payment_token, 'service', {
                 'dat_id': dat_id,
@@ -4410,9 +4592,12 @@ def thanh_toan_dv(dat_id):
                         'thanh_tien': item['thanh_tien']
                     }
                     for item in items
-                ]
+                ],
+                'completed': True,
+                'completed_at': datetime.now().isoformat(),
+                'payment_method': 'cash'
             })
-            
+
             for row in rows:
                 row.trang_thai = 'da_thanh_toan'
             dp.tien_dv = (dp.tien_dv or 0) + tong
@@ -4454,6 +4639,10 @@ def thanh_toan_coc(dat_id):
             return redirect(url_for('thanh_toan_coc', dat_id=dat_id))
 
         if payment_method == 'cash':
+            # Remove any QR payment sessions that might still be linked to this booking
+            invalidate_payment_sessions('deposit', dat_id)
+            if dp.payment_token:
+                dp.payment_token = None
             dp.phuong_thuc_coc = 'cash'
             dp.coc_da_thanh_toan = True
             active_stay = DatPhong.query.filter(
@@ -4572,6 +4761,8 @@ def thanh_toan(dat_id):
             return redirect(url_for('thanh_toan', dat_id=dat_id))
 
         if payment_method == 'cash':
+            # Remove any existing QR payment sessions that are no longer needed
+            invalidate_payment_sessions('room', dat_id)
             dp.thuc_te_tra = dp.thuc_te_tra or datetime.now()
             dp.tien_phong = calc_values['tien_phong']
             dp.tien_dv = calc_values['tien_dv']

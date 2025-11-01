@@ -12,7 +12,7 @@
     <div class="detail-title">
       <h3>{{ nv.ten }}</h3>{% if salary_info.is_top %}
       <span class="top-badge">Top doanh thu tháng</span>{% endif %}
-      <span class="role-chip {{ 'chip-admin' if nv.role_slug == 'admin' else 'chip-staff' }}">{{ nv.role_name }}</span>
+      <span class="role-chip {{ 'chip-admin' if nv.role_slug == 'admin' else 'chip-staff' }}" data-role-chip data-role-slug="{{ nv.role_slug }}">{{ nv.role_name }}</span>
     </div>
     <dl class="detail-meta">
       <div>
@@ -43,9 +43,25 @@
 
 <section class="card permission-card" id="user-permission-card" data-user-id="{{ nv.id }}" data-update-endpoint="{{ url_for('cap_nhat_quyen_ca_nhan', nhanvien_id=nv.id) }}" data-personal='{{ personal_permissions|list|tojson }}'>
   <header class="permission-header">
-    <div>
+    <div class="permission-header-main">
       <h3>Quyền truy cập</h3>
-      <p>Vai trò hiện tại: <strong>{{ nv.role_name }}</strong>. Quyền cá nhân chỉ bổ sung thêm ngoài quyền của vai trò.</p>
+      <p>Vai trò hiện tại: <strong data-role-name>{{ nv.role_name }}</strong>. Quyền cá nhân chỉ bổ sung thêm ngoài quyền của vai trò.</p>
+      {% if roles %}
+      <form class="role-update-form" data-role-update-form data-update-endpoint="{{ url_for('cap_nhat_vai_tro_nhan_vien', nhanvien_id=nv.id) }}">
+        <label for="role-select">Thay đổi vai trò</label>
+        <div class="role-update-field">
+          <select id="role-select" name="role_id" data-role-select>
+            {% for role in roles %}
+            {% set is_selected = (nv.role and role.id == nv.role.id) or (not nv.role and role.slug == nv.loai) %}
+            <option value="{{ role.id }}" {% if is_selected %}selected{% endif %}>{{ role.name }}</option>
+            {% endfor %}
+          </select>
+          <button type="submit" class="role-update-button" data-role-submit>
+            <i class="fas fa-sync-alt"></i> Cập nhật
+          </button>
+        </div>
+      </form>
+      {% endif %}
     </div>
     <div class="permission-badges">
       <span class="badge badge-inherit">Theo vai trò</span>
@@ -339,9 +355,19 @@
 .customer-list li.empty { justify-content:center; color:#6b8a7a; }
 
 .permission-card { margin-bottom:24px; display:flex; flex-direction:column; gap:18px; }
-.permission-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
-.permission-header h3 { margin:0; color:#0b3d2a; }
-.permission-header p { margin:4px 0 0; color:#56726a; font-size:0.92em; max-width:520px; }
+  .permission-header { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; }
+  .permission-header h3 { margin:0; color:#0b3d2a; }
+  .permission-header p { margin:4px 0 0; color:#56726a; font-size:0.92em; max-width:520px; }
+  .permission-header-main { display:flex; flex-direction:column; gap:12px; }
+  .role-update-form { display:flex; flex-direction:column; gap:8px; align-items:flex-start; }
+  .role-update-form label { font-size:0.82em; font-weight:600; color:#0b3d2a; text-transform:uppercase; letter-spacing:0.04em; }
+  .role-update-field { display:flex; flex-wrap:wrap; align-items:center; gap:10px; }
+  .role-update-field select { padding:8px 12px; border-radius:10px; border:1px solid rgba(34,197,94,0.3); background:#ffffff; font-size:0.95em; color:#0b3d2a; box-shadow:0 2px 6px rgba(0,0,0,0.05); transition:box-shadow 0.2s ease, border-color 0.2s ease; }
+  .role-update-field select:focus { outline:none; border-color:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,0.15); }
+  .role-update-button { display:inline-flex; align-items:center; gap:6px; padding:8px 16px; border-radius:999px; border:none; background:linear-gradient(135deg,#16a34a,#22c55e); color:#ffffff; font-size:0.85em; font-weight:600; cursor:pointer; transition:transform 0.2s ease, box-shadow 0.2s ease; }
+  .role-update-button:hover { transform:translateY(-1px); box-shadow:0 10px 20px rgba(34,197,94,0.2); }
+  .role-update-button.is-loading { opacity:0.65; pointer-events:none; }
+  .role-update-button i { font-size:0.9em; }
 .permission-badges { display:flex; gap:8px; flex-wrap:wrap; }
 .permission-groups { display:flex; flex-direction:column; gap:18px; }
 .permission-group h4 { margin:0 0 10px; font-size:1em; color:#14532d; }
@@ -390,6 +416,84 @@
   const errorIcon = '<i class="fas fa-times-circle"></i>';
   const toast = typeof window.showToast === 'function' ? window.showToast : function() {};
   let isUpdating = false;
+  const roleForm = document.querySelector('[data-role-update-form]');
+  const roleSelect = roleForm ? roleForm.querySelector('[data-role-select]') : null;
+  const roleSubmit = roleForm ? roleForm.querySelector('[data-role-submit]') : null;
+  const roleChip = document.querySelector('[data-role-chip]');
+  const roleNameTarget = document.querySelector('[data-role-name]');
+  let isRoleUpdating = false;
+
+  function applyRoleChange(role) {
+    if (!role) { return; }
+    if (roleChip) {
+      roleChip.textContent = role.name || '';
+      roleChip.dataset.roleSlug = role.slug || '';
+      roleChip.classList.remove('chip-admin', 'chip-staff');
+      if (role.slug === 'admin') {
+        roleChip.classList.add('chip-admin');
+      } else {
+        roleChip.classList.add('chip-staff');
+      }
+    }
+    if (roleNameTarget) {
+      roleNameTarget.textContent = role.name || '';
+    }
+    if (roleSelect) {
+      roleSelect.value = String(role.id);
+    }
+  }
+
+  if (roleForm && roleSelect) {
+    roleForm.addEventListener('submit', event => {
+      event.preventDefault();
+      if (isRoleUpdating) { return; }
+      const endpoint = roleForm.dataset.updateEndpoint;
+      if (!endpoint) {
+        toast(errorIcon, 'Loi', 'Khong tim thay dia chi cap nhat vai tro.');
+        return;
+      }
+      const selected = roleSelect.value;
+      if (!selected) {
+        toast(warningIcon, 'Canh bao', 'Vui long chon vai tro hop le.');
+        return;
+      }
+      isRoleUpdating = true;
+      if (roleSubmit) {
+        roleSubmit.disabled = true;
+        roleSubmit.classList.add('is-loading');
+      }
+      fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'XMLHttpRequest',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({ role_id: selected })
+      }).then(async response => {
+        let data = null;
+        try {
+          data = await response.json();
+        } catch (err) {
+          throw new Error('Phan hoi khong hop le tu may chu.');
+        }
+        if (!response.ok || !data || data.status !== 'success') {
+          throw new Error((data && data.message) || 'Khong the cap nhat vai tro.');
+        }
+        applyRoleChange(data.role || null);
+        toast(successIcon, 'Thanh cong', data.message || 'Da cap nhat vai tro.');
+      }).catch(err => {
+        console.error(err);
+        toast(errorIcon, 'Loi', err.message || 'Khong the cap nhat vai tro.');
+      }).finally(() => {
+        isRoleUpdating = false;
+        if (roleSubmit) {
+          roleSubmit.disabled = false;
+          roleSubmit.classList.remove('is-loading');
+        }
+      });
+    });
+  }
 
   function getToggles() {
     return Array.from(permissionCard.querySelectorAll('[data-user-permission-toggle]'));

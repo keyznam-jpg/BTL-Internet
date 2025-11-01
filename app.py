@@ -6557,6 +6557,108 @@ def nhan_vien_chi_tiet(nhanvien_id):
     )
 
 
+@app.route('/nhan-vien/<int:nhanvien_id>/role', methods=['POST'])
+@login_required
+@permission_required('staff.manage')
+def cap_nhat_vai_tro_nhan_vien(nhanvien_id):
+    nv = NguoiDung.query.get_or_404(nhanvien_id)
+    payload = request.get_json(silent=True)
+    if payload is None:
+        payload = request.form
+    wants_json = (
+        request.is_json
+        or request.headers.get('X-Requested-With') == 'XMLHttpRequest'
+        or request.accept_mimetypes['application/json'] >= request.accept_mimetypes['text/html']
+    )
+
+    def respond_error(message, status=400):
+        if wants_json:
+            return jsonify({'status': 'error', 'message': message}), status
+        flash(message, 'danger')
+        return redirect(url_for('nhan_vien_chi_tiet', nhanvien_id=nv.id))
+
+    role = None
+    role_id = payload.get('role_id') or payload.get('role')
+    role_slug = payload.get('role_slug') or payload.get('slug')
+    if role_id:
+        try:
+            role = Role.query.get(int(role_id))
+        except (TypeError, ValueError):
+            role = None
+    if not role and role_slug:
+        slug_value = str(role_slug).strip().lower()
+        if slug_value:
+            role = Role.query.filter(func.lower(Role.slug) == slug_value).first()
+    if not role:
+        return respond_error('Khong tim thay vai tro yeu cau.', 404)
+
+    current_is_admin = (nv.loai == 'admin') or (nv.role and nv.role.slug == 'admin')
+    target_is_admin = role.slug == 'admin'
+    admin_filter = or_(
+        NguoiDung.loai == 'admin',
+        NguoiDung.role.has(Role.slug == 'admin')
+    )
+    first_admin = NguoiDung.query.filter(admin_filter).order_by(NguoiDung.id.asc()).first()
+
+    if target_is_admin and first_admin and current_user.id != first_admin.id:
+        return respond_error('Chi quan tri vien dau tien moi co the gan vai tro quan tri.', 403)
+
+    if current_is_admin and not target_is_admin:
+        if first_admin and nv.id == first_admin.id:
+            return respond_error('Khong the thay doi vai tro cua quan tri vien ban dau.', 403)
+        if first_admin and current_user.id not in (first_admin.id, nv.id):
+            return respond_error('Chi quan tri vien dau tien hoac chinh tai khoan do moi duoc thay doi vai tro nay.', 403)
+        remaining_admins = NguoiDung.query.filter(
+            NguoiDung.id != nv.id,
+            admin_filter
+        ).count()
+        if remaining_admins == 0:
+            return respond_error('Khong the chuyen vai tro cua quan tri vien cuoi cung.', 403)
+
+    changed = False
+    if nv.role_id != role.id:
+        nv.role_id = role.id
+        changed = True
+    if nv.loai != role.slug:
+        nv.loai = role.slug
+        changed = True
+
+    if not changed:
+        response_data = {
+            'status': 'success',
+            'message': 'Vai tro khong thay doi.',
+            'role': {
+                'id': role.id,
+                'name': role.name,
+                'slug': role.slug
+            }
+        }
+        if wants_json:
+            return jsonify(response_data)
+        flash(response_data['message'], 'info')
+        return redirect(url_for('nhan_vien_chi_tiet', nhanvien_id=nv.id))
+
+    try:
+        db.session.commit()
+    except Exception:
+        db.session.rollback()
+        return respond_error('Khong the cap nhat vai tro. Vui long thu lai sau.', 500)
+
+    response_payload = {
+        'status': 'success',
+        'message': 'Da cap nhat vai tro.',
+        'role': {
+            'id': role.id,
+            'name': role.name,
+            'slug': role.slug
+        }
+    }
+    if wants_json:
+        return jsonify(response_payload)
+    flash(response_payload['message'], 'success')
+    return redirect(url_for('nhan_vien_chi_tiet', nhanvien_id=nv.id))
+
+
 @app.route('/nhan-vien/<int:nhanvien_id>/permissions', methods=['POST'])
 @login_required
 @permission_required('staff.manage')

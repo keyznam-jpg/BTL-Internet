@@ -154,10 +154,10 @@ PERMISSION_GROUPS = [
         'customers',
         'Khách hàng & ưu đãi',
         [
-            ('customers.view', 'Qu???n lA? h??" s?? khA?ch hA?ng'),
-            ('customers.export', 'Xu???t d??_ li???u khA?ch hA?ng'),
-            ('customers.manage_accounts', 'XA3a ho???c v??- hi???u hA?a tA?i kho???n khA?ch hA?ng'),
-            ('customers.vouchers', 'C???u hA?nh voucher & khuy???n mA?i'),
+            ('customers.view', 'Quản lý hồ sơ khách hàng'),
+            ('customers.export', 'Xuất dữ liệu khách hàng'),
+            ('customers.manage_accounts', 'Xóa hoặc vô hiệu hóa tài khoản khách hàng'),
+            ('customers.vouchers', 'Cấu hình voucher & khuyến mãi'),
         ],
     ),
     (

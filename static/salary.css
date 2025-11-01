@@ -294,6 +294,34 @@
   gap: 16px;
 }
 
+.employee-list.scrollable {
+  max-height: min(72vh, 780px);
+  overflow-y: auto;
+  padding-right: 6px;
+  scrollbar-gutter: stable both-edges;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(46, 125, 50, 0.4) rgba(232, 245, 233, 0.6);
+}
+
+.employee-list.scrollable::-webkit-scrollbar {
+  width: 8px;
+}
+
+.employee-list.scrollable::-webkit-scrollbar-track {
+  background: rgba(232, 245, 233, 0.6);
+  border-radius: 999px;
+}
+
+.employee-list.scrollable::-webkit-scrollbar-thumb {
+  background: rgba(46, 125, 50, 0.45);
+  border-radius: 999px;
+}
+
+.employee-list.scrollable::-webkit-scrollbar-thumb:hover {
+  background: rgba(46, 125, 50, 0.6);
+}
+
 .employee-salary-card {
   background: linear-gradient(135deg, #f8fdf8 0%, #ffffff 100%);
   border: 2px solid #e8f5e9;

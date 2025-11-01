@@ -1,4 +1,4 @@
-﻿<div class="employee-list">
+﻿<div class="employee-list{% if staffs|length > 3 %} scrollable{% endif %}">
   {% for nv in staffs %}
   {% set record = salary_records.get(nv.id) %}
   <form method="post" class="employee-salary-card">

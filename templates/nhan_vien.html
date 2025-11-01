@@ -385,11 +385,69 @@
 }
 
 /* Employee Grid */
-.employees-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 20px;
-}
+  .employees-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+    gap: 20px;
+  }
+
+  .employee-pagination {
+    margin-top: 24px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+  }
+
+  .pagination-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 999px;
+    border: none;
+    background: linear-gradient(135deg, #2f7d5a 0%, #16a34a 100%);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(47, 125, 90, 0.25);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .pagination-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 26px rgba(47, 125, 90, 0.28);
+  }
+
+  .pagination-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+    box-shadow: none;
+    transform: none;
+  }
+
+  .pagination-info {
+    font-weight: 600;
+    font-size: 1rem;
+    color: #14532d;
+    letter-spacing: 0.04em;
+  }
+
+  .employee-empty {
+    margin-top: 24px;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #6b7280;
+    font-size: 0.95rem;
+  }
+
+  .employee-empty i {
+    font-size: 1.6rem;
+    color: #16a34a;
+  }
 
 .employee-card {
   background: white;
@@ -872,6 +930,23 @@
     </div>
     {% endif %}
   </div>
+
+  <div class="employee-pagination" id="employee-pagination" aria-live="polite">
+    <button type="button" class="pagination-btn" id="employee-pagination-prev" aria-label="Trang trước">
+      <i class="fas fa-chevron-left"></i>
+    </button>
+    <span class="pagination-info">
+      <span id="employee-pagination-current">1</span>/<span id="employee-pagination-total">1</span>
+    </span>
+    <button type="button" class="pagination-btn" id="employee-pagination-next" aria-label="Trang tiếp theo">
+      <i class="fas fa-chevron-right"></i>
+    </button>
+  </div>
+
+  <div class="employee-empty" id="employee-empty-state">
+    <i class="fas fa-user-slash"></i>
+    <span>Không tìm thấy nhân viên phù hợp.</span>
+  </div>
 </div>
 
 <!-- MODAL ADD EMPLOYEE -->
@@ -981,50 +1056,140 @@ function viewEmployee(id) {
   window.location.href = `/nhan-vien/${id}`;
 }
 
-// ============ FILTER AND SEARCH ============
-function filterEmployees() {
-  const searchTerm = document.getElementById('search-input').value.toLowerCase();
-  const roleFilter = document.getElementById('role-filter').value;
-  const cards = document.querySelectorAll('.employee-card');
+// ============ FILTER, SORT & PAGINATION ============
+const EMPLOYEE_PAGE_SIZE = 4;
+let employeeCurrentPage = 1;
 
-  cards.forEach(card => {
+function getEmployeeCards() {
+  return Array.from(document.querySelectorAll('.employee-card'));
+}
+
+function refreshEmployeePagination() {
+  const allCards = getEmployeeCards();
+  const pagination = document.getElementById('employee-pagination');
+  const currentEl = document.getElementById('employee-pagination-current');
+  const totalEl = document.getElementById('employee-pagination-total');
+  const prevBtn = document.getElementById('employee-pagination-prev');
+  const nextBtn = document.getElementById('employee-pagination-next');
+  const emptyState = document.getElementById('employee-empty-state');
+
+  if (!allCards.length) {
+    if (pagination) pagination.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'none';
+    if (currentEl) currentEl.textContent = '0';
+    if (totalEl) totalEl.textContent = '0';
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+    return;
+  }
+
+  const visibleCards = allCards.filter(card => card.dataset.visible !== '0');
+  if (!visibleCards.length) {
+    allCards.forEach(card => (card.style.display = 'none'));
+    if (pagination) pagination.style.display = 'none';
+    if (emptyState) emptyState.style.display = 'flex';
+    if (currentEl) currentEl.textContent = '0';
+    if (totalEl) totalEl.textContent = '0';
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
+    return;
+  }
+
+  if (emptyState) emptyState.style.display = 'none';
+
+  const totalPages = Math.max(1, Math.ceil(visibleCards.length / EMPLOYEE_PAGE_SIZE));
+  if (employeeCurrentPage > totalPages) employeeCurrentPage = totalPages;
+  if (employeeCurrentPage < 1) employeeCurrentPage = 1;
+
+  const startIndex = (employeeCurrentPage - 1) * EMPLOYEE_PAGE_SIZE;
+  const endIndex = startIndex + EMPLOYEE_PAGE_SIZE;
+
+  visibleCards.forEach((card, index) => {
+    card.style.display = index >= startIndex && index < endIndex ? '' : 'none';
+  });
+
+  allCards.filter(card => card.dataset.visible === '0').forEach(card => {
+    card.style.display = 'none';
+  });
+
+  if (pagination) pagination.style.display = totalPages > 1 ? 'flex' : 'none';
+  if (currentEl) currentEl.textContent = String(employeeCurrentPage);
+  if (totalEl) totalEl.textContent = String(totalPages);
+  if (prevBtn) prevBtn.disabled = employeeCurrentPage <= 1;
+  if (nextBtn) nextBtn.disabled = employeeCurrentPage >= totalPages;
+}
+
+function filterEmployees() {
+  const searchInput = document.getElementById('search-input');
+  const roleSelect = document.getElementById('role-filter');
+  if (!searchInput || !roleSelect) return;
+
+  const searchTerm = searchInput.value.toLowerCase();
+  const roleFilter = roleSelect.value;
+
+  getEmployeeCards().forEach(card => {
     const name = card.dataset.name.toLowerCase();
     const username = card.dataset.username.toLowerCase();
     const role = card.dataset.role;
-
     const matchesSearch = name.includes(searchTerm) || username.includes(searchTerm);
     const matchesRole = roleFilter === 'all' || role === roleFilter;
-
-    if (matchesSearch && matchesRole) {
-      card.style.display = 'block';
-    } else {
-      card.style.display = 'none';
-    }
+    card.dataset.visible = matchesSearch && matchesRole ? '1' : '0';
   });
+
+  employeeCurrentPage = 1;
+  refreshEmployeePagination();
 }
 
 function sortEmployees() {
-  const sortBy = document.getElementById('sort-by').value;
+  const sortSelect = document.getElementById('sort-by');
   const grid = document.getElementById('employees-grid');
-  const cards = Array.from(document.querySelectorAll('.employee-card'));
+  if (!sortSelect || !grid) return;
+
+  const sortBy = sortSelect.value;
+  const cards = getEmployeeCards();
 
   cards.sort((a, b) => {
-    switch(sortBy) {
+    switch (sortBy) {
       case 'name':
         return a.dataset.name.localeCompare(b.dataset.name);
       case 'revenue':
-        return parseInt(b.dataset.revenue) - parseInt(a.dataset.revenue);
+        return parseInt(b.dataset.revenue, 10) - parseInt(a.dataset.revenue, 10);
       case 'orders':
-        return parseInt(b.dataset.orders) - parseInt(a.dataset.orders);
+        return parseInt(b.dataset.orders, 10) - parseInt(a.dataset.orders, 10);
       case 'date':
-        return parseInt(b.dataset.date) - parseInt(a.dataset.date);
+        return parseInt(b.dataset.date, 10) - parseInt(a.dataset.date, 10);
       default:
         return 0;
     }
   });
 
   cards.forEach(card => grid.appendChild(card));
+  refreshEmployeePagination();
 }
+
+function goToEmployeePage(step) {
+  const visibleCards = getEmployeeCards().filter(card => card.dataset.visible !== '0');
+  if (!visibleCards.length) return;
+  const totalPages = Math.max(1, Math.ceil(visibleCards.length / EMPLOYEE_PAGE_SIZE));
+  const nextPage = employeeCurrentPage + step;
+  if (nextPage < 1 || nextPage > totalPages) return;
+  employeeCurrentPage = nextPage;
+  refreshEmployeePagination();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  getEmployeeCards().forEach(card => {
+    if (!card.dataset.visible) {
+      card.dataset.visible = '1';
+    }
+  });
+  refreshEmployeePagination();
+
+  const prevBtn = document.getElementById('employee-pagination-prev');
+  const nextBtn = document.getElementById('employee-pagination-next');
+  if (prevBtn) prevBtn.addEventListener('click', () => goToEmployeePage(-1));
+  if (nextBtn) nextBtn.addEventListener('click', () => goToEmployeePage(1));
+});
 
 const attendanceMonthPicker = document.getElementById('attendanceMonthPicker');
 const attendanceMonthLabel = document.getElementById('attendanceMonthLabel');

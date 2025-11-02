@@ -3,563 +3,631 @@
 
 {% set total_types = ds_loai|length %}
 {% set total_capacity = ds_loai|sum(attribute='so_nguoi_toi_da') if total_types else 0 %}
-{% set avg_price = (ds_loai|sum(attribute='gia') // total_types) if total_types else 0 %}
+{% set average_price = (ds_loai|sum(attribute='gia') // total_types) if total_types else 0 %}
 
-<section class="rtypes-header">
-  <div>
-    <h2>Quản lý loại phòng</h2>
-  </div>
-  <button class="add-type-button" onclick="openAddModal()" title="Thêm loại phòng">
-    <i class="fas fa-plus"></i>
-  </button>
-</section>
-
-<section class="rtypes-stats">
-  <article class="stat">
-    <h4>Tổng loại phòng</h4>
-    <strong>{{ total_types }}</strong>
-    <span>Danh mục hiện tại</span>
-  </article>
-  <article class="stat">
-    <h4>Sức chứa tối đa</h4>
-    <strong>{{ total_capacity }}</strong>
-    <span>Khách / toàn bộ loại phòng</span>
-  </article>
-  <article class="stat">
-    <h4>Giá trung bình</h4>
-    <strong>{{ avg_price|vnd }}</strong>
-    <span>Trên mỗi loại phòng</span>
-  </article>
-</section>
-
-<div class="rtypes-surface">
-  <div class="surface-header">
-    <div>
-      <h3>Danh sách loại phòng</h3>
-      <p class="hint">Quản lý giá, sức chứa và cập nhật thông tin từng loại phòng.</p>
-    </div>
-    <div class="surface-actions">
-      <div class="search-field">
-        <i class="fas fa-search"></i>
-        <input type="text" id="search-input" placeholder="Tìm theo tên, ví dụ: Deluxe..." oninput="filterRows()">
-      </div>
-    </div>
-  </div>
-
-  <div class="table-shell">
-    <table class="rtypes-table" id="room-type-table">
-      <thead>
-        <tr>
-          <th>#</th>
-          <th>Tên loại phòng</th>
-          <th>Sức chứa</th>
-          <th>Giá niêm yết</th>
-          <th>Thao tác</th>
-        </tr>
-      </thead>
-      <tbody>
-        {% for loai in ds_loai %}
-        <tr data-name="{{ loai.ten|lower }}">
-          <td>{{ loop.index }}</td>
-          <td>
-            <div class="type-name">
-              <span class="name">{{ loai.ten }}</span>
-              <span class="slug">ID: {{ loai.id }}</span>
-            </div>
-          </td>
-          <td>
-            <span class="pill">{{ loai.so_nguoi_toi_da }} khách</span>
-          </td>
-          <td>
-            <strong class="price">{{ loai.gia|vnd }}</strong>
-          </td>
-          <td class="actions-cell">
-            <button class="btn ghost" onclick="openEditModal({{ loai.id }}, '{{ loai.ten }}', {{ loai.so_nguoi_toi_da }}, {{ loai.gia }})">
-              <i class="fas fa-edit"></i> Sửa
-            </button>
-            <form method="post" action="{{ url_for('xoa_loai_phong', loai_id=loai.id) }}" onsubmit="return confirm('Bạn chắc chắn muốn xoá loại phòng này?');">
-              <button type="submit" class="btn danger ghost"><i class="fas fa-trash-alt"></i></button>
-            </form>
-          </td>
-        </tr>
-        {% else %}
-        <tr>
-          <td colspan="5">
-            <div class="empty-row">
-              <i class="fas fa-bed"></i>
-              <p>Chưa có loại phòng nào. Hãy bắt đầu bằng cách thêm mới.</p>
-            </div>
-          </td>
-        </tr>
-        {% endfor %}
-      </tbody>
-    </table>
-  </div>
-</div>
-
-<!-- Modal -->
-<div class="modal" id="room-type-modal">
-  <div class="modal-overlay" onclick="closeModal()"></div>
-  <div class="modal-card">
-    <div class="modal-top">
+<section class="type-page">
+  <header class="type-page__header">
+    <div class="type-page__header-left">
+      <a class="button ghost" href="{{ url_for('quan_li_phong') }}">
+        <i class="fas fa-arrow-left"></i>
+        <span>Quay lại quản lý phòng</span>
+      </a>
       <div>
-        <h3 id="modal-title">Thêm loại phòng</h3>
+        <h1>Quản lý loại phòng</h1>
+        <p>Thiết lập danh mục loại phòng, giá và sức chứa để đồng bộ với các biểu mẫu đặt phòng.</p>
       </div>
     </div>
-    <form method="post" id="room-type-form" class="modal-form">
-      <input type="hidden" name="loai_id" id="modal-loai-id">
+    <div class="type-page__header-actions">
+      <button class="button primary" type="button" onclick="openTypeModalForCreate()">
+        <i class="fas fa-plus-circle"></i>
+        <span>Thêm loại phòng</span>
+      </button>
+    </div>
+  </header>
+
+  <section class="type-stats">
+    <article class="type-stat">
+      <span class="type-stat__label">Tổng loại phòng</span>
+      <span class="type-stat__value">{{ total_types }}</span>
+    </article>
+    <article class="type-stat type-stat--capacity">
+      <span class="type-stat__label">Tổng sức chứa</span>
+      <span class="type-stat__value">{{ total_capacity }}</span>
+      <span class="type-stat__hint">Khách tối đa theo danh mục</span>
+    </article>
+    <article class="type-stat type-stat--price">
+      <span class="type-stat__label">Giá trung bình</span>
+      <span class="type-stat__value">
+        {% if total_types %}
+          {{ "{:,}".format(average_price|int) }} VNĐ
+        {% else %}
+          Đang cập nhật
+        {% endif %}
+      </span>
+      <span class="type-stat__hint">Trên mỗi loại phòng</span>
+    </article>
+  </section>
+
+  <section class="type-surface">
+    <header class="type-surface__header">
+      <div>
+        <h2>Danh sách loại phòng</h2>
+        <p>Chỉnh sửa hồ sơ từng loại phòng hoặc thêm mới khi khách sạn có hạng phòng khác.</p>
+      </div>
+      <div class="type-surface__tools">
+        <div class="type-search">
+          <i class="fas fa-search"></i>
+          <input id="type-search-input" type="search" placeholder="Tìm theo tên hoặc mô tả...">
+        </div>
+      </div>
+    </header>
+
+    <div class="type-table-wrapper">
+      <table class="type-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Tên loại phòng</th>
+            <th>Sức chứa tối đa</th>
+            <th>Giá niêm yết</th>
+            <th>Mô tả</th>
+            <th>Thao tác</th>
+          </tr>
+        </thead>
+        <tbody id="type-table-body">
+          {% for loai in ds_loai %}
+          <tr data-name="{{ loai.ten|lower }}"
+              data-description="{{ loai.mo_ta|default('', true)|lower }}"
+              data-id="{{ loai.id }}"
+              data-ten="{{ loai.ten }}"
+              data-gia="{{ loai.gia or 0 }}"
+              data-suc-chua="{{ loai.so_nguoi_toi_da or 0 }}"
+              data-mo-ta="{{ loai.mo_ta|default('', true) }}">
+            <td>{{ loop.index }}</td>
+            <td>
+              <strong>{{ loai.ten }}</strong>
+              <div class="type-id">Mã: {{ loai.id }}</div>
+            </td>
+            <td>{{ loai.so_nguoi_toi_da }} khách</td>
+            <td>
+              {% if loai.gia is not none %}
+              {{ "{:,}".format(loai.gia|int) }} VNĐ / đêm
+              {% else %}
+              Đang cập nhật
+              {% endif %}
+            </td>
+            <td>
+              {% if loai.mo_ta %}
+              <span class="type-description">{{ loai.mo_ta }}</span>
+              {% else %}
+              <span class="type-description--empty">Chưa có mô tả</span>
+              {% endif %}
+            </td>
+            <td class="type-actions">
+              <button class="button ghost button--compact" type="button" onclick="openTypeModalForEdit(this)" title="Chỉnh sửa">
+                <i class="fas fa-edit"></i>
+              </button>
+              <form method="post" action="{{ url_for('xoa_loai_phong', loai_id=loai.id) }}" onsubmit="return confirmDeleteType('{{ loai.ten }}')">
+                <button class="button danger button--compact" type="submit" title="Xóa">
+                  <i class="fas fa-trash-alt"></i>
+                </button>
+              </form>
+            </td>
+          </tr>
+          {% else %}
+          <tr class="type-empty-row">
+            <td colspan="6">
+              <i class="fas fa-layer-group"></i>
+              <p>Chưa có loại phòng nào. Bấm “Thêm loại phòng” để khởi tạo danh mục.</p>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+</section>
+
+<dialog id="type-modal" class="type-modal">
+  <form id="type-form" method="post" action="{{ url_for('quan_li_loai_phong') }}">
+    <header class="type-modal__header">
+      <h3 id="type-modal-title">Thêm loại phòng</h3>
+      <button class="button ghost button--compact" type="button" onclick="closeTypeModal()" aria-label="Đóng">
+        <i class="fas fa-times"></i>
+      </button>
+    </header>
+
+    <section class="type-modal__body">
+      <input type="hidden" id="type-id" name="loai_id">
       <label>
-        <span class="label-heading">Tên loại phòng<span class="required-marker">*</span></span>
-        <input type="text" id="modal-ten" name="ten" required placeholder="VD: Premium Sky View">
+        <span>Tên loại phòng <span class="required">*</span></span>
+        <input id="type-name" name="ten" type="text" placeholder="Ví dụ: Deluxe City View" required>
       </label>
-      <div class="double">
-        <label>
-          <span class="label-heading">Số người tối đa<span class="required-marker">*</span></span>
-          <input type="number" id="modal-so-nguoi" name="so_nguoi" min="1" required>
-        </label>
-        <label>
-          <span class="label-heading">Giá (VNĐ)<span class="required-marker">*</span></span>
-          <input type="number" id="modal-gia" name="gia" min="0" required>
-        </label>
-      </div>
-      <div class="modal-actions">
-        <button type="button" class="btn cancel" onclick="closeModal()">Huỷ</button>
-        <button type="submit" class="btn primary" id="modal-submit-btn"><i class="fas fa-save"></i> Lưu</button>
-      </div>
-    </form>
-  </div>
-</div>
+      <label>
+        <span>Giá niêm yết (VNĐ) <span class="required">*</span></span>
+        <input id="type-price" name="gia" type="number" min="0" step="1000" required>
+      </label>
+      <label>
+        <span>Sức chứa tối đa <span class="required">*</span></span>
+        <input id="type-capacity" name="so_nguoi_toi_da" type="number" min="1" required>
+      </label>
+      <label>
+        <span>Mô tả</span>
+        <textarea id="type-description" name="mo_ta" rows="3" placeholder="Thông tin bổ sung cho nhân viên tư vấn..."></textarea>
+      </label>
+    </section>
+
+    <footer class="type-modal__footer">
+      <button class="button ghost" type="button" onclick="closeTypeModal()">Hủy</button>
+      <button class="button primary" type="submit" id="type-submit">
+        <i class="fas fa-save"></i>
+        <span>Lưu loại phòng</span>
+      </button>
+    </footer>
+  </form>
+</dialog>
 
 <style>
-.rtypes-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 24px;
-}
-.add-type-button {
-  width: 48px;
-  height: 48px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 16px;
-  border: none;
-  background: linear-gradient(135deg,#0f766e,#22c55e);
-  color: #fff;
-  box-shadow: 0 12px 24px rgba(22,101,52,0.26);
-  cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
-}
-.add-type-button i {
-  font-size: 18px;
-}
-.add-type-button:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.05);
-}
-.add-type-button:active {
-  transform: translateY(0);
-  box-shadow: 0 6px 12px rgba(22,101,52,0.18);
-  filter: brightness(0.95);
-}
-.add-type-button:focus-visible {
-  outline: 3px solid rgba(34,197,94,0.35);
-  outline-offset: 2px;
-}
-.rtypes-header .eyebrow {
-  text-transform: uppercase;
-  font-size: 12px;
-  letter-spacing: 2px;
-  color: #22c55e;
-  margin-bottom: 6px;
-}
-.rtypes-header h2 {
-  margin: 0;
-  font-size: 28px;
-  color: #13790c;
-}
-.rtypes-header .lead {
-  color: #64748b;
-  display: block;
-  max-width: 520px;
-  margin-top: 6px;
-}
-.rtypes-stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 18px;
-  margin-bottom: 24px;
-}
-.stat {
-  background: linear-gradient(135deg,#f0fdf4,#dcfce7);
-  border-radius: 20px;
-  padding: 20px;
-  box-shadow: 0 16px 35px rgba(34,197,94,0.18);
-  border: 1px solid rgba(22,163,74,0.3);
-}
-.stat h4 {
-  margin: 0;
-  text-transform: uppercase;
-  font-size: 12px;
-  color: #047857;
-  letter-spacing: 1px;
-}
-.stat strong {
-  display: block;
-  font-size: 30px;
-  color: #0f172a;
-  margin: 8px 0 4px;
-}
-.stat span {
-  color: #047857;
-  font-size: 13px;
-}
-.rtypes-surface {
-  background: #ffffff;
-  border-radius: 24px;
-  padding: 24px;
-  box-shadow: 0 20px 40px rgba(15,23,42,0.08);
-  border: 1px solid rgba(148, 163, 184, 0.16);
-}
-.surface-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 18px;
-}
-.surface-header h3 {
-  margin: 0;
-}
-.surface-header .hint {
-  margin: 4px 0 0;
-  color: #94a3b8;
-}
-.surface-actions {
-  display: flex;
-  gap: 12px;
-}
-.search-field {
-  position: relative;
-}
-.search-field input {
-  padding: 10px 14px 10px 38px;
-  border-radius: 12px;
-  border: 1px solid #d0d7e5;
-  background: #f8fafc;
-  width: 240px;
-}
-.search-field i {
-  position: absolute;
-  left: 12px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: #9ca3af;
-}
-.table-shell {
-  overflow-x: auto;
-  border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.2);
-}
-.rtypes-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 640px;
-}
-.rtypes-table thead {
-  background: #047857;
-  color: #fff;
-}
-.rtypes-table th,
-.rtypes-table td {
-  padding: 14px 18px;
-  text-align: left;
-}
-.rtypes-table tbody tr:nth-child(even) {
-  background: #f8fafc;
-}
-.rtypes-table tbody tr:hover {
-  background: #f0fdf4;
-}
-.type-name .name {
-  font-weight: 600;
-  color: #0f172a;
-}
-.type-name .slug {
-  display: block;
-  font-size: 12px;
-  color: #94a3b8;
-}
-.pill {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 999px;
-  background: #e0f2fe;
-  color: #0369a1;
-  font-weight: 600;
-  font-size: 13px;
-}
-.price {
-  color: #047857;
-  font-size: 16px;
-}
-.actions-cell {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.actions-cell form {
-  margin: 0;
-}
-.empty-row {
-  text-align: center;
-  padding: 40px 0;
-  color: #94a3b8;
-}
-.empty-row i {
-  font-size: 34px;
-  margin-bottom: 12px;
-  display: block;
-  color: #22c55e;
-}
-.modal {
-  position: fixed;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-.modal.show {
-  display: flex;
-}
-.modal-overlay {
-  position: absolute;
-  inset: 0;
-  background: rgba(15,23,42,0.5);
-}
-.modal-card {
-  position: relative;
-  background: #fff;
-  border-radius: 24px;
-  padding: 24px;
-  width: 100%;
-  max-width: 460px;
-  box-shadow: 0 35px 60px rgba(15,23,42,0.25);
-  animation: float-in 0.25s ease;
-}
-@keyframes float-in {
-  from { transform: translateY(12px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
-}
-.modal-top {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 18px;
-}
-.modal-eyebrow {
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 2px;
-  color: #6366f1;
-}
-.modal-top h3 {
-  margin: 6px 0;
-}
-.modal-tip {
-  color: #94a3b8;
-  font-size: 13px;
-}
-.modal-close {
-  border: none;
-  background: #eef2ff;
-  color: #4338ca;
-  border-radius: 999px;
-  padding: 6px 10px;
-  cursor: pointer;
-}
-.modal-form label {
-  display: flex;
-  flex-direction: column;
-  font-size: 13px;
-  color: #475569;
-  gap: 8px;
-  margin-bottom: 16px;
-}
-.modal-form label:last-child {
-  margin-bottom: 0;
-}
-.modal-form .label-heading {
-  display: inline-flex;
-  align-items: center;
-  color: #475569;
-  font-weight: 600;
-  gap: 4px;
-}
-.modal-form .required-marker {
-  color: #dc2626;
-}
-.modal-form input {
-  width: 100%;
-  padding: 12px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(34,197,94,0.3);
-  background: #f0fdf4;
-  transition: border-color 0.18s ease, box-shadow 0.18s ease;
-}
-.modal-form label input {
-  flex: 1;
-}
-.modal-form input:focus {
-  outline: none;
-  border-color: rgba(22,163,74,0.6);
-  box-shadow: 0 0 0 3px rgba(134,239,172,0.35);
-  background: #ffffff;
-}
-.modal-form .double {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 16px;
-  align-items: stretch;
-}
-.modal-form .double label {
-  margin-bottom: 0;
-}
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  margin-top: 20px;
-  flex-wrap: wrap;
-}
-.modal-actions .btn {
-  flex: 0 0 auto;
-}
-.btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  border-radius: 999px;
-  border: none;
-  padding: 12px 20px;
-  cursor: pointer;
-  font-weight: 600;
-  transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
-}
-.btn.primary {
-  background: linear-gradient(135deg,#0f766e,#22c55e);
-  color: #fff;
-  box-shadow: 0 12px 24px rgba(22,101,52,0.28);
-}
-.btn.ghost {
-  background: #ecfdf5;
-  color: #047857;
-  box-shadow: none;
-}
-.btn.ghost i {
-  color: #16a34a;
-}
-.btn.danger {
-  background: #fef2f2;
-  color: #dc2626;
-}
-.btn.danger i {
-  color: #f97316;
-}
-.btn.danger.ghost {
-  background: rgba(254, 226, 226, 0.7);
-  color: #dc2626;
-}
-.btn.danger.ghost i {
-  color: #ef4444;
-}
-.btn.cancel {
-  background: #fff;
-  color: #dc2626;
-  border: 1px solid rgba(239,68,68,0.45);
-  box-shadow: none;
-}
-.btn:hover {
-  transform: translateY(-2px);
-  filter: brightness(1.05);
-}
-.btn:active {
-  transform: translateY(0);
-  filter: brightness(0.97);
-}
-.btn.cancel:hover {
-  background: #fef2f2;
-  filter: none;
-}
-.btn.cancel:active {
-  background: #fee2e2;
-}
-.btn:hover {
-  transform: translateY(-1px);
-}
-.btn:active {
-  transform: translateY(0);
-}
-
-@media (max-width: 900px) {
-  .surface-header {
+  .type-page {
+    display: flex;
     flex-direction: column;
+    gap: 28px;
+    padding-bottom: 32px;
+  }
+
+  .type-page__header {
+    display: flex;
+    justify-content: space-between;
     align-items: flex-start;
+    gap: 20px;
+    background: #ffffff;
+    border-radius: 22px;
+    padding: 28px 32px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    box-shadow: 0 18px 45px -32px rgba(15, 23, 42, 0.4);
   }
-  .surface-actions {
+
+  .type-page__header-left {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .type-page__header h1 {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .type-page__header p {
+    margin: 0;
+    color: #475569;
+  }
+
+  .type-page__header-actions {
+    display: flex;
+    gap: 12px;
+  }
+
+  .type-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 18px;
+  }
+
+  .type-stat {
+    background: #ffffff;
+    border-radius: 18px;
+    padding: 20px;
+    border: 1px solid rgba(148, 163, 184, 0.16);
+    box-shadow: 0 16px 36px -30px rgba(15, 23, 42, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .type-stat--capacity {
+    background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  }
+
+  .type-stat--price {
+    background: linear-gradient(135deg, #eff6ff, #dbeafe);
+  }
+
+  .type-stat__label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #64748b;
+  }
+
+  .type-stat__value {
+    font-size: 28px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .type-stat__hint {
+    font-size: 14px;
+    color: #0f766e;
+  }
+
+  .type-surface {
+    background: #ffffff;
+    border-radius: 22px;
+    border: 1px solid rgba(148, 163, 184, 0.14);
+    padding: 26px;
+    box-shadow: 0 18px 45px -32px rgba(15, 23, 42, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+
+  .type-surface__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+
+  .type-surface__header h2 {
+    margin: 0;
+    font-size: 22px;
+    color: #0f172a;
+  }
+
+  .type-surface__header p {
+    margin: 6px 0 0;
+    color: #64748b;
+  }
+
+  .type-search {
+    position: relative;
+    width: 260px;
+  }
+
+  .type-search input {
     width: 100%;
+    padding: 10px 14px 10px 38px;
+    border-radius: 12px;
+    border: 1px solid #d0d7e5;
+    background: #f8fafc;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
   }
-  .search-field input {
+
+  .type-search input:focus {
+    outline: none;
+    border-color: #0f766e;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.15);
+    background: #ffffff;
+  }
+
+  .type-search i {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    color: #94a3b8;
+  }
+
+  .type-table-wrapper {
+    overflow-x: auto;
+  }
+
+  .type-table {
     width: 100%;
+    min-width: 768px;
+    border-collapse: collapse;
   }
-  .modal-form .double {
-    grid-template-columns: 1fr;
+
+  .type-table thead {
+    background: #0f766e;
+    color: #ffffff;
   }
-}
+
+  .type-table th,
+  .type-table td {
+    text-align: left;
+    padding: 14px 16px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: top;
+  }
+
+  .type-table tbody tr:nth-child(even) {
+    background: #f8fafc;
+  }
+
+  .type-id {
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 4px;
+  }
+
+  .type-description {
+    color: #334155;
+    display: inline-block;
+    max-width: 320px;
+  }
+
+  .type-description--empty {
+    color: #94a3b8;
+    font-style: italic;
+  }
+
+  .type-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .type-actions form {
+    margin: 0;
+  }
+
+  .type-empty-row {
+    text-align: center;
+  }
+
+  .type-empty-row i {
+    display: block;
+    font-size: 28px;
+    color: #0f766e;
+    margin-bottom: 10px;
+  }
+
+  .type-modal {
+    border: none;
+    border-radius: 22px;
+    padding: 0;
+    max-width: 520px;
+    width: 100%;
+    box-shadow: 0 30px 80px -40px rgba(15, 23, 42, 0.45);
+  }
+
+  .type-modal::backdrop {
+    background-color: rgba(15, 23, 42, 0.35);
+    backdrop-filter: blur(3px);
+  }
+
+  .type-modal__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 22px 24px;
+    border-bottom: 1px solid #e2e8f0;
+    background: linear-gradient(135deg, #f8fafc, #ffffff);
+  }
+
+  .type-modal__header h3 {
+    margin: 0;
+    font-size: 20px;
+    color: #0f172a;
+  }
+
+  .type-modal__body {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 22px 24px;
+  }
+
+  .type-modal__body label {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    color: #475569;
+    font-weight: 600;
+  }
+
+  .type-modal__body input,
+  .type-modal__body textarea {
+    border: 1px solid #d0d7e5;
+    border-radius: 12px;
+    padding: 12px 14px;
+    font-size: 15px;
+    background: #f8fafc;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .type-modal__body input:focus,
+  .type-modal__body textarea:focus {
+    outline: none;
+    border-color: #0f766e;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+    background: #ffffff;
+  }
+
+  .type-modal__footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 24px;
+    border-top: 1px solid #e2e8f0;
+    background: #f8fafc;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+  }
+
+  .button.primary {
+    background: linear-gradient(135deg, #0f766e, #14b8a6);
+    color: #ffffff;
+  }
+
+  .button.primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px -18px rgba(15, 118, 110, 0.55);
+  }
+
+  .button.ghost {
+    background: #ffffff;
+    color: #0f172a;
+    border-color: rgba(148, 163, 184, 0.35);
+  }
+
+  .button.ghost:hover {
+    background: rgba(148, 163, 184, 0.12);
+  }
+
+  .button.danger {
+    background: rgba(248, 113, 113, 0.12);
+    color: #b91c1c;
+    border-color: rgba(239, 68, 68, 0.45);
+  }
+
+  .button.danger:hover {
+    background: rgba(248, 113, 113, 0.2);
+  }
+
+  .button--compact {
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+
+  .required {
+    color: #dc2626;
+  }
+
+  @media (max-width: 820px) {
+    .type-page__header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .type-page__header-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .type-surface__header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .type-search {
+      width: 100%;
+    }
+  }
 </style>
 
 <script>
-let editActionUrl = "";
+  const typeModal = document.getElementById('type-modal');
+  const typeForm = document.getElementById('type-form');
+  const typeIdField = document.getElementById('type-id');
+  const typeNameField = document.getElementById('type-name');
+  const typePriceField = document.getElementById('type-price');
+  const typeCapacityField = document.getElementById('type-capacity');
+  const typeDescriptionField = document.getElementById('type-description');
+  const typeTitle = document.getElementById('type-modal-title');
+  const typeSubmit = document.getElementById('type-submit');
+  const searchInput = document.getElementById('type-search-input');
+  const tableRows = Array.from(document.querySelectorAll('#type-table-body tr[data-id]'));
 
-function openAddModal() {
-  editActionUrl = "";
-  document.getElementById('modal-title').textContent = 'Thêm loại phòng';
-  document.getElementById('room-type-form').action = "{{ url_for('quan_li_loai_phong') }}";
-  document.getElementById('modal-loai-id').value = '';
-  document.getElementById('modal-ten').value = '';
-  document.getElementById('modal-so-nguoi').value = 2;
-  document.getElementById('modal-gia').value = 0;
-  document.getElementById('modal-submit-btn').innerHTML = '<i class="fas fa-save"></i> Thêm mới';
-  document.getElementById('room-type-modal').classList.add('show');
-}
+  function normalizeText(value) {
+    if (!value) { return ''; }
+    try {
+      return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+    } catch (err) {
+      return value.toLowerCase();
+    }
+  }
 
-function openEditModal(id, ten, soNguoi, gia) {
-  editActionUrl = '{{ url_for('sua_loai_phong', loai_id=0) }}'.replace('0', id);
-  document.getElementById('modal-title').textContent = 'Chỉnh sửa loại phòng';
-  document.getElementById('room-type-form').action = editActionUrl;
-  document.getElementById('modal-loai-id').value = id;
-  document.getElementById('modal-ten').value = ten;
-  document.getElementById('modal-so-nguoi').value = soNguoi;
-  document.getElementById('modal-gia').value = gia;
-  document.getElementById('modal-submit-btn').innerHTML = '<i class="fas fa-save"></i> Cập nhật';
-  document.getElementById('room-type-modal').classList.add('show');
-}
+  function openTypeModal() {
+    if (typeof typeModal.showModal === 'function') {
+      typeModal.showModal();
+    } else {
+      typeModal.setAttribute('open', 'open');
+    }
+  }
 
-function closeModal() {
-  document.getElementById('room-type-modal').classList.remove('show');
-}
+  function closeTypeModal() {
+    if (typeof typeModal.close === 'function') {
+      typeModal.close();
+    } else {
+      typeModal.removeAttribute('open');
+    }
+  }
 
-function filterRows() {
-  const keyword = document.getElementById('search-input').value.toLowerCase();
-  document.querySelectorAll('#room-type-table tbody tr').forEach(row => {
-    const match = row.dataset.name ? row.dataset.name.includes(keyword) : keyword === '';
-    row.style.display = match ? '' : 'none';
+  function openTypeModalForCreate() {
+    typeForm.action = "{{ url_for('quan_li_loai_phong') }}";
+    typeIdField.value = '';
+    typeNameField.value = '';
+    typePriceField.value = '';
+    typeCapacityField.value = '2';
+    typeDescriptionField.value = '';
+    typeTitle.textContent = 'Thêm loại phòng';
+    typeSubmit.innerHTML = '<i class="fas fa-save"></i><span>Lưu loại phòng</span>';
+    openTypeModal();
+    typeNameField.focus();
+  }
+
+  function openTypeModalForEdit(button) {
+    const row = button.closest('tr');
+    if (!row) { return; }
+    const id = row.dataset.id;
+    typeForm.action = "{{ url_for('sua_loai_phong', loai_id=0) }}".replace('0', id);
+    typeIdField.value = id;
+    typeNameField.value = row.dataset.ten || '';
+    typePriceField.value = row.dataset.gia || 0;
+    const capacity = row.dataset.sucChua || row.getAttribute('data-suc-chua') || '2';
+    typeCapacityField.value = capacity;
+    const description = row.dataset.moTa || row.getAttribute('data-mo-ta') || '';
+    typeDescriptionField.value = description;
+    typeTitle.textContent = 'Cập nhật loại phòng';
+    typeSubmit.innerHTML = '<i class="fas fa-save"></i><span>Lưu thay đổi</span>';
+    openTypeModal();
+    typeNameField.focus();
+  }
+
+  function confirmDeleteType(name) {
+    return confirm(`Bạn có chắc chắn muốn xóa loại phòng “${name}”? Mọi phòng thuộc loại này phải được xử lý trước khi xóa.`);
+  }
+
+  function filterTypeRows() {
+    const keyword = normalizeText((searchInput.value || '').trim());
+    let visible = 0;
+    tableRows.forEach(row => {
+      const target = normalizeText(`${row.dataset.name || ''} ${row.dataset.description || ''}`);
+      const match = !keyword || target.includes(keyword);
+      row.style.display = match ? '' : 'none';
+      if (match) { visible += 1; }
+    });
+    const emptyRow = document.querySelector('.type-empty-row');
+    if (emptyRow) {
+      emptyRow.style.display = visible === 0 ? '' : 'none';
+      const message = visible === 0
+        ? 'Không tìm thấy loại phòng phù hợp. Hãy thử từ khóa khác.'
+        : 'Chưa có loại phòng nào. Bấm “Thêm loại phòng” để khởi tạo danh mục.';
+      const paragraph = emptyRow.querySelector('p');
+      if (paragraph) {
+        paragraph.textContent = message;
+      }
+    }
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', filterTypeRows);
+  }
+
+  window.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && typeModal?.open) {
+      closeTypeModal();
+    }
   });
-}
+
+  filterTypeRows();
 </script>
 
 {% endblock %}

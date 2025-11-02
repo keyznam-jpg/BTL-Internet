@@ -341,10 +341,13 @@ def ensure_default_roles():
         changed = True
     db.session.flush()
 
+    # Chỉ reset quyền admin, KHÔNG reset quyền các vai trò khác để giữ cấu hình tùy chỉnh
     if set_role_permissions(admin_role, DEFAULT_ROLE_PERMISSIONS['admin']):
         changed = True
-    if set_role_permissions(staff_role, DEFAULT_ROLE_PERMISSIONS['nhanvien']):
-        changed = True
+    
+    # KHÔNG gọi set_role_permissions cho staff_role để giữ nguyên quyền đã cấu hình
+    # if set_role_permissions(staff_role, DEFAULT_ROLE_PERMISSIONS['nhanvien']):
+    #     changed = True
 
     roles = {role.slug: role for role in Role.query.all()}
     default_role = roles.get('nhanvien') or staff_role
@@ -1778,8 +1781,12 @@ def compute_effective_base_salary(base_salary, work_days, mode=None):
     mode = (mode or get_salary_mode()).strip().lower()
     base_salary = max(0, int(base_salary or 0))
     work_days = max(0, int(work_days or 0))
-    if mode == SALARY_MODE_DAILY and base_salary > 0 and work_days > 0:
-        return _round_divide(base_salary * work_days, SALARY_DAILY_DIVISOR)
+    if mode == SALARY_MODE_DAILY:
+        # Chế độ lương ngày: nếu chưa chấm công (work_days = 0) thì lương = 0
+        if work_days == 0:
+            return 0
+        if base_salary > 0 and work_days > 0:
+            return _round_divide(base_salary * work_days, SALARY_DAILY_DIVISOR)
     return base_salary
 
 

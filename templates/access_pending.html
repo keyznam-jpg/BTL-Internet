@@ -3,213 +3,593 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Tài khoản cần cấp quyền</title>
+  <title>Tài khoản chưa được cấp quyền</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
-      color-scheme: light;
-      font-family: "Segoe UI", Tahoma, sans-serif;
-      --surface: rgba(255, 255, 255, 0.85);
       --primary: #2563eb;
-      --primary-strong: #1d4ed8;
-      --accent: #38bdf8;
-      --text-strong: #0f172a;
-      --text-muted: #4b5563;
-      --chip: rgba(37, 99, 235, 0.12);
-      --chip-text: #1d4ed8;
-      --shadow: 0 45px 80px -50px rgba(15, 23, 42, 0.7);
-      --shadow-hover: 0 50px 90px -45px rgba(37, 99, 235, 0.55);
+      --accent: #0ea5e9;
+      --text: #0f172a;
+      --muted: #4b5563;
+      --pointer-x: 0.5;
+      --pointer-y: 0.5;
     }
+
+    * {
+      box-sizing: border-box;
+    }
+
     body {
       margin: 0;
       min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: radial-gradient(circle at 8% 12%, rgba(134, 239, 172, 0.55), transparent 55%),
-                  radial-gradient(circle at 88% 18%, rgba(74, 222, 128, 0.38), transparent 48%),
-                  radial-gradient(circle at 72% 82%, rgba(110, 231, 183, 0.35), transparent 42%),
-                  #3dd5bc;
-      color: var(--text-strong);
+      font-family: 'Manrope', 'Segoe UI', sans-serif;
+      background: #ffffff;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
       overflow: hidden;
     }
-    body::before,
-    body::after {
-      content: "";
-      position: absolute;
-      width: 60vmin;
-      height: 60vmin;
-      background: radial-gradient(circle, rgba(74, 222, 128, 0.28), transparent 65%);
-      filter: blur(35px);
-      opacity: 0.55;
-      z-index: 0;
-    }
-    body::before {
-      top: -18vmin;
-      left: -12vmin;
-    }
-    body::after {
-      bottom: -20vmin;
-      right: -18vmin;
-    }
-    .card {
+
+    .error-stage {
       position: relative;
-      z-index: 1;
-      width: min(580px, 92vw);
-      padding: clamp(36px, 5vw, 52px);
-      border-radius: 28px;
-      background: var(--surface);
-      backdrop-filter: blur(18px);
-      border: 1px solid rgba(255, 255, 255, 0.45);
-      box-shadow: var(--shadow);
-      text-align: center;
+      width: min(960px, 100%);
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 32px;
+      padding: clamp(24px, 4vw, 48px);
+      box-shadow:
+        0 40px 90px -45px rgba(15, 23, 42, 0.45),
+        0 20px 30px -20px rgba(15, 23, 42, 0.25);
       overflow: hidden;
+      backdrop-filter: blur(10px);
+      transform: perspective(1600px)
+                 rotateX(calc((0.5 - var(--pointer-y)) * 12deg))
+                 rotateY(calc((var(--pointer-x) - 0.5) * 18deg));
+      transition: transform 0.18s ease-out;
     }
-    .card::before {
-      content: "";
-      position: absolute;
-      inset: -40% -35% 40%;
-      background: radial-gradient(circle at 20% 30%, rgba(59, 130, 246, 0.28), transparent 60%),
-                  radial-gradient(circle at 85% 25%, rgba(56, 189, 248, 0.22), transparent 65%);
-      opacity: 0.65;
-      pointer-events: none;
-    }
-    .card::after {
-      content: "";
+
+    .glow {
       position: absolute;
       inset: 0;
-      background: linear-gradient(180deg, rgba(255, 255, 255, 0.38), rgba(255, 255, 255, 0));
       pointer-events: none;
     }
-    .icon {
-      position: relative;
-      width: 104px;
-      height: 104px;
-      margin: 0 auto 28px;
-      border-radius: 28px;
-      background: linear-gradient(135deg, rgba(37, 99, 235, 0.22), rgba(56, 189, 248, 0.18));
+
+    .glow::before {
+      content: '';
+      position: absolute;
+      inset: -40%;
+      background: radial-gradient(
+        circle at calc(var(--pointer-x) * 100%) calc(var(--pointer-y) * 100%),
+        rgba(14, 165, 233, 0.18),
+        rgba(37, 99, 235, 0.05),
+        transparent 65%
+      );
+      transition: background 0.12s ease-out;
+    }
+
+    .glow::after {
+      content: '';
+      position: absolute;
+      inset: -25%;
+      background:
+        radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.08), transparent 55%),
+        radial-gradient(circle at 80% 30%, rgba(14, 165, 233, 0.08), transparent 50%),
+        radial-gradient(circle at 60% 80%, rgba(34, 211, 238, 0.08), transparent 55%);
+      opacity: 0.85;
+      animation: shimmer 12s linear infinite;
+    }
+
+    .floating-shapes span {
+      position: absolute;
+      display: block;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 30%, rgba(37, 99, 235, 0.2), rgba(14, 165, 233, 0.05));
+      filter: blur(0);
+      animation: float 18s ease-in-out infinite;
+    }
+
+    .floating-shapes span:nth-child(1) {
+      width: 220px;
+      height: 220px;
+      top: -80px;
+      right: -60px;
+      animation-duration: 22s;
+    }
+
+    .floating-shapes span:nth-child(2) {
+      width: 160px;
+      height: 160px;
+      bottom: -70px;
+      left: -40px;
+      animation-duration: 18s;
+      animation-delay: -4s;
+    }
+
+    .floating-shapes span:nth-child(3) {
+      width: 120px;
+      height: 120px;
+      top: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      animation-duration: 16s;
+      animation-delay: -8s;
+    }
+
+    .orbit {
+      position: absolute;
+      inset: -40%;
+      pointer-events: none;
+    }
+
+    .orbit::before,
+    .orbit::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      border: 1px dashed rgba(37, 99, 235, 0.15);
+      animation: rotate 22s linear infinite;
+    }
+
+    .orbit::before {
+      width: 460px;
+      height: 460px;
+      top: 18%;
+      left: 30%;
+    }
+
+    .orbit::after {
+      width: 360px;
+      height: 360px;
+      top: 40%;
+      left: 48%;
+      animation-duration: 18s;
+      animation-direction: reverse;
+    }
+
+    .confetti {
+      position: absolute;
+      inset: -20%;
+      pointer-events: none;
       display: grid;
       place-items: center;
-      font-size: 48px;
-      color: var(--primary);
-      box-shadow: inset 0 0 0 1px rgba(255,255,255,0.6);
     }
-    h1 {
+
+    .confetti span {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: rgba(37, 99, 235, 0.35);
+      animation: fall 12s ease-in-out infinite;
+      backdrop-filter: blur(2px);
+    }
+
+    .confetti span:nth-child(3n) {
+      background: rgba(14, 165, 233, 0.45);
+      width: 8px;
+      height: 8px;
+    }
+
+    .confetti span:nth-child(5n) {
+      background: rgba(34, 211, 238, 0.4);
+      width: 5px;
+      height: 5px;
+    }
+
+    .confetti span:nth-child(1) { top: 12%; left: 20%; animation-delay: -2s; }
+    .confetti span:nth-child(2) { top: 30%; left: 80%; animation-delay: -6s; }
+    .confetti span:nth-child(3) { top: 70%; left: 10%; animation-delay: -4s; }
+    .confetti span:nth-child(4) { top: 80%; left: 60%; animation-delay: -9s; }
+    .confetti span:nth-child(5) { top: 20%; left: 60%; animation-delay: -7s; }
+    .confetti span:nth-child(6) { top: 55%; left: 35%; animation-delay: -3s; }
+    .confetti span:nth-child(7) { top: 42%; left: 15%; animation-delay: -5s; }
+    .confetti span:nth-child(8) { top: 68%; left: 78%; animation-delay: -10s; }
+    .confetti span:nth-child(9) { top: 18%; left: 45%; animation-delay: -1s; }
+    .confetti span:nth-child(10) { top: 88%; left: 28%; animation-delay: -8s; }
+
+    .error-content {
       position: relative;
-      margin: 0 0 18px;
-      font-size: clamp(28px, 5vw, 32px);
+      z-index: 1;
+      display: grid;
+      gap: 16px;
+      text-align: center;
+      animation: fadeInUp 0.8s ease-out forwards;
+      opacity: 0;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      margin-bottom: 8px;
+    }
+
+    .brand img {
+      display: block;
+      width: 48px;
+      height: 48px;
+      object-fit: contain;
+      filter: drop-shadow(0 6px 12px rgba(37, 99, 235, 0.2));
+    }
+
+    .error-code {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: clamp(12px, 4vw, 24px);
+      font-size: clamp(64px, 12vw, 120px);
       font-weight: 700;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.04em;
+      margin: 0;
+      background: linear-gradient(120deg, #ef4444 0%, #f97316 50%, #f59e0b 100%);
+      background-size: 180% 180%;
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
+      animation: gradientFlow 9s ease infinite;
+    }
+
+    .error-code svg {
+      width: clamp(64px, 12vw, 120px);
+      height: clamp(64px, 12vw, 120px);
+      animation: floatDigits 6s ease-in-out infinite;
+    }
+
+    .error-code span {
+      display: inline-block;
+      transform-origin: center;
+      animation: floatDigits 6s ease-in-out infinite;
+    }
+
+    .error-code span:nth-child(2) {
+      animation-delay: -3s;
+    }
+
+    .error-title {
+      font-size: clamp(22px, 4.5vw, 36px);
+      margin: 8px 0 0;
+      font-weight: 700;
+      color: var(--text);
+      animation: fadeInUp 0.9s ease-out 0.12s both;
+    }
+
+    .error-message {
+      margin: 12px auto 0;
+      max-width: 620px;
+      font-size: clamp(15px, 3.2vw, 17px);
+      line-height: 1.65;
+      color: var(--muted);
+      animation: fadeInUp 0.9s ease-out 0.24s both;
+    }
+
+    .error-message strong {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    .permissions-box {
+      margin: 12px auto 0;
+      max-width: 580px;
+      padding: 18px 22px;
+      background: rgba(239, 68, 68, 0.04);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      border-radius: 16px;
+      animation: fadeInUp 0.9s ease-out 0.36s both;
+    }    .permissions-title {
+      font-size: 14px;
+      font-weight: 700;
       color: #ef4444;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
     }
-    p {
-      position: relative;
-      margin: 12px 0;
-      line-height: 1.66;
-      color: var(--text-muted);
-      font-size: 16px;
+
+    .permissions-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 10px;
     }
-    p strong {
-      color: var(--text-strong);
+
+    .permission-badge {
+      background: rgba(255, 255, 255, 0.9);
+      padding: 10px 14px;
+      border-radius: 12px;
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 500;
+      border: 1px solid rgba(239, 68, 68, 0.1);
+      transition: all 0.3s ease;
     }
-    .chips {
-      position: relative;
-      margin-top: 20px;
+
+    .permission-badge:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.25);
+    }
+
+    .actions {
       display: flex;
       flex-wrap: wrap;
       justify-content: center;
-      gap: 10px;
+      gap: 12px;
+      margin-top: 16px;
+      animation: fadeInUp 0.9s ease-out 0.48s both;
     }
-    .chip {
-      padding: 6px 14px;
-      border-radius: 999px;
-      background: var(--chip);
-      color: var(--chip-text);
-      font-size: 13px;
-      font-weight: 600;
-      letter-spacing: 0.015em;
-    }
-    .actions {
-      position: relative;
-      margin-top: 36px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
+
     .btn {
-      display: inline-flex;
-      justify-content: center;
-      align-items: center;
-      text-decoration: none;
-      font-weight: 600;
-      padding: 13px 20px;
-      border-radius: 14px;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+      border: none;
+      border-radius: 999px;
+      padding: 14px 28px;
       font-size: 15px;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      text-decoration: none;
     }
-    .btn.primary {
-      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
-      color: #fff;
-      box-shadow: 0 18px 40px rgba(37, 99, 235, 0.35);
+
+    .btn-primary {
+      color: #ffffff;
+      background: linear-gradient(135deg, #2563eb 0%, #0ea5e9 100%);
+      box-shadow: 0 12px 24px -14px rgba(37, 99, 235, 0.8);
+      animation: pulse 3.2s ease-in-out infinite;
     }
-    .btn.primary:hover {
+
+    .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: var(--shadow-hover);
+      box-shadow: 0 18px 28px -14px rgba(14, 165, 233, 0.55);
     }
-    .btn.secondary {
-      background: rgba(37, 99, 235, 0.1);
+
+    .btn-ghost {
+      background: rgba(14, 165, 233, 0.06);
       color: var(--primary);
+      box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.25);
     }
-    .btn.secondary:hover {
-      background: rgba(37, 99, 235, 0.16);
-      transform: translateY(-1px);
+
+    .btn-ghost:hover {
+      transform: translateY(-2px);
+      background: rgba(14, 165, 233, 0.12);
+      box-shadow: inset 0 0 0 1px rgba(14, 165, 233, 0.35);
     }
-    footer {
-      position: relative;
-      margin-top: 34px;
-      font-size: 13px;
-      color: #64748b;
+
+    .status-hint {
+      margin-top: 8px;
+      font-size: 14px;
+      color: rgba(75, 85, 99, 0.85);
+      animation: fadeInUp 0.9s ease-out 0.6s both;
     }
-    @media (max-width: 520px) {
-      .card {
-        border-radius: 22px;
-        padding: 30px 24px;
+
+    @keyframes float {
+      0%, 100% {
+        transform: translate3d(0, 0, 0) scale(1);
+        opacity: 0.85;
       }
-      .icon {
-        width: 86px;
-        height: 86px;
-        border-radius: 22px;
-        font-size: 40px;
+      50% {
+        transform: translate3d(0, -28px, 0) scale(1.05);
+        opacity: 1;
       }
-      h1 {
-        font-size: 24px;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translate3d(-5%, -5%, 0) rotate(0deg); }
+      50% { transform: translate3d(5%, 5%, 0) rotate(180deg); }
+      100% { transform: translate3d(-5%, -5%, 0) rotate(360deg); }
+    }
+
+    @keyframes rotate {
+      0% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(180deg) scale(1.04); }
+      100% { transform: rotate(360deg) scale(1); }
+    }
+
+    @keyframes fall {
+      0% {
+        transform: translate3d(0, 0, 0) scale(1);
+        opacity: 0;
       }
+      20% {
+        opacity: 1;
+      }
+      50% {
+        transform: translate3d(12px, 22px, 0) scale(1.1);
+        opacity: 0.85;
+      }
+      100% {
+        transform: translate3d(-8px, 60px, 0) scale(0.95);
+        opacity: 0;
+      }
+    }
+
+    @keyframes floatDigits {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+    }
+
+    @keyframes gradientFlow {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes fadeInUp {
+      0% {
+        opacity: 0;
+        transform: translate3d(0, 24px, 0);
+      }
+      100% {
+        opacity: 1;
+        transform: translate3d(0, 0, 0);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        box-shadow: 0 12px 24px -14px rgba(37, 99, 235, 0.8);
+      }
+      50% {
+        box-shadow: 0 18px 36px -16px rgba(14, 165, 233, 0.6);
+      }
+    }
+
+    @media (max-width: 640px) {
+      body {
+        padding: 32px 12px;
+      }
+
+      .error-stage {
+        border-radius: 24px;
+        padding: clamp(24px, 8vw, 36px);
+      }
+
       .btn {
-        font-size: 14px;
+        width: 100%;
+        justify-content: center;
+      }
+
+      .brand img {
+        width: 44px;
+        height: 44px;
+      }
+
+      .permissions-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
       }
     }
   </style>
 </head>
 <body>
-  <main class="card" role="alert">
-    <div class="icon" aria-hidden="true">ℹ️</div>
-    <h1>Tài khoản của bạn chưa được cấp quyền</h1>
-    <p>Chúng tôi ghi nhận tài khoản <strong>{{ current_user.ten }}</strong> chưa được cấu hình quyền truy cập cho các chức năng cần thiết.</p>
-    <p>Vui lòng liên hệ quản trị viên hoặc bộ phận nhân sự để được phân quyền trước khi tiếp tục sử dụng hệ thống.</p>
-
-    {% set pending_permissions = required_permissions | reject('equalto', 'dashboard.view') | list %}
-    {% if pending_permissions %}
-      <div class="chips" aria-label="Quyền đang chờ được cấp">
-        {% for perm in pending_permissions %}
-          <span class="chip">{{ perm }}</span>
-        {% endfor %}
-      </div>
-    {% endif %}
-
-    <div class="actions">
-      {% if contact_email %}
-        <a class="btn primary" href="mailto:{{ contact_email }}">Liên hệ quản trị viên</a>
-      {% endif %}
-      <a class="btn secondary" href="{{ url_for('logout') }}">Đăng xuất</a>
+  <div class="error-stage">
+    <div class="glow" aria-hidden="true"></div>
+    <div class="orbit" aria-hidden="true"></div>
+    <div class="floating-shapes" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
     </div>
-  </main>
+    <div class="confetti" aria-hidden="true">
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+    <div class="error-content">
+      <div class="brand">
+        <img src="{{ url_for('static', filename='img/logo.png') }}" alt="Hotel Logo">
+        Hệ thống quản lý khách sạn PTIT
+      </div>
+      <h1 class="error-code">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+          <path fill-rule="evenodd" d="M12 1.5a5.25 5.25 0 00-5.25 5.25v3a3 3 0 00-3 3v6.75a3 3 0 003 3h10.5a3 3 0 003-3v-6.75a3 3 0 00-3-3v-3c0-2.9-2.35-5.25-5.25-5.25zm3.75 8.25v-3a3.75 3.75 0 10-7.5 0v3h7.5z" clip-rule="evenodd" />
+        </svg>
+      </h1>
+      <p class="error-title">Tài khoản của bạn chưa được cấp quyền</p>
+      <p class="error-message">
+        Chúng tôi ghi nhận tài khoản <strong>{{ current_user.ten }}</strong> chưa được cấu hình quyền 
+        truy cập cho các chức năng cần thiết. Vui lòng liên hệ quản trị viên hoặc bộ phận nhân sự 
+        để được phân quyền trước khi tiếp tục sử dụng hệ thống.
+      </p>
+      
+      {% set pending_permissions = required_permissions | reject('equalto', 'dashboard.view') | list %}
+      {% if pending_permissions %}
+      <div class="permissions-box">
+        <div class="permissions-title">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" style="width:18px;height:18px">
+            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a.75.75 0 000 1.5h.253a.25.25 0 01.244.304l-.459 2.066A1.75 1.75 0 0010.747 15H11a.75.75 0 000-1.5h-.253a.25.25 0 01-.244-.304l.459-2.066A1.75 1.75 0 009.253 9H9z" clip-rule="evenodd" />
+          </svg>
+          Quyền đang chờ được cấp
+        </div>
+        <div class="permissions-grid">
+          {% for perm in pending_permissions %}
+          <div class="permission-badge">{{ perm }}</div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+      </p>
+      <div class="actions">
+        {% if contact_email %}
+        <a href="mailto:{{ contact_email }}" class="btn btn-primary">
+          <span>Liên hệ quản trị viên</span>
+        </a>
+        {% else %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-primary">
+          <span>Về bảng điều khiển</span>
+        </a>
+        {% endif %}
+        <a href="{{ url_for('logout') }}" class="btn btn-ghost">
+          <span>Đăng xuất</span>
+        </a>
+      </div>
+      <p class="status-hint">© Mọi quyền được bảo lưu - 2025</p>
+    </div>
+  </div>
+  <script>
+    const root = document.documentElement;
+    const stage = document.querySelector('.error-stage');
+
+    function updatePointerPosition(xRatio, yRatio) {
+      root.style.setProperty('--pointer-x', xRatio.toFixed(4));
+      root.style.setProperty('--pointer-y', yRatio.toFixed(4));
+    }
+
+    const confettiPieces = document.querySelectorAll('.confetti span');
+
+    function randomizeConfetti() {
+      confettiPieces.forEach((piece) => {
+        const delay = -Math.random() * 12;
+        const duration = 10 + Math.random() * 6;
+        const translateX = (Math.random() - 0.5) * 40;
+        const translateY = Math.random() * 60;
+        piece.style.animationDelay = `${delay}s`;
+        piece.style.animationDuration = `${duration}s`;
+        piece.style.transform = `translate3d(${translateX}px, ${translateY}px, 0)`;
+      });
+    }
+
+    stage.addEventListener('pointermove', function (event) {
+      const rect = stage.getBoundingClientRect();
+      const xRatio = (event.clientX - rect.left) / rect.width;
+      const yRatio = (event.clientY - rect.top) / rect.height;
+      updatePointerPosition(Math.min(Math.max(xRatio, 0), 1), Math.min(Math.max(yRatio, 0), 1));
+    });
+
+    stage.addEventListener('pointerleave', function () {
+      updatePointerPosition(0.5, 0.5);
+    });
+
+    randomizeConfetti();
+    window.addEventListener('resize', randomizeConfetti);
+  </script>
 </body>
 </html>

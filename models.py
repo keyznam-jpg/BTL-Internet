@@ -116,6 +116,7 @@ class LoaiPhong(db.Model):
     ten = db.Column(db.String(100), nullable=False)
     so_nguoi_toi_da = db.Column(db.Integer, default=2)
     gia  = db.Column(db.BIGINT, default=0)
+    mo_ta = db.Column(db.Text, nullable=True)  # Thêm trường mô tả
     phongs = db.relationship("Phong", backref="loai", lazy=True)
 
 class Phong(db.Model):

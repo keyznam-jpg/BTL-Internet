@@ -66,7 +66,8 @@ CREATE TABLE loaiphong(
   id INT PRIMARY KEY AUTO_INCREMENT,
   ten VARCHAR(100) NOT NULL,
   so_nguoi_toi_da INT DEFAULT 2 CHECK (so_nguoi_toi_da > 0),
-  gia BIGINT DEFAULT 0 CHECK (gia >= 0)
+  gia BIGINT DEFAULT 0 CHECK (gia >= 0),
+  mo_ta TEXT NULL
 );
 
 CREATE TABLE phong(

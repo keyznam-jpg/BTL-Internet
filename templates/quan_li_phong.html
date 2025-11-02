@@ -1,0 +1,1683 @@
+{% extends 'base.html' %}
+
+{% block content %}
+{% set total_rooms = rooms_payload|length %}
+{% set available_rooms = rooms_payload|selectattr('trang_thai', 'equalto', 'trong')|list|length %}
+{% set booked_rooms = rooms_payload|selectattr('trang_thai', 'equalto', 'da_dat')|list|length %}
+{% set occupied_rooms = rooms_payload|selectattr('trang_thai', 'equalto', 'dang_o')|list|length %}
+{% set overdue_rooms = rooms_payload|selectattr('trang_thai', 'equalto', 'qua_gio')|list|length %}
+{% set total_room_types = loai_phongs|length %}
+{% set total_room_capacity = loai_phongs|sum(attribute='so_nguoi_toi_da') if total_room_types else 0 %}
+{% set average_room_price = (loai_phongs|sum(attribute='gia') // total_room_types) if total_room_types else 0 %}
+
+<section class="room-management">
+  <header class="room-management__header">
+    <div class="room-management__header-content">
+      <div class="header-icon">
+        <i class="fas fa-door-open"></i>
+      </div>
+      <div>
+        <h2>Quản Lý Phòng</h2>
+        <p>Tổ chức phòng theo trạng thái, loại phòng và quan sát booking trong nháy mắt.</p>
+      </div>
+    </div>
+    <div class="room-management__header-actions">
+      <button type="button" class="button secondary" onclick="focusRoomTypeSection('add')">
+        <i class="fas fa-layer-group"></i>
+        <span>Quản Lý Loại Phòng</span>
+      </button>
+      <a href="#room-form" class="button primary">
+        <i class="fas fa-plus-circle"></i>
+        <span>Thêm Phòng</span>
+      </a>
+      {% if phong_edit %}
+      <a href="{{ url_for('quan_li_phong') }}" class="button ghost">
+        <i class="fas fa-times"></i>
+        <span>Hủy Cập Nhật</span>
+      </a>
+      {% endif %}
+    </div>
+  </header>
+
+  <div class="room-management__stats">
+    <article class="stat-card">
+      <div class="stat-card__icon">
+        <i class="fas fa-building"></i>
+      </div>
+      <div class="stat-card__content">
+        <div class="stat-card__label">Tổng Số Phòng</div>
+        <div class="stat-card__value">{{ total_rooms }}</div>
+      </div>
+    </article>
+    <article class="stat-card stat-card--available">
+      <div class="stat-card__icon">
+        <i class="fas fa-check-circle"></i>
+      </div>
+      <div class="stat-card__content">
+        <div class="stat-card__label">Phòng Trống</div>
+        <div class="stat-card__value">{{ available_rooms }}</div>
+      </div>
+    </article>
+    <article class="stat-card stat-card--booked">
+      <div class="stat-card__icon">
+        <i class="fas fa-calendar-check"></i>
+      </div>
+      <div class="stat-card__content">
+        <div class="stat-card__label">Đã Đặt</div>
+        <div class="stat-card__value">{{ booked_rooms }}</div>
+      </div>
+    </article>
+    <article class="stat-card stat-card--occupied">
+      <div class="stat-card__icon">
+        <i class="fas fa-user-check"></i>
+      </div>
+      <div class="stat-card__content">
+        <div class="stat-card__label">Đang Ở</div>
+        <div class="stat-card__value">{{ occupied_rooms }}</div>
+      </div>
+    </article>
+    <article class="stat-card stat-card--overdue">
+      <div class="stat-card__icon">
+        <i class="fas fa-clock"></i>
+      </div>
+      <div class="stat-card__content">
+        <div class="stat-card__label">Quá Giờ / Chờ</div>
+        <div class="stat-card__value">{{ overdue_rooms }}</div>
+      </div>
+    </article>
+  </div>
+
+  <div class="room-management__layout">
+    <section class="room-catalog">
+      <!-- Ô tìm kiếm -->
+      <div class="search-box">
+        <div class="search-box__icon">
+          <i class="fas fa-search"></i>
+        </div>
+        <input 
+          type="search" 
+          id="room-search" 
+          class="search-box__input" 
+          placeholder="Tìm kiếm theo số phòng, loại phòng hoặc trạng thái..."
+        >
+        <button type="button" class="search-box__clear" id="clear-search" style="display: none;">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+
+      <!-- Thông tin kết quả -->
+      <div class="search-info">
+        <span id="room-count-indicator">
+          <i class="fas fa-info-circle"></i>
+          Đang hiện {{ total_rooms }} / {{ total_rooms }} phòng
+        </span>
+      </div>
+
+      <div class="room-grid" id="room-grid">
+        {% if phongs %}
+        {% set status_labels = {'trong': 'Trống', 'da_dat': 'Đã Đặt', 'dang_o': 'Đang Ở', 'qua_gio': 'Quá Giờ'} %}
+        {% for phong in phongs %}
+        {% set active_booking = room_booking_status.get(phong.id) %}
+        <article class="room-card status-{{ phong.trang_thai }}" data-room-id="{{ phong.id }}" data-status="{{ phong.trang_thai }}" data-type="{{ phong.loai_id }}" data-search="{{ (phong.ten ~ ' ' ~ (phong.loai.ten if phong.loai else '') ~ ' ' ~ status_labels.get(phong.trang_thai, phong.trang_thai))|lower }}">
+          <div class="room-card__top">
+            <div class="room-card__badge">
+              <i class="fas fa-door-open"></i>
+              {{ status_labels.get(phong.trang_thai, phong.trang_thai) }}
+            </div>
+            <div class="room-card__actions">
+              <a href="{{ url_for('sua_phong', phong_id=phong.id) }}" class="icon-button" title="Chỉnh Sửa">
+                <i class="fa fa-pen-to-square"></i>
+              </a>
+              <form action="{{ url_for('xoa_phong', phong_id=phong.id) }}" method="post" class="inline-form delete-room-form">
+                <button type="submit" class="icon-button danger" title="Xóa Phòng">
+                  <i class="fa fa-trash"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+          <div class="room-card__body">
+            <h3 class="room-card__title">
+              <i class="fas fa-hashtag"></i>
+              {{ phong.ten }}
+            </h3>
+            <dl class="room-card__info">
+              <div>
+                <dt><i class="fas fa-bed"></i> Loại</dt>
+                <dd>{{ phong.loai.ten if phong.loai else 'Chưa xác định' }}</dd>
+              </div>
+              <div>
+                <dt><i class="fas fa-money-bill-wave"></i> Giá</dt>
+                <dd>
+                  {% if phong.loai and phong.loai.gia is not none %}
+                    {{ "{:,}".format(phong.loai.gia|int) }} VNĐ / đêm
+                  {% else %}
+                    Đang cập nhật
+                  {% endif %}
+                </dd>
+              </div>
+              <div>
+                <dt><i class="fas fa-users"></i> Sức chứa</dt>
+                <dd>
+                  {% if phong.loai and phong.loai.so_nguoi_toi_da %}
+                    {{ phong.loai.so_nguoi_toi_da }} khách
+                  {% else %}
+                    Đang cập nhật
+                  {% endif %}
+                </dd>
+              </div>
+            </dl>
+          </div>
+          {% if active_booking %}
+          <footer class="room-card__footer">
+            <div class="room-booking">
+              <span class="room-booking__label">
+                <i class="fas fa-user"></i>
+                Đang Giữ Chỗ
+              </span>
+              <span class="room-booking__guest">{{ active_booking.khachhang.ho_ten if active_booking.khachhang else 'Khách Lẻ' }}</span>
+              <span class="room-booking__time">
+                <i class="fas fa-calendar-alt"></i>
+                {% if active_booking.ngay_nhan %}
+                  {{ active_booking.ngay_nhan.strftime('%d/%m %H:%M') }}
+                {% endif %}
+                {% if active_booking.ngay_tra %}
+                  &ndash; {{ active_booking.ngay_tra.strftime('%d/%m %H:%M') }}
+                {% endif %}
+              </span>
+            </div>
+          </footer>
+          {% else %}
+          <footer class="room-card__footer room-card__footer--idle">
+            <i class="fas fa-check-circle"></i>
+            <span class="room-card__hint">Chưa có booking tranh chấp</span>
+          </footer>
+          {% endif %}
+        </article>
+        {% endfor %}
+        {% else %}
+        <div class="empty-state">
+          <i class="fa fa-door-open"></i>
+          <p>Danh sách phòng đang trống. Hãy thêm phòng mới bên phải.</p>
+        </div>
+        {% endif %}
+      </div>
+    </section>
+
+    <aside class="room-form-panel" id="room-form">
+      <div class="room-form-panel__header">
+        {% if phong_edit %}
+        <div class="header-icon-title">
+          <i class="fas fa-edit"></i>
+          <div>
+            <h3>Cập Nhật Phòng</h3>
+            <p>Chỉnh sửa thông tin và trạng thái phòng.</p>
+          </div>
+        </div>
+        {% else %}
+        <div class="header-icon-title">
+          <i class="fas fa-plus-circle"></i>
+          <div>
+            <h3>Thêm Phòng Mới</h3>
+            <p>Nhập thông tin phòng bạn muốn đưa vào hệ thống.</p>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      <form class="room-form" method="post" action="{% if phong_edit %}{{ url_for('sua_phong', phong_id=phong_edit.id) }}{% else %}{{ url_for('them_phong') }}{% endif %}">
+        <div class="form-field">
+          <label for="room-number">
+            <i class="fas fa-door-closed"></i>
+            Số Phòng
+          </label>
+          <input type="text" id="room-number" name="so_phong" placeholder="Ví dụ: 1205" value="{{ phong_edit.ten if phong_edit else '' }}" required>
+        </div>
+
+        <div class="form-field">
+          <label for="room-type">
+            <i class="fas fa-bed"></i>
+            Loại Phòng
+          </label>
+          <select id="room-type" name="loai_id" required>
+            <option value="">Chọn loại phòng</option>
+            {% for loai in loai_phongs %}
+            <option value="{{ loai.id }}" {% if phong_edit and phong_edit.loai_id == loai.id %}selected{% endif %}>
+              {{ loai.ten }}{% if loai.gia is not none %} - {{ "{:,}".format(loai.gia|int) }} VNĐ{% endif %}
+            </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="room-status">
+            <i class="fas fa-info-circle"></i>
+            Trạng Thái
+          </label>
+          {% set status_options = [('trong', 'Phòng Trống'), ('da_dat', 'Đã Đặt'), ('dang_o', 'Đang Ở'), ('qua_gio', 'Quá Giờ / Chờ Check-in')] %}
+          <select id="room-status" name="trang_thai">
+            {% for value, label in status_options %}
+            <option value="{{ value }}" {% if phong_edit and phong_edit.trang_thai == value %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="button primary wide">
+            {% if phong_edit %}
+            <i class="fas fa-save"></i>
+            Lưu Thay Đổi
+            {% else %}
+            <i class="fas fa-plus"></i>
+            Thêm Phòng
+            {% endif %}
+          </button>
+          {% if phong_edit %}
+          <a href="{{ url_for('quan_li_phong') }}" class="button ghost wide">
+            <i class="fas fa-times"></i>
+            Hủy
+          </a>
+          {% endif %}
+        </div>
+      </form>
+
+      <div class="room-form-panel__note">
+        <h4>
+          <i class="fas fa-lightbulb"></i>
+          Gợi Ý
+        </h4>
+        <ul>
+          <li>Trạng thái <strong>Quá Giờ</strong> giúp cảnh báo booking chậm check-in.</li>
+          <li>Sử dụng danh sách bên trái để kiểm tra hiệu quả đáp ứng.</li>
+          <li>Các phòng đang có booking không thể xóa trực tiếp.</li>
+        </ul>
+      </div>
+    </aside>
+  </div>
+
+  <section class="room-type-management" id="room-type-management">
+    <header class="room-type-management__header">
+      <div>
+        <h3>Quan ly loai phong</h3>
+        <p>Dieu chinh danh muc loai phong va cap nhat thong tin gia, suc chua tren cung mot giao dien.</p>
+      </div>
+      <div class="room-type-management__actions">
+        <button type="button" class="button secondary button--compact" onclick="focusRoomTypeSection('add')">
+          <i class="fas fa-plus"></i>
+          <span>Them loai phong</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="room-type-management__stats">
+      <article class="type-stat-card">
+        <span class="type-stat-card__label">Tong loai</span>
+        <span class="type-stat-card__value">{{ total_room_types }}</span>
+        <span class="type-stat-card__hint">Danh muc hien co</span>
+      </article>
+      <article class="type-stat-card">
+        <span class="type-stat-card__label">Tong suc chua</span>
+        <span class="type-stat-card__value">{{ total_room_capacity }}</span>
+        <span class="type-stat-card__hint">Tong khach toi da</span>
+      </article>
+      <article class="type-stat-card">
+        <span class="type-stat-card__label">Gia trung binh</span>
+        <span class="type-stat-card__value">
+          {% if total_room_types %}
+            {{ "{:,}".format(average_room_price|int) }} VND
+          {% else %}
+            Dang cap nhat
+          {% endif %}
+        </span>
+        <span class="type-stat-card__hint">Tren moi loai phong</span>
+      </article>
+    </div>
+
+    <div class="room-type-management__layout">
+      <div class="room-type-management__list">
+        <header class="room-type-list__header">
+          <div>
+            <h4>Danh sach loai phong</h4>
+            <p class="room-type-list__hint">Quan ly gia, suc chua va mo ta cua tung loai phong.</p>
+          </div>
+          <div class="room-type-list__tools">
+            <span class="room-type-list__counter" id="room-type-count">
+              {% if total_room_types %}
+                Dang hien {{ total_room_types }} loai
+              {% else %}
+                Chua co loai phong
+              {% endif %}
+            </span>
+            <div class="room-type-search">
+              <i class="fas fa-search"></i>
+              <input type="search" id="room-type-search" placeholder="Tim theo ten hoac mo ta...">
+            </div>
+          </div>
+        </header>
+
+        {% if loai_phongs %}
+        <div class="room-type-grid" id="room-type-cards">
+          {% for loai in loai_phongs %}
+          {% set gia_value = loai.gia if loai.gia is not none else 0 %}
+          <div class="room-type-card"
+               data-id="{{ loai.id }}"
+               data-name="{{ loai.ten|e }}"
+               data-price="{{ gia_value }}"
+               data-capacity="{{ loai.so_nguoi_toi_da or 0 }}"
+               data-description="{{ loai.mo_ta|default('', true)|e }}">
+            <div class="room-type-card__header">
+              <div>
+                <h5>{{ loai.ten }}</h5>
+                <span class="room-type-card__meta">ID: {{ loai.id }}</span>
+              </div>
+              <div class="room-type-card__actions">
+                <button type="button" class="icon-button" data-role="edit-room-type" title="Chinh sua loai phong">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <form action="{{ url_for('xoa_loai_phong', loai_id=loai.id) }}" method="post" class="inline-form" onsubmit="return confirmDeleteRoomType('{{ loai.ten }}')">
+                  <button type="submit" class="icon-button danger" title="Xoa loai phong">
+                    <i class="fas fa-trash"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+            <div class="room-type-card__body">
+              <div class="room-type-info">
+                <span class="info-label"><i class="fas fa-money-bill-wave"></i> Gia</span>
+                <span class="info-value">
+                  {% if loai.gia is not none %}
+                    {{ "{:,}".format(loai.gia|int) }} VND/dem
+                  {% else %}
+                    Dang cap nhat
+                  {% endif %}
+                </span>
+              </div>
+              <div class="room-type-info">
+                <span class="info-label"><i class="fas fa-users"></i> Suc chua</span>
+                <span class="info-value">{{ loai.so_nguoi_toi_da or 0 }} khach</span>
+              </div>
+              {% if loai.mo_ta %}
+              <div class="room-type-info room-type-info--description">
+                <span class="info-label"><i class="fas fa-align-left"></i> Mo ta</span>
+                <span class="info-value">{{ loai.mo_ta }}</span>
+              </div>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="room-type-empty">
+          <i class="fas fa-layer-group"></i>
+          <p>Chua co loai phong nao. Hay them moi o ben canh.</p>
+        </div>
+        {% endif %}
+        <div class="room-type-empty room-type-empty--filter" id="room-type-filter-empty">
+          <i class="fas fa-search"></i>
+          <p>Khong tim thay loai phong phu hop voi tu khoa hien tai.</p>
+        </div>
+      </div>
+
+      <aside class="room-type-management__form">
+        <div class="room-type-form-header">
+          <h4 id="roomTypeFormTitle">Them loai phong</h4>
+          <p id="roomTypeFormSubtitle">Nhap ten, gia va suc chua de tao loai phong moi.</p>
+        </div>
+        <form id="roomTypeFormElement"
+              method="post"
+              action="{{ url_for('quan_li_loai_phong') }}"
+              data-create-action="{{ url_for('quan_li_loai_phong') }}"
+              data-update-action="{{ url_for('sua_loai_phong', loai_id=0) }}">
+          <input type="hidden" id="roomTypeId" name="loai_id">
+          <div class="form-field">
+            <label for="roomTypeName"><i class="fas fa-tag"></i> Ten loai phong</label>
+            <input type="text" id="roomTypeName" name="ten" placeholder="Vi du: Deluxe Sky View" required>
+          </div>
+          <div class="form-field">
+            <label for="roomTypePrice"><i class="fas fa-money-check-alt"></i> Gia (VND/dem)</label>
+            <input type="number" id="roomTypePrice" name="gia" min="0" placeholder="500000" required>
+          </div>
+          <div class="form-field">
+            <label for="roomTypeCapacity"><i class="fas fa-users"></i> Suc chua toi da</label>
+            <input type="number" id="roomTypeCapacity" name="so_nguoi_toi_da" min="1" placeholder="2" required>
+          </div>
+          <div class="form-field">
+            <label for="roomTypeDescription"><i class="fas fa-align-left"></i> Mo ta (tuy chon)</label>
+            <textarea id="roomTypeDescription" name="mo_ta" rows="3" placeholder="Mo ta ngan giup nhan vien tu van de dang."></textarea>
+          </div>
+          <div class="form-actions">
+            <button type="submit" class="button primary wide" id="roomTypeSubmit">
+              <i class="fas fa-save"></i>
+              Luu loai phong
+            </button>
+            <button type="button" class="button ghost wide" id="roomTypeCancel">
+              <i class="fas fa-undo"></i>
+              Dat lai
+            </button>
+          </div>
+        </form>
+
+        <div class="room-type-hints">
+          <h5><i class="fas fa-lightbulb"></i> Goi y</h5>
+          <ul>
+            <li>Su dung mo ta de lam noi bat uu diem hoac chinh sach kem theo.</li>
+            <li>Gia va suc chua anh huong truc tiep den form dat phong ben trai.</li>
+            <li>Loai phong co lich su dat phong dang hoat dong se khong the xoa ngay.</li>
+          </ul>
+        </div>
+      </aside>
+    </div>
+  </section>
+</section>
+
+<style>
+
+  .room-management {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+    padding-bottom: 32px;
+  }
+
+  .room-management__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    background: #ffffff;
+    padding: 32px 40px;
+    border-radius: 24px;
+    color: #0f172a;
+    box-shadow: 0 10px 30px -15px rgba(15, 23, 42, 0.2);
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  .room-management__header-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    z-index: 1;
+  }
+
+  .header-icon {
+    width: 60px;
+    height: 60px;
+    background: linear-gradient(135deg, #0f766e, #14b8a6);
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    color: #ffffff;
+    box-shadow: 0 8px 16px rgba(15, 118, 110, 0.2);
+  }
+
+  .room-management__header h2 {
+    margin: 0 0 8px;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: #0f172a;
+  }
+
+  .room-management__header p {
+    margin: 0;
+    max-width: 560px;
+    opacity: 0.7;
+    font-size: 15px;
+    color: #475569;
+  }
+
+  .room-management__header-actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    z-index: 1;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border-radius: 12px;
+    border: 2px solid transparent;
+    font-weight: 600;
+    font-size: 15px;
+    letter-spacing: 0.3px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+    background: #1f2937;
+    color: #f9fafb;
+  }
+
+  .button.primary {
+    background: linear-gradient(135deg, #0f766e, #14b8a6);
+    color: #ffffff;
+    border-color: transparent;
+  }
+
+  .button.primary:hover {
+    background: linear-gradient(135deg, #0d6760, #12a594);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 24px -10px rgba(15, 118, 110, 0.4);
+  }
+
+  .button.ghost {
+    background: transparent;
+    border-color: rgba(15, 118, 110, 0.3);
+    color: #0f766e;
+  }
+
+  .button.ghost:hover {
+    background: rgba(15, 118, 110, 0.1);
+    border-color: rgba(15, 118, 110, 0.5);
+    transform: translateY(-2px);
+  }
+
+  .button.secondary {
+    background: #ffffff;
+    color: #0f766e;
+    border-color: #e2e8f0;
+  }
+
+  .button.secondary:hover {
+    background: #f8fafc;
+    border-color: #0f766e;
+    transform: translateY(-2px);
+  }
+
+  .button--compact {
+    padding: 10px 16px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+
+  .button.wide {
+    width: 100%;
+  }
+
+  .room-management__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+  }
+
+  .stat-card {
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 24px;
+    box-shadow: 0 10px 30px -15px rgba(15, 23, 42, 0.2);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  .stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 40px -15px rgba(15, 23, 42, 0.3);
+  }
+
+  .stat-card__icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    background: rgba(15, 118, 110, 0.1);
+    color: #0f766e;
+    flex-shrink: 0;
+  }
+
+  .stat-card__content {
+    flex: 1;
+  }
+
+  .stat-card__label {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    font-weight: 600;
+  }
+
+  .stat-card__value {
+    font-size: 32px;
+    font-weight: 700;
+    color: #0f172a;
+    line-height: 1;
+  }
+
+  .stat-card--available .stat-card__icon {
+    background: linear-gradient(135deg, #ecfdf5, #d1fae5);
+    color: #059669;
+  }
+
+  .stat-card--booked .stat-card__icon {
+    background: linear-gradient(135deg, #dbeafe, #bfdbfe);
+    color: #2563eb;
+  }
+
+  .stat-card--occupied .stat-card__icon {
+    background: linear-gradient(135deg, #fef3c7, #fde68a);
+    color: #d97706;
+  }
+
+  .stat-card--overdue .stat-card__icon {
+    background: linear-gradient(135deg, #fee2e2, #fecaca);
+    color: #dc2626;
+  }
+
+  .room-management__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2.5fr) minmax(0, 1fr);
+    gap: 32px;
+    align-items: start;
+  }
+
+  .search-box {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 2px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px 20px;
+    box-shadow: 0 4px 12px -4px rgba(15, 23, 42, 0.1);
+    transition: all 0.3s ease;
+    margin-bottom: 20px;
+  }
+
+  .search-box:focus-within {
+    border-color: #14b8a6;
+    box-shadow: 0 8px 20px -6px rgba(20, 184, 166, 0.2);
+  }
+
+  .search-box__icon {
+    color: #64748b;
+    font-size: 18px;
+    margin-right: 12px;
+    transition: color 0.3s ease;
+  }
+
+  .search-box:focus-within .search-box__icon {
+    color: #14b8a6;
+  }
+
+  .search-box__input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 16px;
+    color: #0f172a;
+    background: transparent;
+    padding: 0;
+  }
+
+  .search-box__input::placeholder {
+    color: #94a3b8;
+  }
+
+  .search-box__clear {
+    background: rgba(239, 68, 68, 0.1);
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #ef4444;
+    transition: all 0.3s ease;
+    margin-left: 8px;
+  }
+
+  .search-box__clear:hover {
+    background: rgba(239, 68, 68, 0.2);
+    transform: scale(1.1);
+  }
+
+  .search-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    color: #64748b;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .search-info i {
+    color: #14b8a6;
+    margin-right: 6px;
+  }
+
+  .room-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  .room-card {
+    background: #ffffff;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px -15px rgba(15, 23, 42, 0.2);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+    transition: all 0.3s ease;
+  }
+
+  .room-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 40px -15px rgba(20, 184, 166, 0.4);
+    border-color: rgba(20, 184, 166, 0.3);
+  }
+
+  .room-card__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px 0;
+  }
+
+  .room-card__badge {
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.8px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 999px;
+    background: #f3f4f6;
+    color: #1f2937;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .status-trong .room-card__badge {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(5, 150, 105, 0.2));
+    color: #047857;
+  }
+
+  .status-da_dat .room-card__badge {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(37, 99, 235, 0.2));
+    color: #1d4ed8;
+  }
+
+  .status-dang_o .room-card__badge {
+    background: linear-gradient(135deg, rgba(251, 146, 60, 0.15), rgba(234, 88, 12, 0.2));
+    color: #c2410c;
+  }
+
+  .status-qua_gio .room-card__badge {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.15), rgba(220, 38, 38, 0.2));
+    color: #b91c1c;
+  }
+
+  .room-card__actions {
+    display: flex;
+    gap: 10px;
+  }
+
+  .icon-button {
+    border: none;
+    background: rgba(148, 163, 184, 0.1);
+    color: #475569;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    font-size: 14px;
+  }
+
+  .icon-button:hover {
+    background: rgba(20, 184, 166, 0.15);
+    color: #0f766e;
+    transform: scale(1.1);
+  }
+
+  .icon-button.danger:hover {
+    background: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+  }
+
+  .inline-form {
+    margin: 0;
+  }
+
+  .room-card__body {
+    padding: 16px 24px 0;
+    flex: 1;
+  }
+
+  .room-card__title {
+    margin: 0 0 18px;
+    font-size: 24px;
+    color: #0f172a;
+    letter-spacing: -0.3px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .room-card__title i {
+    color: #0f766e;
+    font-size: 20px;
+  }
+
+  .room-card__info {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 18px;
+    margin: 0;
+  }
+
+  .room-card__info dt {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: #64748b;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .room-card__info dt i {
+    color: #0f766e;
+  }
+
+  .room-card__info dd {
+    margin: 4px 0 0;
+    font-size: 14px;
+    color: #1f2937;
+    font-weight: 600;
+  }
+
+  .room-card__footer {
+    padding: 18px 24px 24px;
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.05), rgba(20, 184, 166, 0.08));
+    border-top: 1px solid rgba(15, 118, 110, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .room-card__footer--idle {
+    background: rgba(243, 244, 246, 0.5);
+    border-top-color: rgba(209, 213, 219, 0.4);
+    color: #64748b;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .room-card__hint {
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  .room-booking {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    color: #0f172a;
+    width: 100%;
+  }
+
+  .room-booking__label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.7px;
+    color: #0f766e;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .room-booking__guest {
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  .room-booking__time {
+    font-size: 13px;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .room-form-panel {
+    position: sticky;
+    top: 32px;
+    background: #ffffff;
+    border-radius: 24px;
+    padding: 32px;
+    box-shadow: 0 10px 30px -15px rgba(15, 23, 42, 0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+    border: 1px solid rgba(148, 163, 184, 0.1);
+  }
+
+  .room-form-panel__header {
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 20px;
+  }
+
+  .header-icon-title {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .header-icon-title > i {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, #0f766e, #14b8a6);
+    color: #ffffff;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .room-form-panel__header h3 {
+    margin: 0 0 8px;
+    font-size: 24px;
+    color: #0f172a;
+    font-weight: 700;
+  }
+
+  .room-form-panel__header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+  }
+
+  .room-form {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .form-field label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .form-field label i {
+    color: #0f766e;
+  }
+
+  .form-field input,
+  .form-field select {
+    padding: 14px 16px;
+    border-radius: 14px;
+    border: 2px solid #e2e8f0;
+    font-size: 15px;
+    transition: all 0.3s ease;
+    background: #f8fafc;
+  }
+
+  .form-field input:focus,
+  .form-field select:focus {
+    outline: none;
+    border-color: #14b8a6;
+    box-shadow: 0 0 0 4px rgba(20, 184, 166, 0.1);
+    background: #ffffff;
+  }
+
+  .form-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .room-form-panel__note {
+    padding: 20px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.05), rgba(20, 184, 166, 0.08));
+    color: #0f172a;
+    border: 1px solid rgba(15, 118, 110, 0.15);
+  }
+
+  .room-form-panel__note h4 {
+    margin: 0 0 12px;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #0f766e;
+  }
+
+  .room-form-panel__note h4 i {
+    color: #14b8a6;
+  }
+
+  .room-form-panel__note ul {
+    padding-left: 20px;
+    margin: 0;
+    display: grid;
+    gap: 8px;
+    color: #334155;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  .room-form-panel__note strong {
+    font-weight: 700;
+    color: #0f766e;
+  }
+
+  .empty-state {
+    grid-column: 1 / -1;
+    background: linear-gradient(135deg, #f8fafc, #ffffff);
+    border-radius: 24px;
+    padding: 60px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 16px;
+    color: #64748b;
+    font-size: 16px;
+    border: 2px dashed rgba(148, 163, 184, 0.3);
+  }
+
+  .empty-state i {
+    font-size: 48px;
+    color: #14b8a6;
+  }
+
+  @media (max-width: 1140px) {
+    .room-management__layout {
+      grid-template-columns: 1fr;
+    }
+
+    .room-form-panel {
+      position: static;
+    }
+  }
+
+  @media (max-width: 820px) {
+    .room-management__header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .room-management__header-content {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .room-management__header-content {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .room-management__stats {
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    .room-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .room-card__info {
+      grid-template-columns: 1fr;
+    }
+  }
+  .room-type-management {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .room-type-management__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 28px 32px;
+    border: 1px solid rgba(148, 163, 184, 0.2);
+    box-shadow: 0 12px 30px -22px rgba(15, 23, 42, 0.3);
+  }
+
+  .room-type-management__header h3 {
+    margin: 0 0 6px;
+    font-size: 24px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .room-type-management__header p {
+    margin: 0;
+    color: #475569;
+    font-size: 14px;
+  }
+
+  .room-type-management__actions {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .room-type-management__stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 18px;
+  }
+
+  .type-stat-card {
+    background: linear-gradient(135deg, #f8fafc, #ffffff);
+    border-radius: 18px;
+    padding: 18px 20px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: 0 10px 30px -20px rgba(15, 23, 42, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .type-stat-card__label {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    color: #64748b;
+    font-weight: 600;
+  }
+
+  .type-stat-card__value {
+    font-size: 26px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .type-stat-card__hint {
+    font-size: 13px;
+    color: #0f766e;
+  }
+
+  .room-type-management__layout {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 28px;
+    align-items: start;
+  }
+
+  .room-type-management__list {
+    background: #ffffff;
+    border-radius: 22px;
+    padding: 26px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: 0 16px 40px -30px rgba(15, 23, 42, 0.35);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .room-type-list__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .room-type-list__header h4 {
+    margin: 0;
+    font-size: 20px;
+    color: #0f172a;
+    font-weight: 700;
+  }
+
+  .room-type-list__hint {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 14px;
+  }
+
+  .room-type-list__tools {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .room-type-list__counter {
+    font-size: 14px;
+    color: #0f766e;
+    font-weight: 600;
+  }
+
+  .room-type-search {
+    position: relative;
+    min-width: 220px;
+  }
+
+  .room-type-search input {
+    width: 100%;
+    padding: 10px 14px 10px 36px;
+    border-radius: 12px;
+    border: 1px solid #d0d7e5;
+    background: #f8fafc;
+    font-size: 14px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .room-type-search input:focus {
+    outline: none;
+    border-color: #0f766e;
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+    background: #ffffff;
+  }
+
+  .room-type-search i {
+    position: absolute;
+    top: 50%;
+    left: 12px;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    pointer-events: none;
+  }
+
+  .room-type-empty {
+    background: linear-gradient(135deg, #f9fafb, #ffffff);
+    border-radius: 18px;
+    padding: 40px 24px;
+    border: 2px dashed rgba(148, 163, 184, 0.3);
+    text-align: center;
+    color: #64748b;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+  }
+
+  .room-type-empty i {
+    font-size: 32px;
+    color: #0f766e;
+  }
+
+  .room-type-empty--filter {
+    display: none;
+  }
+
+  .room-type-management__form {
+    background: #ffffff;
+    border-radius: 22px;
+    padding: 26px;
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: 0 18px 45px -32px rgba(15, 23, 42, 0.4);
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    position: sticky;
+    top: 32px;
+  }
+
+  .room-type-form-header h4 {
+    margin: 0 0 6px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .room-type-form-header p {
+    margin: 0;
+    color: #64748b;
+    font-size: 14px;
+  }
+
+  #roomTypeFormElement textarea {
+    resize: vertical;
+    min-height: 96px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    border: 2px solid #e2e8f0;
+    font-size: 15px;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background: #f8fafc;
+  }
+
+  #roomTypeFormElement textarea:focus {
+    outline: none;
+    border-color: #0f766e;
+    box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.1);
+    background: #ffffff;
+  }
+
+  #roomTypeFormElement.is-editing {
+    border: 2px solid rgba(15, 118, 110, 0.25);
+    box-shadow: 0 0 0 6px rgba(15, 118, 110, 0.08);
+    border-radius: 18px;
+  }
+
+  .room-type-hints {
+    padding: 18px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.05), rgba(20, 184, 166, 0.1));
+    border: 1px solid rgba(15, 118, 110, 0.18);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .room-type-hints h5 {
+    margin: 0;
+    font-size: 15px;
+    color: #0f766e;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .room-type-hints ul {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 6px;
+    color: #334155;
+    font-size: 14px;
+  }
+
+  .room-type-card__meta {
+    display: block;
+    font-size: 12px;
+    color: #94a3b8;
+    margin-top: 4px;
+  }
+
+  .room-type-info--description {
+    align-items: flex-start;
+  }
+
+  .room-type-info--description .info-value {
+    line-height: 1.4;
+    text-align: right;
+  }
+
+  .room-type-info--description .info-label {
+    align-items: flex-start;
+  }
+
+  @media (max-width: 1140px) {
+    .room-type-management__layout {
+      grid-template-columns: 1fr;
+    }
+
+    .room-type-management__form {
+      position: static;
+    }
+  }
+
+  @media (max-width: 820px) {
+    .room-type-management__header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .room-type-list__header {
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .room-type-list__tools {
+      width: 100%;
+    }
+
+    .room-type-search {
+      width: 100%;
+    }
+
+    .room-type-search input {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .room-type-management__stats {
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    }
+  }
+</style>
+
+<script>
+function normalizeText(text) {
+  if (!text) { return ''; }
+  try {
+    return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+  } catch (err) {
+    return text.toLowerCase();
+  }
+}
+
+function confirmDeleteRoomType(name) {
+  return confirm(`Ban chac chan muon xoa loai phong "${name}"?
+
+Luu y: Loai phong dang duoc su dung se khong the xoa ngay.`);
+}
+
+function focusRoomTypeSection(mode) {
+  const section = document.getElementById('room-type-management');
+  if (!section) { return; }
+  section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  if (mode === 'add' && typeof window.prepareRoomTypeFormForCreate === 'function') {
+    window.prepareRoomTypeFormForCreate(true);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('room-search');
+  const clearButton = document.getElementById('clear-search');
+  const countIndicator = document.getElementById('room-count-indicator');
+  const roomCards = Array.from(document.querySelectorAll('.room-card'));
+  const totalRooms = roomCards.length;
+
+  function performRoomSearch() {
+    if (!searchInput || !countIndicator) { return; }
+    const term = normalizeText(searchInput.value.trim());
+    let visibleCount = 0;
+
+    roomCards.forEach(card => {
+      const roomNumber = card.querySelector('.room-card__title')?.textContent || '';
+      const roomType = card.querySelector('.room-card__info dd')?.textContent || '';
+      const roomStatus = card.querySelector('.room-card__badge')?.textContent || '';
+      const target = normalizeText(`${roomNumber} ${roomType} ${roomStatus}`);
+      const isVisible = !term || target.includes(term);
+      card.style.display = isVisible ? '' : 'none';
+      if (isVisible) { visibleCount += 1; }
+    });
+
+    countIndicator.innerHTML = `<i class="fas fa-info-circle"></i> Dang hien ${visibleCount} / ${totalRooms} phong`;
+    if (clearButton) {
+      clearButton.style.display = searchInput.value ? 'flex' : 'none';
+    }
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', performRoomSearch);
+    if (clearButton) {
+      clearButton.addEventListener('click', function() {
+        searchInput.value = '';
+        performRoomSearch();
+        searchInput.focus();
+      });
+    }
+    performRoomSearch();
+  }
+
+  document.querySelectorAll('.delete-room-form').forEach(form => {
+    form.addEventListener('submit', function(event) {
+      const roomName = this.closest('.room-card')?.querySelector('.room-card__title')?.textContent?.trim() || 'phong';
+      if (!confirm(`Ban chac chan muon xoa ${roomName}?`)) {
+        event.preventDefault();
+      }
+    });
+  });
+
+  {% if phong_edit %}
+  const formPanel = document.getElementById('room-form');
+  if (formPanel && formPanel.scrollIntoView) {
+    setTimeout(() => formPanel.scrollIntoView({ behavior: 'smooth', block: 'start' }), 200);
+  }
+  {% endif %}
+
+  const roomTypeForm = document.getElementById('roomTypeFormElement');
+  const typeCardsContainer = document.getElementById('room-type-cards');
+  const typeSearchInput = document.getElementById('room-type-search');
+  const typeCounter = document.getElementById('room-type-count');
+  const filterEmpty = document.getElementById('room-type-filter-empty');
+
+  if (roomTypeForm) {
+    const createAction = roomTypeForm.dataset.createAction;
+    const updateTemplate = roomTypeForm.dataset.updateAction;
+    const idField = document.getElementById('roomTypeId');
+    const nameField = document.getElementById('roomTypeName');
+    const priceField = document.getElementById('roomTypePrice');
+    const capacityField = document.getElementById('roomTypeCapacity');
+    const descriptionField = document.getElementById('roomTypeDescription');
+    const submitButton = document.getElementById('roomTypeSubmit');
+    const cancelButton = document.getElementById('roomTypeCancel');
+    const title = document.getElementById('roomTypeFormTitle');
+    const subtitle = document.getElementById('roomTypeFormSubtitle');
+    const defaultCapacity = capacityField?.value || '2';
+
+    function setCreateMode(focusField) {
+      roomTypeForm.action = createAction;
+      if (idField) { idField.value = ''; }
+      if (nameField) { nameField.value = ''; }
+      if (priceField) { priceField.value = ''; }
+      if (capacityField) { capacityField.value = defaultCapacity; }
+      if (descriptionField) { descriptionField.value = ''; }
+      if (title) { title.textContent = 'Them loai phong'; }
+      if (subtitle) { subtitle.textContent = 'Nhap ten, gia va suc chua de tao loai phong moi.'; }
+      if (submitButton) { submitButton.innerHTML = '<i class="fas fa-save"></i> Luu loai phong'; }
+      roomTypeForm.classList.remove('is-editing');
+      if (focusField && nameField && typeof nameField.focus === 'function') {
+        nameField.focus();
+      }
+    }
+
+    function setEditMode(dataset) {
+      const id = dataset?.id || '';
+      if (!id) { return; }
+      const updateAction = updateTemplate ? updateTemplate.replace(/0$/, String(id)) : roomTypeForm.action;
+      roomTypeForm.action = updateAction;
+      if (idField) { idField.value = id; }
+      if (nameField) { nameField.value = dataset?.name || ''; }
+      if (priceField) { priceField.value = dataset?.price || ''; }
+      if (capacityField) { capacityField.value = dataset?.capacity || ''; }
+      if (descriptionField) { descriptionField.value = dataset?.description || ''; }
+      if (title) { title.textContent = 'Cap nhat loai phong'; }
+      if (subtitle) { subtitle.textContent = 'Dieu chinh thong tin loai phong va luu lai de ap dung ngay.'; }
+      if (submitButton) { submitButton.innerHTML = '<i class="fas fa-save"></i> Luu thay doi'; }
+      roomTypeForm.classList.add('is-editing');
+      if (nameField && typeof nameField.focus === 'function') {
+        nameField.focus();
+      }
+    }
+
+    if (cancelButton) {
+      cancelButton.addEventListener('click', function(event) {
+        event.preventDefault();
+        setCreateMode(true);
+      });
+    }
+
+    window.prepareRoomTypeFormForCreate = setCreateMode;
+    window.prepareRoomTypeFormForEdit = setEditMode;
+    setCreateMode(false);
+
+    if (typeCardsContainer) {
+      typeCardsContainer.addEventListener('click', function(event) {
+        const trigger = event.target.closest('[data-role="edit-room-type"]');
+        if (!trigger) { return; }
+        event.preventDefault();
+        const card = trigger.closest('.room-type-card');
+        if (!card) { return; }
+        setEditMode(card.dataset);
+        focusRoomTypeSection();
+      });
+    }
+
+    const typeCards = Array.from(document.querySelectorAll('.room-type-card'));
+
+    function updateTypeVisibility() {
+      if (!typeCards.length) {
+        if (typeCounter) { typeCounter.textContent = 'Chua co loai phong'; }
+        if (filterEmpty) { filterEmpty.style.display = 'none'; }
+        return;
+      }
+
+      const term = normalizeText(typeSearchInput?.value?.trim() || '');
+      let visible = 0;
+
+      typeCards.forEach(card => {
+        const content = normalizeText(
+          `${card.dataset.name || ''} ${card.dataset.description || ''} ${card.dataset.price || ''} ${card.dataset.capacity || ''}`
+        );
+        const matches = !term || content.includes(term);
+        card.style.display = matches ? '' : 'none';
+        if (matches) { visible += 1; }
+      });
+
+      if (typeCounter) {
+        typeCounter.textContent = `Dang hien ${visible} / ${typeCards.length} loai`;
+      }
+      if (filterEmpty) {
+        filterEmpty.style.display = visible === 0 ? 'flex' : 'none';
+      }
+    }
+
+    if (typeSearchInput) {
+      typeSearchInput.addEventListener('input', updateTypeVisibility);
+    }
+    updateTypeVisibility();
+  }
+});
+</script>
+{% endblock %}

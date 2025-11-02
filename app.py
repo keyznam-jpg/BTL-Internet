@@ -603,6 +603,7 @@ class LoaiPhong(db.Model):
     ten = db.Column(db.String(100), nullable=False)
     so_nguoi_toi_da = db.Column(db.Integer, default=2)
     gia  = db.Column(db.BIGINT, default=0)
+    mo_ta = db.Column(db.Text, nullable=True)
     phongs = db.relationship("Phong", backref="loai", lazy=True)
 
 class Phong(db.Model):
@@ -8356,11 +8357,17 @@ def xoa_dich_vu(dichvu_id):
 @permission_required('room_types.manage')
 def quan_li_loai_phong():
     if request.method == 'POST':
-        ten, so_nguoi, gia = request.form['ten'], int(request.form['so_nguoi']), int(request.form['gia'])
+        ten = request.form.get('ten', '').strip()
+        so_nguoi = int(request.form.get('so_nguoi_toi_da', 1))
+        gia = int(request.form.get('gia', 0))
+        mo_ta = request.form.get('mo_ta', '').strip()
+        
         if LoaiPhong.query.filter_by(ten=ten).first():
             flash(f"Tên loại phòng '{ten}' đã tồn tại.", 'danger')
         else:
-            db.session.add(LoaiPhong(ten=ten, so_nguoi_toi_da=so_nguoi, gia=gia)); db.session.commit()
+            loai_moi = LoaiPhong(ten=ten, so_nguoi_toi_da=so_nguoi, gia=gia, mo_ta=mo_ta if mo_ta else None)
+            db.session.add(loai_moi)
+            db.session.commit()
             flash('Thêm loại phòng mới thành công!', 'success')
         return redirect(url_for('quan_li_loai_phong'))
     return render_template('quan_li_loai_phong.html', ds_loai=LoaiPhong.query.order_by(LoaiPhong.gia).all(), lp_edit=None)
@@ -8371,7 +8378,11 @@ def quan_li_loai_phong():
 def sua_loai_phong(loai_id):
     lp_edit = LoaiPhong.query.get_or_404(loai_id)
     if request.method == 'POST':
-        lp_edit.ten, lp_edit.so_nguoi_toi_da, lp_edit.gia = request.form['ten'], int(request.form['so_nguoi']), int(request.form['gia'])
+        lp_edit.ten = request.form.get('ten', '').strip()
+        lp_edit.so_nguoi_toi_da = int(request.form.get('so_nguoi_toi_da', 1))
+        lp_edit.gia = int(request.form.get('gia', 0))
+        mo_ta = request.form.get('mo_ta', '').strip()
+        lp_edit.mo_ta = mo_ta if mo_ta else None
         db.session.commit()
         flash('Cập nhật loại phòng thành công!', 'success')
         return redirect(url_for('quan_li_loai_phong'))

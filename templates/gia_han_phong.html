@@ -1,0 +1,735 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+  /* Ẩn toast notification trong trang này */
+  .toast-notification {
+    display: none !important;
+  }
+
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  .extend-booking-dashboard {
+    padding: 0;
+  }
+
+  /* Page Title */
+  .page-title {
+    margin-bottom: 25px;
+  }
+
+  .page-title h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #2d3748;
+    margin: 0 0 8px 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .page-title h2 i {
+    color: #16a34a;
+    font-size: 1.7rem;
+  }
+
+  .page-title p {
+    color: #718096;
+    font-size: 0.95rem;
+    margin: 0;
+    line-height: 1.5;
+  }
+
+  /* Stats Cards - Enhanced */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 20px;
+    margin-bottom: 30px;
+  }
+
+  .stat-card {
+    background: white;
+    border-radius: 18px;
+    padding: 28px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 100px;
+    height: 100px;
+    background: radial-gradient(circle, rgba(22, 163, 74, 0.05) 0%, transparent 70%);
+    border-radius: 50%;
+    transform: translate(40%, -40%);
+  }
+
+  .stat-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.15);
+    border-color: rgba(22, 163, 74, 0.3);
+  }
+
+  .stat-icon {
+    width: 60px;
+    height: 60px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.7rem;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transition: all 0.3s ease;
+  }
+
+  .stat-card:hover .stat-icon {
+    transform: scale(1.1) rotate(5deg);
+  }
+
+  .stat-icon.green {
+    background: linear-gradient(135deg, #16a34a 0%, #10b981 100%);
+  }
+
+  .stat-icon.blue {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  }
+
+  .stat-icon.purple {
+    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  }
+
+  .stat-icon.orange {
+    background: linear-gradient(135deg, #fb923c 0%, #f59e0b 100%);
+  }
+
+  .stat-content h3 {
+    font-size: 2rem;
+    font-weight: 800;
+    color: #1a202c;
+    margin: 0 0 6px 0;
+    background: linear-gradient(135deg, #1a202c 0%, #4a5568 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .stat-content p {
+    font-size: 0.88rem;
+    color: #718096;
+    margin: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+
+  /* Info Bar */
+  .info-bar {
+    background: white;
+    border-radius: 16px;
+    padding: 24px;
+    margin-bottom: 25px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+  }
+
+  .info-bar-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f1f5f9;
+  }
+
+  .info-bar-header h3 {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: #1a202c;
+    margin: 0;
+  }
+
+  .info-bar-header i {
+    color: #16a34a;
+    font-size: 1.3rem;
+  }
+
+  .info-bar-content {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 20px;
+  }
+
+  .info-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .info-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    color: #16a34a;
+    flex-shrink: 0;
+  }
+
+  .info-text {
+    flex: 1;
+  }
+
+  .info-label {
+    font-size: 0.8rem;
+    color: #718096;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+
+  .info-value {
+    font-size: 1rem;
+    color: #1a202c;
+    font-weight: 700;
+  }
+
+  /* Main Content Card */
+  .content-card {
+    background: white;
+    border-radius: 18px;
+    padding: 30px;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    animation: fadeInUp 0.4s ease-out;
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .content-header {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 2px solid #f1f5f9;
+  }
+
+  .content-header h3 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: #1a202c;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .content-header h3 i {
+    color: #16a34a;
+  }
+
+  .content-header p {
+    color: #718096;
+    font-size: 0.92rem;
+    margin: 0;
+  }
+
+  /* Alert */
+  .alert {
+    padding: 18px 22px;
+    border-radius: 12px;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    border: 1px solid;
+  }
+
+  .alert-info {
+    background: linear-gradient(135deg, #dbeafe 0%, #bfdbfe 100%);
+    border-color: #3b82f6;
+    color: #1e40af;
+  }
+
+  .alert-warning {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border-color: #f59e0b;
+    color: #92400e;
+  }
+
+  .alert i {
+    font-size: 1.3rem;
+  }
+
+  /* Form Styles */
+  .form-group {
+    margin-bottom: 25px;
+  }
+
+  .form-group label {
+    display: block;
+    font-weight: 700;
+    color: #374151;
+    margin-bottom: 10px;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .form-group label i {
+    color: #16a34a;
+  }
+
+  .form-control {
+    width: 100%;
+    padding: 14px 18px;
+    border: 2px solid #e5e7eb;
+    border-radius: 12px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    font-family: inherit;
+  }
+
+  .form-control:focus {
+    outline: none;
+    border-color: #16a34a;
+    box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+  }
+
+  .form-control:disabled {
+    background: #f9fafb;
+    cursor: not-allowed;
+  }
+
+  /* Calculation Display */
+  .calculation-display {
+    background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+    border: 2px solid #16a34a;
+    border-radius: 16px;
+    padding: 25px;
+    margin-top: 25px;
+    display: none;
+  }
+
+  .calc-header {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #16a34a;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .calc-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(22, 163, 74, 0.2);
+  }
+
+  .calc-item:last-child {
+    border-bottom: none;
+    padding-top: 15px;
+    margin-top: 10px;
+    border-top: 2px solid #16a34a;
+  }
+
+  .calc-label {
+    font-weight: 600;
+    color: #374151;
+    font-size: 1rem;
+  }
+
+  .calc-value {
+    font-weight: 700;
+    color: #16a34a;
+    font-size: 1.2rem;
+  }
+
+  /* Buttons */
+  .btn-group {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+  }
+
+  .btn {
+    flex: 1;
+    padding: 16px 30px;
+    border: none;
+    border-radius: 12px;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    text-decoration: none;
+    text-align: center;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #16a34a 0%, #10b981 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(22, 163, 74, 0.3);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(22, 163, 74, 0.4);
+  }
+
+  .btn-secondary {
+    background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(107, 114, 128, 0.3);
+  }
+
+  .btn-secondary:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(107, 114, 128, 0.4);
+  }
+
+  .btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Responsive Design */
+  @media (max-width: 768px) {
+    .stats-grid {
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    }
+    
+    .btn-group {
+      flex-direction: column;
+    }
+    
+    .page-title h2 {
+      font-size: 1.4rem;
+    }
+
+    .stat-content h3 {
+      font-size: 1.8rem;
+    }
+
+    .info-bar-content {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
+
+<div class="extend-booking-dashboard">
+  <!-- Page Title -->
+  <div class="page-title">
+    <h2>
+      <i class="fas fa-clock-rotate-left"></i>
+      Gia hạn thời gian thuê phòng
+    </h2>
+    <p>Quản lý và gia hạn thời gian thuê phòng cho khách hàng đang ở</p>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon green">
+        <i class="fas fa-door-open"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ dp.phong.ten }}</h3>
+        <p>Phòng hiện tại</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon blue">
+        <i class="fas fa-calendar-check"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ dp.ngay_nhan.strftime('%d/%m') }}</h3>
+        <p>Ngày nhận phòng</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon purple">
+        <i class="fas fa-calendar-xmark"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ dp.ngay_tra.strftime('%d/%m') }}</h3>
+        <p>Ngày trả dự kiến</p>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <div class="stat-icon orange">
+        <i class="fas fa-moon"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ ((dp.ngay_tra - dp.ngay_nhan).days) }}</h3>
+        <p>Số đêm hiện tại</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Customer & Room Info Bar -->
+  <div class="info-bar">
+    <div class="info-bar-header">
+      <i class="fas fa-info-circle"></i>
+      <h3>Thông tin đặt phòng</h3>
+    </div>
+    <div class="info-bar-content">
+      <div class="info-item">
+        <div class="info-icon">
+          <i class="fas fa-user"></i>
+        </div>
+        <div class="info-text">
+          <div class="info-label">Khách hàng</div>
+          <div class="info-value">{{ dp.khachhang.ho_ten }}</div>
+        </div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-icon">
+          <i class="fas fa-home"></i>
+        </div>
+        <div class="info-text">
+          <div class="info-label">Loại phòng</div>
+          <div class="info-value">{{ dp.phong.loai.ten }}</div>
+        </div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-icon">
+          <i class="fas fa-money-bill-wave"></i>
+        </div>
+        <div class="info-text">
+          <div class="info-label">Giá phòng/đêm</div>
+          <div class="info-value">{{ "{:,.0f}".format(dp.phong.loai.gia) }} ₫</div>
+        </div>
+      </div>
+
+      <div class="info-item">
+        <div class="info-icon">
+          <i class="fas fa-receipt"></i>
+        </div>
+        <div class="info-text">
+          <div class="info-label">Tổng tiền hiện tại</div>
+          <div class="info-value">{{ "{:,.0f}".format(dp.tien_phong) }} ₫</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert for conflicting booking -->
+  {% if next_booking %}
+  <div class="alert alert-warning">
+    <i class="fas fa-exclamation-triangle"></i>
+    <div>
+      <strong>Lưu ý:</strong> Phòng này đã có booking tiếp theo từ ngày {{ next_booking.ngay_nhan.strftime('%d/%m/%Y %H:%M') }}. 
+      Bạn chỉ có thể gia hạn đến trước {{ max_extend_date.strftime('%d/%m/%Y %H:%M') }}.
+    </div>
+  </div>
+  {% else %}
+  <div class="alert alert-info">
+    <i class="fas fa-info-circle"></i>
+    <div>
+      <strong>Thông tin:</strong> Hiện tại phòng chưa có booking tiếp theo. Bạn có thể gia hạn tùy ý cho khách hàng.
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Extension Form -->
+  <div class="content-card">
+    <div class="content-header">
+      <h3>
+        <i class="fas fa-calendar-plus"></i>
+        Chọn ngày trả mới
+      </h3>
+      <p>Vui lòng chọn ngày trả mới để tính toán chi phí gia hạn</p>
+    </div>
+
+    <form method="POST" id="extendForm">
+      <div class="form-group">
+        <label for="ngay_tra_moi">
+          <i class="fas fa-calendar-alt"></i>
+          Ngày trả mới
+        </label>
+        <input 
+          type="datetime-local" 
+          class="form-control" 
+          id="ngay_tra_moi" 
+          name="ngay_tra_moi" 
+          required
+          min="{{ min_extend_date.strftime('%Y-%m-%dT%H:%M') }}"
+          {% if max_extend_date %}
+          max="{{ max_extend_date.strftime('%Y-%m-%dT%H:%M') }}"
+          {% endif %}
+        >
+      </div>
+
+      <!-- Calculation Display -->
+      <div class="calculation-display" id="pricePreview">
+        <div class="calc-header">
+          <i class="fas fa-calculator"></i>
+          Chi tiết tính toán
+        </div>
+        
+        <div class="calc-item">
+          <span class="calc-label">
+            <i class="fas fa-moon"></i>
+            Số đêm thêm
+          </span>
+          <span class="calc-value" id="extraNights">-</span>
+        </div>
+        
+        <div class="calc-item">
+          <span class="calc-label">
+            <i class="fas fa-coins"></i>
+            Tiền phòng thêm
+          </span>
+          <span class="calc-value" id="extraPrice">-</span>
+        </div>
+        
+        <div class="calc-item">
+          <span class="calc-label">
+            <i class="fas fa-receipt"></i>
+            Tổng tiền phòng mới
+          </span>
+          <span class="calc-value" id="totalPrice">-</span>
+        </div>
+      </div>
+
+      <div class="btn-group">
+        <a href="{{ url_for('nhan_phong') }}" class="btn btn-secondary">
+          <i class="fas fa-times"></i>
+          Hủy bỏ
+        </a>
+        <button type="submit" class="btn btn-primary" id="submitBtn">
+          <i class="fas fa-check-circle"></i>
+          Xác nhận gia hạn
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const ngayTraMoiInput = document.getElementById('ngay_tra_moi');
+    const pricePreview = document.getElementById('pricePreview');
+    const extraNightsSpan = document.getElementById('extraNights');
+    const extraPriceSpan = document.getElementById('extraPrice');
+    const totalPriceSpan = document.getElementById('totalPrice');
+    const submitBtn = document.getElementById('submitBtn');
+    
+    const ngayTraHienTai = new Date("{{ dp.ngay_tra.isoformat() }}");
+    const giaPhong = {{ dp.phong.loai.gia }};
+    const tienPhongHienTai = {{ dp.tien_phong }};
+    
+    ngayTraMoiInput.addEventListener('change', function() {
+        const ngayTraMoi = new Date(this.value);
+        
+        if (ngayTraMoi <= ngayTraHienTai) {
+            alert('⚠️ Ngày trả mới phải sau ngày trả hiện tại!');
+            this.value = '';
+            pricePreview.style.display = 'none';
+            submitBtn.disabled = true;
+            return;
+        }
+        
+        // Tính số đêm thêm
+        const diffTime = Math.abs(ngayTraMoi - ngayTraHienTai);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const soDemThem = Math.max(1, diffDays);
+        
+        // Tính tiền
+        const tienPhongThem = giaPhong * soDemThem;
+        const tongTienMoi = tienPhongHienTai + tienPhongThem;
+        
+        // Hiển thị với animation
+        extraNightsSpan.textContent = soDemThem + ' đêm';
+        extraPriceSpan.textContent = tienPhongThem.toLocaleString('vi-VN') + ' ₫';
+        totalPriceSpan.textContent = tongTienMoi.toLocaleString('vi-VN') + ' ₫';
+        pricePreview.style.display = 'block';
+        submitBtn.disabled = false;
+    });
+    
+    // Validate form
+    document.getElementById('extendForm').addEventListener('submit', function(e) {
+        const ngayTraMoi = new Date(ngayTraMoiInput.value);
+        
+        if (!ngayTraMoiInput.value) {
+            e.preventDefault();
+            alert('⚠️ Vui lòng chọn ngày trả mới!');
+            return false;
+        }
+        
+        if (ngayTraMoi <= ngayTraHienTai) {
+            e.preventDefault();
+            alert('⚠️ Ngày trả mới phải sau ngày trả hiện tại!');
+            return false;
+        }
+        
+        if (ngayTraMoi <= new Date()) {
+            e.preventDefault();
+            alert('⚠️ Ngày trả mới phải sau thời điểm hiện tại!');
+            return false;
+        }
+        
+        // Xác nhận
+        const soDemThem = Math.max(1, Math.ceil((ngayTraMoi - ngayTraHienTai) / (1000 * 60 * 60 * 24)));
+        const tienPhongThem = giaPhong * soDemThem;
+        
+        const confirmed = confirm(
+            '✅ XÁC NHẬN GIA HẠN PHÒNG\n\n' +
+            `📅 Ngày trả mới: ${ngayTraMoi.toLocaleString('vi-VN')}\n` +
+            `🌙 Số đêm thêm: ${soDemThem} đêm\n` +
+            `💰 Tiền phòng thêm: ${tienPhongThem.toLocaleString('vi-VN')} ₫\n\n` +
+            'Bạn có chắc chắn muốn gia hạn?'
+        );
+        
+        if (!confirmed) {
+            e.preventDefault();
+            return false;
+        }
+    });
+    
+    // Disable submit initially
+    submitBtn.disabled = true;
+});
+</script>
+{% endblock %}

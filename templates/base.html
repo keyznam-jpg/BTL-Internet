@@ -124,6 +124,9 @@
         {% if can_handle_checkins %}
         <a href="{{ url_for('nhan_phong') }}" title="Nhận & Trả phòng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg><span class="menu-text">Nhận & Trả phòng</span></a>
         {% endif %}
+        {% if current_user.has_permission('rooms.manage') %}
+        <a href="{{ url_for('quan_li_phong') }}" title="Quản lý phòng"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg><span class="menu-text">Quản lý phòng</span></a>
+        {% endif %}
         {% if can_manage_waitlist %}
         <a href="{{ url_for('quan_ly_booking_cho') }}" title="Quản lý Booking chờ"><i class="fas fa-clock"></i><span class="menu-text">Booking chờ</span></a>
         {% endif %}

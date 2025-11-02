@@ -36,7 +36,7 @@
   <!-- Tab Navigation -->
   <div class="tabs-container">
     <div class="tabs-header">
-      <button class="tab-btn active" data-tab="checkin">
+      <button class="tab-btn {{ 'active' if active_tab == 'checkin' else '' }}" data-tab="checkin">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path>
           <polyline points="10 17 15 12 10 7"></polyline>
@@ -45,7 +45,7 @@
         Check-in hôm nay
         <span class="tab-badge">{{ ds_nhan|length }}</span>
       </button>
-      <button class="tab-btn" data-tab="checkout">
+      <button class="tab-btn {{ 'active' if active_tab == 'checkout' else '' }}" data-tab="checkout">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
           <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
           <polyline points="16 17 21 12 16 7"></polyline>
@@ -57,7 +57,7 @@
     </div>
 
     <!-- Tab Content: Check-in -->
-    <div class="tab-content active" id="checkin-tab">
+    <div class="tab-content {{ 'active' if active_tab == 'checkin' else '' }}" id="checkin-tab">
       {% if ds_nhan %}
       <form method="post">
         <div class="booking-grid">
@@ -213,7 +213,7 @@
     </div>
 
     <!-- Tab Content: Check-out -->
-    <div class="tab-content" id="checkout-tab">
+    <div class="tab-content {{ 'active' if active_tab == 'checkout' else '' }}" id="checkout-tab">
       {% if ds_thue %}
       <div class="booking-grid">
         {% for d in ds_thue %}
@@ -272,6 +272,14 @@
           </div>
 
           <div class="card-footer actions-footer">
+            {% if current_user.has_permission('bookings.extend') %}
+            <a class="btn-extend" href="{{ url_for('gia_han_phong', dat_id=d.id) }}" style="flex: 1; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none; color: white; padding: 10px 15px; border-radius: 5px; text-decoration: none; font-weight: 500;" title="Gia hạn phòng">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 5px;">
+                <path d="M12 5v14M5 12h14"/>
+              </svg>
+              Gia hạn
+            </a>
+            {% endif %}
             <a class="btn-checkout-print" href="{{ url_for('thanh_toan', dat_id=d.id) }}" style="flex: 1; display: flex; align-items: center; justify-content: center;">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <polyline points="6 9 6 2 18 2 18 9"></polyline>

@@ -85,7 +85,7 @@
                 <input type="email" name="email_to" class="email-input" placeholder="Email khách hàng" value="{{ email_prefill }}" required>
                 <button type="submit" class="btn">Gửi email</button>
             </form>
-            <a class="btn light" href="{% if request.args.get('return_to') == 'quan_li_hoa_don' %}{{ url_for('quan_li_hoa_don') }}{% else %}{{ url_for('nhan_phong') }}{% endif %}">Quay lại</a>
+            <a class="btn light" href="{% if request.args.get('return_to') == 'quan_li_hoa_don' %}{{ url_for('quan_li_hoa_don') }}{% elif request.args.get('return_tab') %}{{ url_for('nhan_phong', tab=request.args.get('return_tab')) }}{% else %}{{ url_for('nhan_phong') }}{% endif %}">Quay lại</a>
             <button class="btn" onclick="window.print()">In hóa đơn</button>
         </div>
     </div>

@@ -138,6 +138,7 @@ PERMISSION_GROUPS = [
             ('bookings.manage_waiting', 'Quản lý danh sách chờ & sắp xếp phòng'),
             ('bookings.checkin_checkout', 'Thực hiện nhận/trả phòng'),
             ('bookings.cancel', 'Hủy đặt phòng & giải phóng phòng'),
+            ('bookings.extend', 'Gia hạn thời gian thuê phòng'),
         ],
     ),
     (
@@ -167,6 +168,7 @@ PERMISSION_GROUPS = [
             ('services.manage', 'Quản lý danh mục dịch vụ'),
             ('services.orders', 'Quản lý sử dụng dịch vụ & thanh toán'),
             ('room_types.manage', 'Quản lý loại phòng'),
+            ('rooms.manage', 'Quản lý phòng (thêm/sửa/xóa)'),
         ],
     ),
     (
@@ -4373,6 +4375,9 @@ def quan_ly_booking_cho_tu_choi(dat_id):
 @permission_required('bookings.checkin_checkout')
 def nhan_phong():
     huy_dat_phong_khong_den()
+    # Lấy tab từ query parameter (mặc định là checkin)
+    active_tab = request.args.get('tab', 'checkin')
+    
     if request.method == 'POST':
         dp = DatPhong.query.get(int(request.form['dat_id']))
         if dp:
@@ -4505,7 +4510,8 @@ def nhan_phong():
         ds_thue=ds_thue,
         voucher_discount=discount_percent,
         auto_cancel_minutes=auto_cancel_minutes,
-        cancel_data=cancel_data
+        cancel_data=cancel_data,
+        active_tab=active_tab
     )
 
 
@@ -4898,7 +4904,7 @@ def thanh_toan(dat_id):
             flash('Da ghi nhan thanh toan phong bang tien mat.', 'success')
             if diem_moi:
                 flash(f'Khách hàng được cộng thêm {diem_moi} điểm thưởng.', 'info')
-            return redirect(url_for('in_hoa_don', dat_id=dat_id))
+            return redirect(url_for('in_hoa_don', dat_id=dat_id, return_tab='checkout'))
 
         amount_due = max(0, invoice_ctx.get('tien_con_lai', 0))
         if amount_due <= 0:
@@ -5512,6 +5518,163 @@ def tra_phong(dat_id):
         dp.thuc_te_tra = datetime.now()
         db.session.commit()
     return redirect(url_for('thanh_toan', dat_id=dat_id))
+
+
+# ============================================
+# GIA HẠN PHÒNG - EXTEND BOOKING
+# ============================================
+@app.route('/gia-han-phong/<int:dat_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required('bookings.extend')
+def gia_han_phong(dat_id):
+    """
+    Gia hạn thời gian thuê phòng cho khách hàng đang ở.
+    
+    Điều kiện:
+    - Booking phải ở trạng thái 'nhan' (đang ở)
+    - Không được trùng với booking khác đã đặt phòng này
+    - Gia hạn không bị tính phí phạt
+    """
+    dp = DatPhong.query.options(
+        db.joinedload(DatPhong.khachhang),
+        db.joinedload(DatPhong.phong).joinedload(Phong.loai)
+    ).get_or_404(dat_id)
+    
+    # Kiểm tra điều kiện gia hạn
+    if dp.trang_thai != 'nhan':
+        flash('Chỉ có thể gia hạn cho khách đang ở phòng.', 'danger')
+        return redirect(url_for('nhan_phong', tab='checkout'))
+    
+    if request.method == 'POST':
+        try:
+            # Lấy thông tin gia hạn
+            ngay_tra_moi_str = request.form.get('ngay_tra_moi')
+            if not ngay_tra_moi_str:
+                flash('Vui lòng chọn ngày trả mới.', 'danger')
+                return redirect(url_for('gia_han_phong', dat_id=dat_id))
+            
+            # Parse ngày trả mới
+            ngay_tra_moi = datetime.strptime(ngay_tra_moi_str, '%Y-%m-%dT%H:%M')
+            ngay_tra_hien_tai = dp.ngay_tra
+            
+            # Validate ngày trả mới
+            if ngay_tra_moi <= ngay_tra_hien_tai:
+                flash('Ngày trả mới phải sau ngày trả hiện tại.', 'danger')
+                return redirect(url_for('gia_han_phong', dat_id=dat_id))
+            
+            if ngay_tra_moi <= datetime.now():
+                flash('Ngày trả mới phải sau thời điểm hiện tại.', 'danger')
+                return redirect(url_for('gia_han_phong', dat_id=dat_id))
+            
+            # Kiểm tra xung đột với booking khác
+            conflicting_bookings = DatPhong.query.filter(
+                DatPhong.phong_id == dp.phong_id,
+                DatPhong.id != dat_id,
+                DatPhong.trang_thai.in_(BOOKING_BLOCKING_STATUSES),
+                # Kiểm tra overlap: booking khác bắt đầu trước khi kết thúc gia hạn
+                DatPhong.ngay_nhan < ngay_tra_moi,
+                # Và kết thúc sau ngày trả hiện tại
+                DatPhong.ngay_tra > ngay_tra_hien_tai
+            ).all()
+            
+            if conflicting_bookings:
+                # Tìm booking gần nhất
+                nearest = min(conflicting_bookings, key=lambda b: b.ngay_nhan)
+                flash(
+                    f'Không thể gia hạn đến {ngay_tra_moi.strftime("%d/%m/%Y %H:%M")}. '
+                    f'Phòng đã có khách đặt từ {nearest.ngay_nhan.strftime("%d/%m/%Y %H:%M")} '
+                    f'(Khách: {nearest.khachhang.ho_ten}). '
+                    f'Bạn chỉ có thể gia hạn đến trước thời điểm này.',
+                    'warning'
+                )
+                return redirect(url_for('gia_han_phong', dat_id=dat_id))
+            
+            # Tính số đêm thêm
+            delta = ngay_tra_moi - ngay_tra_hien_tai
+            so_dem_them = max(1, int(delta.total_seconds() / 86400))
+            
+            # Tính tiền phòng thêm (KHÔNG CÓ PHÍ PHẠT)
+            gia_phong = dp.phong.loai.gia
+            tien_phong_them = gia_phong * so_dem_them
+            
+            # Cập nhật booking
+            dp.ngay_tra = ngay_tra_moi
+            dp.so_dem += so_dem_them
+            dp.tien_phong = (dp.tien_phong or 0) + tien_phong_them
+            
+            # Reset tổng thanh toán để tính lại khi thanh toán
+            # (sẽ bao gồm tiền phòng mới + dịch vụ + cọc đã trả)
+            dp.tong_thanh_toan = 0
+            
+            db.session.commit()
+            
+            # Gửi thông báo qua chat (nếu có)
+            if dp.chat_token:
+                try:
+                    msg = f"Phòng của bạn đã được gia hạn đến {ngay_tra_moi.strftime('%d/%m/%Y %H:%M')}. Thêm {so_dem_them} đêm, tiền phòng thêm: {vnd(tien_phong_them)}."
+                    tn = TinNhan(
+                        datphong_id=dat_id,
+                        nguoi_gui='he_thong',
+                        noi_dung=msg,
+                        thoi_gian=datetime.now(),
+                        trang_thai='chua_doc'
+                    )
+                    db.session.add(tn)
+                    db.session.commit()
+                    
+                    # Emit SocketIO event
+                    socketio.emit('new_message', {
+                        'booking_id': dat_id,
+                        'message': msg,
+                        'sender': 'system'
+                    })
+                except Exception as e:
+                    app.logger.warning(f'Không thể gửi thông báo gia hạn: {e}')
+            
+            flash(
+                f'Đã gia hạn phòng thành công! '
+                f'Ngày trả mới: {ngay_tra_moi.strftime("%d/%m/%Y %H:%M")}. '
+                f'Thêm {so_dem_them} đêm, tiền phòng thêm: {vnd(tien_phong_them)}.',
+                'success'
+            )
+            return redirect(url_for('nhan_phong', tab='checkout'))
+            
+        except ValueError as e:
+            flash(f'Định dạng ngày giờ không hợp lệ: {e}', 'danger')
+            return redirect(url_for('gia_han_phong', dat_id=dat_id))
+        except Exception as e:
+            app.logger.error(f'Lỗi gia hạn phòng: {e}')
+            db.session.rollback()
+            flash('Có lỗi xảy ra khi gia hạn phòng. Vui lòng thử lại.', 'danger')
+            return redirect(url_for('gia_han_phong', dat_id=dat_id))
+    
+    # GET request - hiển thị form gia hạn
+    # Tìm booking tiếp theo sau booking hiện tại (nếu có)
+    next_booking = DatPhong.query.filter(
+        DatPhong.phong_id == dp.phong_id,
+        DatPhong.id != dat_id,
+        DatPhong.trang_thai.in_(BOOKING_BLOCKING_STATUSES),
+        DatPhong.ngay_nhan >= dp.ngay_tra
+    ).order_by(DatPhong.ngay_nhan.asc()).first()
+    
+    # Tính thời gian gia hạn tối đa
+    max_extend_date = None
+    if next_booking:
+        # Chỉ gia hạn đến trước khi khách tiếp theo nhận phòng
+        max_extend_date = next_booking.ngay_nhan - timedelta(hours=2)  # Buffer 2 giờ
+    
+    # Tính min date (1 giờ sau ngày trả hiện tại)
+    min_extend_date = dp.ngay_tra + timedelta(hours=1)
+    
+    return render_template(
+        'gia_han_phong.html',
+        dp=dp,
+        next_booking=next_booking,
+        max_extend_date=max_extend_date,
+        min_extend_date=min_extend_date,
+        gia_phong=dp.phong.loai.gia
+    )
+
 
 @app.route('/khach-hang')
 @login_required
@@ -8249,6 +8412,287 @@ def xoa_loai_phong(loai_id):
     else:
         flash('Đã xóa loại phòng.', 'success')
     return redirect(url_for('quan_li_loai_phong'))
+
+
+# ============================================
+# QUẢN LÝ PHÒNG - ROOM MANAGEMENT
+# ============================================
+@app.route('/quan-li-phong')
+@login_required
+@permission_required('rooms.manage')
+def quan_li_phong():
+    """
+    Hiển thị danh sách tất cả phòng với khả năng thêm/sửa/xóa.
+    """
+    # Lấy tất cả phòng với thông tin loại phòng và trạng thái
+    phongs = Phong.query.options(
+        db.joinedload(Phong.loai)
+    ).order_by(Phong.ten).all()
+    
+    # Lấy danh sách loại phòng để hiển thị trong form
+    loai_phongs = LoaiPhong.query.order_by(LoaiPhong.ten).all()
+    
+    # Kiểm tra booking đang hoạt động cho mỗi phòng
+    room_booking_status = {}
+    for phong in phongs:
+        active_booking = DatPhong.query.filter(
+            DatPhong.phong_id == phong.id,
+            DatPhong.trang_thai.in_(BOOKING_BLOCKING_STATUSES)
+        ).first()
+        room_booking_status[phong.id] = active_booking
+    
+    rooms_payload = []
+    for phong in phongs:
+        loai = getattr(phong, 'loai', None)
+        rooms_payload.append({
+            'id': phong.id,
+            'ten': phong.ten,
+            'loai_id': phong.loai_id,
+            'loai_ten': loai.ten if loai else None,
+            'gia': int(loai.gia) if loai and loai.gia is not None else None,
+            'so_nguoi_toi_da': loai.so_nguoi_toi_da if loai else None,
+            'trang_thai': phong.trang_thai,
+        })
+
+    loai_phongs_payload = [
+        {
+            'id': loai.id,
+            'ten': loai.ten,
+            'gia': int(loai.gia) if loai.gia is not None else None,
+            'so_nguoi_toi_da': loai.so_nguoi_toi_da,
+        }
+        for loai in loai_phongs
+    ]
+
+    return render_template(
+        'quan_li_phong.html',
+        phongs=phongs,
+        loai_phongs=loai_phongs,
+        rooms_payload=rooms_payload,
+        loai_phongs_payload=loai_phongs_payload,
+        room_booking_status=room_booking_status,
+        phong_edit=None
+    )
+
+
+@app.route('/quan-li-phong/them', methods=['POST'])
+@login_required
+@permission_required('rooms.manage')
+def them_phong():
+    """Thêm phòng mới."""
+    try:
+        ten_phong = request.form.get('so_phong', '').strip()  # Form vẫn gửi 'so_phong'
+        loai_id = request.form.get('loai_id', type=int)
+        trang_thai = request.form.get('trang_thai', 'trong')
+        
+        # Validation
+        if not ten_phong:
+            flash('Số phòng không được để trống.', 'danger')
+            return redirect(url_for('quan_li_phong'))
+        
+        if not loai_id:
+            flash('Vui lòng chọn loại phòng.', 'danger')
+            return redirect(url_for('quan_li_phong'))
+        
+        # Kiểm tra loại phòng tồn tại
+        loai = LoaiPhong.query.get(loai_id)
+        if not loai:
+            flash('Loại phòng không tồn tại.', 'danger')
+            return redirect(url_for('quan_li_phong'))
+        
+        # Kiểm tra số phòng đã tồn tại
+        existing = Phong.query.filter_by(ten=ten_phong).first()
+        if existing:
+            flash(f'Số phòng "{ten_phong}" đã tồn tại.', 'danger')
+            return redirect(url_for('quan_li_phong'))
+        
+        # Tạo phòng mới
+        phong_moi = Phong(
+            ten=ten_phong,
+            loai_id=loai_id,
+            trang_thai=trang_thai
+        )
+        
+        db.session.add(phong_moi)
+        db.session.commit()
+        
+        flash(f'Đã thêm phòng "{ten_phong}" - {loai.ten} thành công!', 'success')
+        return redirect(url_for('quan_li_phong'))
+        
+    except Exception as e:
+        app.logger.error(f'Lỗi thêm phòng: {e}')
+        db.session.rollback()
+        flash('Có lỗi xảy ra khi thêm phòng. Vui lòng thử lại.', 'danger')
+        return redirect(url_for('quan_li_phong'))
+
+
+@app.route('/quan-li-phong/sua/<int:phong_id>', methods=['GET', 'POST'])
+@login_required
+@permission_required('rooms.manage')
+def sua_phong(phong_id):
+    """Sửa thông tin phòng."""
+    phong = Phong.query.get_or_404(phong_id)
+    
+    if request.method == 'POST':
+        try:
+            ten_phong = request.form.get('so_phong', '').strip()  # Form vẫn gửi 'so_phong'
+            loai_id = request.form.get('loai_id', type=int)
+            trang_thai = request.form.get('trang_thai', 'trong')
+            
+            # Validation
+            if not ten_phong:
+                flash('Số phòng không được để trống.', 'danger')
+                return redirect(url_for('sua_phong', phong_id=phong_id))
+            
+            if not loai_id:
+                flash('Vui lòng chọn loại phòng.', 'danger')
+                return redirect(url_for('sua_phong', phong_id=phong_id))
+            
+            # Kiểm tra loại phòng tồn tại
+            loai = LoaiPhong.query.get(loai_id)
+            if not loai:
+                flash('Loại phòng không tồn tại.', 'danger')
+                return redirect(url_for('sua_phong', phong_id=phong_id))
+            
+            # Kiểm tra số phòng trùng (ngoại trừ phòng hiện tại)
+            existing = Phong.query.filter(
+                Phong.ten == ten_phong,
+                Phong.id != phong_id
+            ).first()
+            
+            if existing:
+                flash(f'Số phòng "{ten_phong}" đã tồn tại.', 'danger')
+                return redirect(url_for('sua_phong', phong_id=phong_id))
+            
+            # Cập nhật thông tin
+            phong.ten = ten_phong
+            phong.loai_id = loai_id
+            phong.trang_thai = trang_thai
+            
+            db.session.commit()
+            
+            flash(f'Đã cập nhật phòng "{ten_phong}" thành công!', 'success')
+            return redirect(url_for('quan_li_phong'))
+            
+        except Exception as e:
+            app.logger.error(f'Lỗi sửa phòng: {e}')
+            db.session.rollback()
+            flash('Có lỗi xảy ra khi sửa phòng. Vui lòng thử lại.', 'danger')
+            return redirect(url_for('sua_phong', phong_id=phong_id))
+    
+    # GET request - hiển thị form sửa
+    phongs = Phong.query.options(
+        db.joinedload(Phong.loai)
+    ).order_by(Phong.ten).all()
+    loai_phongs = LoaiPhong.query.order_by(LoaiPhong.ten).all()
+    
+    room_booking_status = {}
+    for p in phongs:
+        active_booking = DatPhong.query.filter(
+            DatPhong.phong_id == p.id,
+            DatPhong.trang_thai.in_(BOOKING_BLOCKING_STATUSES)
+        ).first()
+        room_booking_status[p.id] = active_booking
+
+    rooms_payload = []
+    for p in phongs:
+        loai = getattr(p, 'loai', None)
+        rooms_payload.append({
+            'id': p.id,
+            'ten': p.ten,
+            'loai_id': p.loai_id,
+            'loai_ten': loai.ten if loai else None,
+            'gia': int(loai.gia) if loai and loai.gia is not None else None,
+            'so_nguoi_toi_da': loai.so_nguoi_toi_da if loai else None,
+            'trang_thai': p.trang_thai,
+        })
+
+    loai_phongs_payload = [
+        {
+            'id': loai.id,
+            'ten': loai.ten,
+            'gia': int(loai.gia) if loai.gia is not None else None,
+            'so_nguoi_toi_da': loai.so_nguoi_toi_da,
+        }
+        for loai in loai_phongs
+    ]
+    
+    return render_template(
+        'quan_li_phong.html',
+        phongs=phongs,
+        loai_phongs=loai_phongs,
+        rooms_payload=rooms_payload,
+        loai_phongs_payload=loai_phongs_payload,
+        room_booking_status=room_booking_status,
+        phong_edit=phong
+    )
+
+
+@app.route('/quan-li-phong/xoa/<int:phong_id>', methods=['POST'])
+@login_required
+@permission_required('rooms.manage')
+def xoa_phong(phong_id):
+    """
+    Xóa phòng.
+    
+    Điều kiện xóa:
+    - Không có booking đang hoạt động (dat, nhan, cho_xac_nhan, waiting)
+    - Nếu có lịch sử booking cũ (da_huy, da_hoan_thanh) thì cảnh báo nhưng vẫn cho xóa
+    """
+    try:
+        phong = Phong.query.get_or_404(phong_id)
+        
+        # Kiểm tra booking đang hoạt động
+        active_bookings = DatPhong.query.filter(
+            DatPhong.phong_id == phong_id,
+            DatPhong.trang_thai.in_(BOOKING_BLOCKING_STATUSES)
+        ).all()
+        
+        if active_bookings:
+            # Có booking đang hoạt động - không cho xóa
+            booking_info = []
+            for b in active_bookings[:3]:  # Hiển thị tối đa 3 booking
+                booking_info.append(
+                    f"{b.khachhang.ho_ten} ({b.trang_thai}, "
+                    f"{b.ngay_nhan.strftime('%d/%m/%Y')} - {b.ngay_tra.strftime('%d/%m/%Y')})"
+                )
+            
+            flash(
+                f'Không thể xóa phòng "{phong.ten}" vì đang có {len(active_bookings)} booking hoạt động: '
+                f'{", ".join(booking_info)}{"..." if len(active_bookings) > 3 else ""}',
+                'danger'
+            )
+            return redirect(url_for('quan_li_phong'))
+        
+        # Kiểm tra lịch sử booking cũ (chỉ cảnh báo, không chặn)
+        historical_bookings = DatPhong.query.filter(
+            DatPhong.phong_id == phong_id
+        ).count()
+        
+        # Xóa phòng
+        ten_phong = phong.ten
+        loai_ten = phong.loai.ten
+        
+        db.session.delete(phong)
+        db.session.commit()
+        
+        if historical_bookings > 0:
+            flash(
+                f'Đã xóa phòng "{ten_phong}" ({loai_ten}). '
+                f'Lưu ý: Phòng này có {historical_bookings} booking trong lịch sử.',
+                'success'
+            )
+        else:
+            flash(f'Đã xóa phòng "{ten_phong}" ({loai_ten}) thành công!', 'success')
+        
+        return redirect(url_for('quan_li_phong'))
+        
+    except Exception as e:
+        app.logger.error(f'Lỗi xóa phòng: {e}')
+        db.session.rollback()
+        flash('Có lỗi xảy ra khi xóa phòng. Vui lòng thử lại.', 'danger')
+        return redirect(url_for('quan_li_phong'))
+
 
 @app.route('/xuat-bao-cao/<int:nam>')
 @login_required

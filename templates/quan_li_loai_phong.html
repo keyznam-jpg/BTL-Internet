@@ -132,7 +132,7 @@
   <form id="type-form" method="post" action="{{ url_for('quan_li_loai_phong') }}">
     <header class="type-modal__header">
       <h3 id="type-modal-title">Thêm loại phòng</h3>
-      <button class="button ghost button--compact" type="button" onclick="closeTypeModal()" aria-label="Đóng">
+      <button class="modal-close-btn" type="button" onclick="closeTypeModal()" aria-label="Đóng">
         <i class="fas fa-times"></i>
       </button>
     </header>
@@ -158,8 +158,7 @@
     </section>
 
     <footer class="type-modal__footer">
-      <button class="button ghost" type="button" onclick="closeTypeModal()">Hủy</button>
-      <button class="button primary" type="submit" id="type-submit">
+      <button class="button primary button--save" type="submit" id="type-submit">
         <i class="fas fa-save"></i>
         <span>Lưu loại phòng</span>
       </button>
@@ -397,12 +396,42 @@
     padding: 22px 24px;
     border-bottom: 1px solid #e2e8f0;
     background: linear-gradient(135deg, #f8fafc, #ffffff);
+    position: relative;
   }
 
   .type-modal__header h3 {
     margin: 0;
     font-size: 20px;
     color: #0f172a;
+    flex: 1;
+  }
+
+  .modal-close-btn {
+    position: absolute;
+    top: 18px;
+    right: 18px;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: none;
+    background: #fee2e2;
+    color: #dc2626;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+  }
+
+  .modal-close-btn:hover {
+    background: #fecaca;
+    color: #b91c1c;
+    transform: rotate(90deg);
+  }
+
+  .modal-close-btn:active {
+    transform: rotate(90deg) scale(0.95);
   }
 
   .type-modal__body {
@@ -440,8 +469,9 @@
 
   .type-modal__footer {
     display: flex;
-    justify-content: flex-end;
-    gap: 12px;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
     padding: 20px 24px;
     border-top: 1px solid #e2e8f0;
     background: #f8fafc;
@@ -472,28 +502,38 @@
   }
 
   .button.ghost {
-    background: #ffffff;
-    color: #0f172a;
-    border-color: rgba(148, 163, 184, 0.35);
+    background: transparent;
+    color: #94a3b8;
+    border-color: #e2e8f0;
   }
 
   .button.ghost:hover {
-    background: rgba(148, 163, 184, 0.12);
+    background: #f8fafc;
+    color: #64748b;
+    border-color: #cbd5e1;
   }
 
   .button.danger {
-    background: rgba(248, 113, 113, 0.12);
+    background: #fee2e2;
     color: #b91c1c;
-    border-color: rgba(239, 68, 68, 0.45);
+    border-color: #ef4444;
   }
 
   .button.danger:hover {
-    background: rgba(248, 113, 113, 0.2);
+    background: #fecaca;
   }
 
   .button--compact {
     padding: 8px 14px;
     font-size: 14px;
+  }
+
+  .button--save {
+    padding: 12px 32px;
+    min-width: 200px;
+    height: 48px;
+    justify-content: center;
+    font-size: 15px;
   }
 
   .required {

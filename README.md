@@ -1,10 +1,29 @@
-# Hệ Thống Quản Lý Khách Sạn PTIT
+# 🏨 HỆ THỐNG QUẢN LÝ KHÁCH SẠN PTIT - PHIÊN BẢN NÂNG CAP 2025
 
-## 📋 Mô tả dự án
+## 📋 TỔNG QUAN DỰ ÁN
 
-Đây là một hệ thống quản lý khách sạn toàn diện được phát triển bằng Python Flask, cho phép quản lý hiệu quả tất cả các hoạt động hàng ngày của khách sạn. Hệ thống hỗ trợ cả giao diện web cho nhân viên quản lý và khách hàng đặt phòng online, với các tính năng hiện đại như chat real-time, thanh toán QR, email tự động và báo cáo thống kê.
+Hệ Thống Quản Lý Khách Sạn PTIT là một giải pháp phần mềm toàn diện, được phát triển bằng công nghệ web hiện đại nhất với Python Flask 3.0.0 làm backend và các công nghệ frontend tiên tiến. Đây không chỉ là một công cụ quản lý đơn thuần mà còn là một hệ sinh thái hoàn chỉnh, tích hợp mọi khía cạnh vận hành của một khách sạn hiện đại - từ quản lý đặt phòng, thanh toán điện tử, giao tiếp khách hàng, đến quản trị nhân sự và phân tích kinh doanh.
 
-Hệ thống được thiết kế để đáp ứng nhu cầu của các khách sạn từ nhỏ đến lớn, với giao diện thân thiện, bảo mật cao và khả năng mở rộng tốt.
+### 🎯 Đối tượng sử dụng
+
+Hệ thống được thiết kế cho ba nhóm người dùng chính:
+
+1. **Quản trị viên (Admin)**: Toàn quyền kiểm soát hệ thống, bao gồm cấu hình, phân quyền, quản lý nhân sự, và truy cập mọi báo cáo
+2. **Nhân viên (Staff)**: Xử lý các nghiệp vụ hàng ngày như đặt phòng, check-in/out, dịch vụ, thanh toán với quyền hạn được phân cấp linh hoạt
+3. **Khách hàng (Customer)**: Tự đặt phòng online, thanh toán, chat với lễ tân, sử dụng dịch vụ trong phòng thông qua giao diện riêng biệt
+
+### 🌟 Điểm nổi bật
+
+- **Kiến trúc hiện đại**: MVC pattern với Flask, SQLAlchemy ORM, MySQL database với connection pooling tối ưu
+- **Bảo mật cao**: Role-based access control (RBAC) đa cấp, mã hóa mật khẩu, CSRF protection, session management
+- **Real-time Communication**: WebSocket-based chat giữa khách hàng và nhân viên
+- **Thanh toán đa dạng**: Hỗ trợ tiền mặt và chuyển khoản QR (VietQR) với xác thực tự động
+- **Email Marketing**: Hệ thống email tự động với templates tùy chỉnh cho mọi sự kiện
+- **Responsive Design**: Giao diện thân thiện, hoạt động mượt mà trên mọi thiết bị
+- **Báo cáo thông minh**: Thống kê, biểu đồ trực quan, xuất Excel/PDF
+- **Loyalty Program**: Hệ thống tích điểm và voucher khuyến mãi tự động
+- **Quản lý nhân sự**: Chấm công, tính lương, thưởng theo doanh thu
+- **Tối ưu hiệu suất**: Caching, compression, database indexing
 
 ## 🚀 Tính năng chính
 

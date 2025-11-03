@@ -6934,7 +6934,7 @@ def export_attendance_overview():
     wb.save(output)
     output.seek(0)
 
-    filename = f"Cham-cong_{start_date.strftime('%Y-%m')}.xlsx"
+    filename = f"Chấm công_{start_date.strftime('%Y-%m')}.xlsx"
     return send_file(
         output,
         as_attachment=True,

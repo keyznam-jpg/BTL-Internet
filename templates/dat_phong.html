@@ -968,6 +968,10 @@ let roomFilterToggle = null;
 
 function initRoomTypePagination() {
   allRoomCards = Array.from(document.querySelectorAll('.room-type-card'));
+  allRoomCards.forEach((card, index) => {
+    card.dataset.originalOrder = index;
+    card.style.order = index;
+  });
   filteredRoomCards = [...allRoomCards];
   
   const paginationWrapper = document.getElementById('roomTypePagination');
@@ -997,7 +1001,18 @@ function filterAndPaginateRooms() {
       }
       return priceB - priceA;
     });
+  } else {
+    filteredRoomCards.sort((a, b) => {
+      const orderA = parseInt(a.dataset.originalOrder || '0', 10);
+      const orderB = parseInt(b.dataset.originalOrder || '0', 10);
+      return orderA - orderB;
+    });
   }
+
+  filteredRoomCards.forEach((card, index) => {
+    card.style.order = index;
+    card.dataset.sortedOrder = index;
+  });
   
   currentPage = 1;
   updatePagination();

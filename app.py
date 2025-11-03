@@ -648,7 +648,7 @@ class KhachHang(db.Model):
 
     @property
     def co_tai_khoan(self):
-        return bool(self.mat_khau_hash)
+        return bool(self.mat_khau_hash or self.lan_dang_nhap_cuoi)
 
     def tang_diem(self, so_diem):
         if so_diem is None:
@@ -3182,7 +3182,11 @@ def khach_hang_dang_ky():
             email_conflict = KhachHang.query.filter(
                 func.lower(KhachHang.email) == email_normalized,
                 KhachHang.cmnd != cmnd,
-                KhachHang.mat_khau_hash.isnot(None)
+                or_(
+                    KhachHang.mat_khau_hash.isnot(None),
+                    KhachHang.lan_dang_nhap_cuoi.isnot(None)
+                ),
+                KhachHang.trang_thai_tai_khoan != 'da_xoa'
             ).first()
             if email_conflict:
                 errors['email'] = 'Email này đã được sử dụng cho tài khoản khác.'
@@ -3530,7 +3534,11 @@ def khach_hang_tai_khoan():
                 email_conflict = KhachHang.query.filter(
                     func.lower(KhachHang.email) == email_normalized,
                     KhachHang.id != kh.id,
-                    KhachHang.mat_khau_hash.isnot(None)
+                    or_(
+                        KhachHang.mat_khau_hash.isnot(None),
+                        KhachHang.lan_dang_nhap_cuoi.isnot(None)
+                    ),
+                    KhachHang.trang_thai_tai_khoan != 'da_xoa'
                 ).first()
                 if email_conflict:
                     errors['email'] = 'Email này đã được dùng cho tài khoản khác.'
@@ -5697,7 +5705,13 @@ def quan_ly_tai_khoan_khach_hang():
     page = request.args.get('page', 1, type=int)
     per_page = 3  # 3 customers per page
     
-    query = KhachHang.query.filter(KhachHang.mat_khau_hash.isnot(None))
+    query = KhachHang.query.filter(
+        or_(
+            KhachHang.mat_khau_hash.isnot(None),
+            KhachHang.lan_dang_nhap_cuoi.isnot(None)
+        ),
+        KhachHang.trang_thai_tai_khoan != 'da_xoa'
+    )
     if keyword:
         like_pattern = f"%{keyword}%"
         query = query.filter(

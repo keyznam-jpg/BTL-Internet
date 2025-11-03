@@ -1328,6 +1328,85 @@ def attendance_approve(att_id):
     db.session.commit()
     return redirect(url_for('attendance_admin'))
 
+# API endpoint để lấy danh sách attendance (AJAX)
+@app.route('/api/attendance/list', methods=['GET'])
+@login_required
+@permission_required('attendance.manage')
+def api_attendance_list():
+    # Lấy tham số phân trang, lọc và tìm kiếm
+    page = request.args.get('page', 1, type=int)
+    per_page = 8  # Mỗi trang hiển thị tối đa 8 yêu cầu
+    status_filter = request.args.get('status', 'all')
+    search_query = request.args.get('search', '').strip()
+    
+    # Query cơ bản với join để tìm kiếm theo tên user
+    query = Attendance.query.join(NguoiDung, Attendance.user_id == NguoiDung.id)
+    
+    # Áp dụng tìm kiếm theo tên hoặc username
+    if search_query:
+        search_pattern = f'%{search_query}%'
+        query = query.filter(
+            db.or_(
+                NguoiDung.ten.ilike(search_pattern),
+                NguoiDung.ten_dang_nhap.ilike(search_pattern)
+            )
+        )
+    
+    # Áp dụng filter theo trạng thái
+    if status_filter and status_filter != 'all':
+        query = query.filter(Attendance.status == status_filter)
+    
+    # Sắp xếp và phân trang
+    pagination = query.order_by(Attendance.checkin_time.desc()).paginate(
+        page=page, 
+        per_page=per_page, 
+        error_out=False
+    )
+    
+    # Lấy tất cả attendances để tính số liệu thống kê
+    all_attendances = Attendance.query.all()
+    stats = {
+        'pending': len([a for a in all_attendances if a.status == 'pending']),
+        'approved': len([a for a in all_attendances if a.status == 'approved']),
+        'rejected': len([a for a in all_attendances if a.status == 'rejected']),
+        'total': len(all_attendances)
+    }
+    
+    # Chuyển đổi attendances sang dict
+    items = []
+    for att in pagination.items:
+        items.append({
+            'id': att.id,
+            'status': att.status,
+            'user': {
+                'id': att.user.id,
+                'ten': att.user.ten,
+                'ten_dang_nhap': att.user.ten_dang_nhap
+            },
+            'checkin_time': att.checkin_time.strftime('%d/%m/%Y %H:%M:%S') if att.checkin_time else '',
+            'note': att.note or '',
+            'approver': {
+                'ten': att.approver.ten if att.approver else None
+            } if att.approved_by else None
+        })
+    
+    return jsonify({
+        'items': items,
+        'pagination': {
+            'page': pagination.page,
+            'pages': pagination.pages,
+            'total': pagination.total,
+            'per_page': pagination.per_page,
+            'has_prev': pagination.has_prev,
+            'has_next': pagination.has_next,
+            'prev_num': pagination.prev_num,
+            'next_num': pagination.next_num
+        },
+        'stats': stats,
+        'current_status': status_filter,
+        'search_query': search_query
+    })
+
 @app.context_processor
 def inject_globals():
     unread_count = 0

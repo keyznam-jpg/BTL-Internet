@@ -14,23 +14,14 @@
         placeholder="Tìm kiếm theo tên nhân viên hoặc username..."
         value="{{ request.args.get('search', '') }}"
       >
-      {% if request.args.get('search') %}
-      <button type="button" id="clearSearch" class="clear-search-btn" title="Xóa tìm kiếm">
+      <button type="button" id="clearSearch" class="clear-search-btn" title="Xóa tìm kiếm" style="display: none;">
         <i class="fas fa-times"></i>
       </button>
-      {% endif %}
     </div>
-    {% if request.args.get('search') %}
-    <div class="search-results-info">
+    <div id="searchResultsInfo" class="search-results-info" style="display: none;">
       <i class="fas fa-info-circle"></i>
-      Đang tìm kiếm: <strong>"{{ request.args.get('search') }}"</strong>
-      {% if pagination.total == 0 %}
-        - Không tìm thấy kết quả
-      {% else %}
-        - Tìm thấy <strong>{{ pagination.total }}</strong> kết quả
-      {% endif %}
+      <span id="searchResultsText"></span>
     </div>
-    {% endif %}
   </div>
 
   <!-- Stats Mini Cards -->
@@ -40,7 +31,7 @@
         <i class="fas fa-clock fa-2x" style="color: #ff9500;"></i>
       </div>
       <div class="stat-content">
-        <span class="stat-number">{{ all_attendances|selectattr('status', 'equalto', 'pending')|list|length }}</span>
+        <span class="stat-number" id="stat-pending">{{ all_attendances|selectattr('status', 'equalto', 'pending')|list|length }}</span>
         <span class="stat-label">Chờ duyệt</span>
       </div>
     </div>
@@ -50,7 +41,7 @@
         <i class="fas fa-check-circle fa-2x" style="color: #00d4aa;"></i>
       </div>
       <div class="stat-content">
-        <span class="stat-number">{{ all_attendances|selectattr('status', 'equalto', 'approved')|list|length }}</span>
+        <span class="stat-number" id="stat-approved">{{ all_attendances|selectattr('status', 'equalto', 'approved')|list|length }}</span>
         <span class="stat-label">Đã duyệt</span>
       </div>
     </div>
@@ -60,7 +51,7 @@
         <i class="fas fa-times-circle fa-2x text-danger"></i>
       </div>
       <div class="stat-content">
-        <span class="stat-number">{{ all_attendances|selectattr('status', 'equalto', 'rejected')|list|length }}</span>
+        <span class="stat-number" id="stat-rejected">{{ all_attendances|selectattr('status', 'equalto', 'rejected')|list|length }}</span>
         <span class="stat-label">Từ chối</span>
       </div>
     </div>
@@ -70,194 +61,25 @@
         <i class="fas fa-list fa-2x" style="color: #00d4aa;"></i>
       </div>
       <div class="stat-content">
-        <span class="stat-number">{{ all_attendances|length }}</span>
+        <span class="stat-number" id="stat-total">{{ all_attendances|length }}</span>
         <span class="stat-label">Tất cả</span>
       </div>
     </div>
   </div>
 
+  <!-- Loading Overlay -->
+  <div id="loadingOverlay" class="loading-overlay" style="display: none;">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Đang tải dữ liệu...</div>
+  </div>
+
   <!-- Attendance Cards Grid -->
-  {% if attendances %}
-  <div class="attendance-admin-grid">
-    {% for att in attendances %}
-    <div class="admin-attendance-card status-{{ att.status }}" data-status="{{ att.status }}">
-      <div class="card-status-indicator"></div>
-      
-      <div class="card-header">
-        <div class="employee-info">
-          <div class="employee-avatar">
-            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-              <circle cx="12" cy="7" r="4"></circle>
-            </svg>
-          </div>
-          <div class="employee-details">
-            <h4 class="employee-name">{{ att.user.ten }}</h4>
-            <span class="employee-username">@{{ att.user.ten_dang_nhap }}</span>
-          </div>
-        </div>
-        
-        <div class="status-badge-wrapper">
-          {% if att.status == 'approved' %}
-            <span class="status-badge badge-approved">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-              Đã duyệt
-            </span>
-          {% elif att.status == 'rejected' %}
-            <span class="status-badge badge-rejected">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-              Từ chối
-            </span>
-          {% else %}
-            <span class="status-badge badge-pending">
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="12" cy="12" r="10"></circle>
-                <polyline points="12 6 12 12 16 14"></polyline>
-              </svg>
-              Chờ duyệt
-            </span>
-          {% endif %}
-        </div>
-      </div>
-
-      <div class="card-body">
-        <div class="info-row">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"></circle>
-            <polyline points="12 6 12 12 16 14"></polyline>
-          </svg>
-          <div class="info-content">
-            <span class="info-label">Thời gian chấm công</span>
-            <span class="info-value">{{ att.checkin_time|fmt_dt }}</span>
-          </div>
-        </div>
-
-        {% if att.note %}
-        <div class="info-row note-row">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-            <polyline points="14 2 14 8 20 8"></polyline>
-          </svg>
-          <div class="info-content">
-            <span class="info-label">Ghi chú</span>
-            <span class="info-value">{{ att.note }}</span>
-          </div>
-        </div>
-        {% endif %}
-
-        {% if att.status != 'pending' and att.approver %}
-        <div class="approval-info">
-          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
-            <circle cx="9" cy="7" r="4"></circle>
-            <polyline points="16 11 18 13 22 9"></polyline>
-          </svg>
-          <span>{{ 'Duyệt' if att.status == 'approved' else 'Từ chối' }} bởi <strong>{{ att.approver.ten }}</strong></span>
-        </div>
-        {% endif %}
-      </div>
-
-      {% if att.status == 'pending' %}
-      <div class="card-actions">
-        <form method="POST" action="{{ url_for('attendance_approve', att_id=att.id) }}" style="display: flex; gap: 10px; width: 100%;">
-          <button type="submit" name="action" value="approve" class="btn-action btn-approve">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <polyline points="20 6 9 17 4 12"></polyline>
-            </svg>
-            Duyệt
-          </button>
-          <button type="submit" name="action" value="reject" class="btn-action btn-reject">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-            Từ chối
-          </button>
-        </form>
-      </div>
-      {% endif %}
-    </div>
-    {% endfor %}
+  <div id="attendanceGrid" class="attendance-admin-grid">
+    <!-- Cards will be loaded here via AJAX -->
   </div>
-  {% if pagination and pagination.pages > 0 %}
-  <!-- Phân trang -->
-  {% if pagination.pages > 1 %}
-  <div class="pagination-wrapper">
-    <div class="pagination-info">
-      Hiển thị <strong>{{ (pagination.page - 1) * pagination.per_page + 1 }}</strong> 
-      đến <strong>{{ [pagination.page * pagination.per_page, pagination.total]|min }}</strong> 
-      trong tổng số <strong>{{ pagination.total }}</strong> yêu cầu
-    </div>
-    
-    <nav class="pagination" aria-label="Phân trang">
-      <!-- Nút Previous -->
-      {% if pagination.has_prev %}
-        <a href="{{ url_for('attendance_admin', page=pagination.prev_num, status=current_status, search=request.args.get('search', '')) }}" 
-           class="page-link page-prev" 
-           aria-label="Trang trước">
-          <i class="fas fa-chevron-left"></i>
-          <span>Trước</span>
-        </a>
-      {% else %}
-        <span class="page-link page-prev disabled" aria-disabled="true">
-          <i class="fas fa-chevron-left"></i>
-          <span>Trước</span>
-        </span>
-      {% endif %}
-      
-      <!-- Các số trang -->
-      <div class="page-numbers">
-        {% if pagination.page > 3 %}
-          <a href="{{ url_for('attendance_admin', page=1, status=current_status, search=request.args.get('search', '')) }}" 
-             class="page-number">1</a>
-          {% if pagination.page > 4 %}
-            <span class="page-ellipsis">...</span>
-          {% endif %}
-        {% endif %}
-        
-        {% for p in range([pagination.page - 2, 1]|max, [pagination.page + 2, pagination.pages]|min + 1) %}
-          {% if p == pagination.page %}
-            <span class="page-number active" aria-current="page">{{ p }}</span>
-          {% else %}
-            <a href="{{ url_for('attendance_admin', page=p, status=current_status, search=request.args.get('search', '')) }}" 
-               class="page-number">{{ p }}</a>
-          {% endif %}
-        {% endfor %}
-        
-        {% if pagination.page < pagination.pages - 2 %}
-          {% if pagination.page < pagination.pages - 3 %}
-            <span class="page-ellipsis">...</span>
-          {% endif %}
-          <a href="{{ url_for('attendance_admin', page=pagination.pages, status=current_status, search=request.args.get('search', '')) }}" 
-             class="page-number">{{ pagination.pages }}</a>
-        {% endif %}
-      </div>
-      
-      <!-- Nút Next -->
-      {% if pagination.has_next %}
-        <a href="{{ url_for('attendance_admin', page=pagination.next_num, status=current_status, search=request.args.get('search', '')) }}" 
-           class="page-link page-next" 
-           aria-label="Trang sau">
-          <span>Sau</span>
-          <i class="fas fa-chevron-right"></i>
-        </a>
-      {% else %}
-        <span class="page-link page-next disabled" aria-disabled="true">
-          <span>Sau</span>
-          <i class="fas fa-chevron-right"></i>
-        </span>
-      {% endif %}
-    </nav>
-  </div>
-  {% endif %}
-  {% endif %}
-  {% else %}
-  <div class="empty-state">
+
+  <!-- Empty State -->
+  <div id="emptyState" class="empty-state" style="display: none;">
     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
       <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
       <line x1="16" y1="2" x2="16" y2="6"></line>
@@ -267,7 +89,11 @@
     <h3>Không có yêu cầu chấm công</h3>
     <p>Chưa có nhân viên nào gửi yêu cầu chấm công</p>
   </div>
-  {% endif %}
+
+  <!-- Pagination Wrapper -->
+  <div id="paginationWrapper" class="pagination-wrapper" style="display: none;">
+    <!-- Pagination will be loaded here via AJAX -->
+  </div>
 </div>
 
 <style>
@@ -371,6 +197,42 @@
 .search-results-info strong {
   color: #2f7d5a;
   font-weight: 700;
+}
+
+/* ===== LOADING OVERLAY ===== */
+.loading-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 9999;
+  backdrop-filter: blur(4px);
+}
+
+.loading-spinner {
+  width: 50px;
+  height: 50px;
+  border: 4px solid #e9ecef;
+  border-top-color: #2f7d5a;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loading-text {
+  color: #2f7d5a;
+  font-weight: 600;
+  font-size: 1em;
 }
 
 /* ===== STATS MINI GRID ===== */
@@ -720,6 +582,10 @@
   background: white;
   border-radius: 20px;
   border: 2px solid #e9ecef;
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .empty-state svg {
@@ -969,15 +835,51 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+  // State management
+  const state = {
+    currentPage: 1,
+    currentStatus: '{{ current_status }}' || 'all',
+    searchQuery: '{{ request.args.get("search", "") }}',
+    isLoading: false
+  };
+
+  // DOM Elements
   const statCards = Array.from(document.querySelectorAll('.stat-mini-card[data-filter]'));
-  const currentStatus = '{{ current_status }}' || 'all';
   const searchInput = document.getElementById('searchInput');
   const clearSearchBtn = document.getElementById('clearSearch');
+  const loadingOverlay = document.getElementById('loadingOverlay');
+  const attendanceGrid = document.getElementById('attendanceGrid');
+  const emptyState = document.getElementById('emptyState');
+  const paginationWrapper = document.getElementById('paginationWrapper');
+  const searchResultsInfo = document.getElementById('searchResultsInfo');
+  const searchResultsText = document.getElementById('searchResultsText');
 
-  if (!statCards.length) {
-    return;
+  let searchTimeout;
+
+  // Show/Hide Loading
+  function showLoading() {
+    if (loadingOverlay) {
+      loadingOverlay.style.display = 'flex';
+      state.isLoading = true;
+    }
   }
 
+  function hideLoading() {
+    if (loadingOverlay) {
+      loadingOverlay.style.display = 'none';
+      state.isLoading = false;
+    }
+  }
+
+  // Update Stats Cards
+  function updateStats(stats) {
+    document.getElementById('stat-pending').textContent = stats.pending || 0;
+    document.getElementById('stat-approved').textContent = stats.approved || 0;
+    document.getElementById('stat-rejected').textContent = stats.rejected || 0;
+    document.getElementById('stat-total').textContent = stats.total || 0;
+  }
+
+  // Set Active Card
   function setActiveCard(filter) {
     statCards.forEach(card => {
       const cardFilter = card.dataset.filter || 'all';
@@ -987,19 +889,335 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 
-  // Set active card based on current status
-  setActiveCard(currentStatus);
+  // Update Search Results Info
+  function updateSearchResultsInfo(searchQuery, total) {
+    if (searchQuery) {
+      searchResultsText.innerHTML = `Đang tìm kiếm: <strong>"${escapeHtml(searchQuery)}"</strong> - ${total === 0 ? 'Không tìm thấy kết quả' : 'Tìm thấy <strong>' + total + '</strong> kết quả'}`;
+      searchResultsInfo.style.display = 'flex';
+      clearSearchBtn.style.display = 'flex';
+    } else {
+      searchResultsInfo.style.display = 'none';
+      clearSearchBtn.style.display = 'none';
+    }
+  }
 
-  // Handle filter clicks - redirect to new URL with status parameter
+  // Escape HTML
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // Render Attendance Card
+  function renderAttendanceCard(att) {
+    const statusBadges = {
+      approved: `<span class="status-badge badge-approved">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <polyline points="20 6 9 17 4 12"></polyline>
+        </svg>
+        Đã duyệt
+      </span>`,
+      rejected: `<span class="status-badge badge-rejected">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+        Từ chối
+      </span>`,
+      pending: `<span class="status-badge badge-pending">
+        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+        Chờ duyệt
+      </span>`
+    };
+
+    return `
+      <div class="admin-attendance-card status-${att.status}" data-status="${att.status}">
+        <div class="card-status-indicator"></div>
+        
+        <div class="card-header">
+          <div class="employee-info">
+            <div class="employee-avatar">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+                <circle cx="12" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <div class="employee-details">
+              <h4 class="employee-name">${escapeHtml(att.user.ten)}</h4>
+              <span class="employee-username">@${escapeHtml(att.user.ten_dang_nhap)}</span>
+            </div>
+          </div>
+          
+          <div class="status-badge-wrapper">
+            ${statusBadges[att.status]}
+          </div>
+        </div>
+
+        <div class="card-body">
+          <div class="info-row">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+            <div class="info-content">
+              <span class="info-label">Thời gian chấm công</span>
+              <span class="info-value">${escapeHtml(att.checkin_time)}</span>
+            </div>
+          </div>
+
+          ${att.note ? `
+          <div class="info-row note-row">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+            </svg>
+            <div class="info-content">
+              <span class="info-label">Ghi chú</span>
+              <span class="info-value">${escapeHtml(att.note)}</span>
+            </div>
+          </div>
+          ` : ''}
+
+          ${att.approver ? `
+          <div class="approval-info">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path>
+              <circle cx="9" cy="7" r="4"></circle>
+              <polyline points="16 11 18 13 22 9"></polyline>
+            </svg>
+            <span>${att.status === 'approved' ? 'Duyệt' : 'Từ chối'} bởi <strong>${escapeHtml(att.approver.ten)}</strong></span>
+          </div>
+          ` : ''}
+        </div>
+
+        ${att.status === 'pending' ? `
+        <div class="card-actions">
+          <form method="POST" action="/attendance/approve/${att.id}" style="display: flex; gap: 10px; width: 100%;" onsubmit="return handleApprove(event, ${att.id});">
+            <button type="submit" name="action" value="approve" class="btn-action btn-approve">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Duyệt
+            </button>
+            <button type="submit" name="action" value="reject" class="btn-action btn-reject">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="18" y1="6" x2="6" y2="18"></line>
+                <line x1="6" y1="6" x2="18" y2="18"></line>
+              </svg>
+              Từ chối
+            </button>
+          </form>
+        </div>
+        ` : ''}
+      </div>
+    `;
+  }
+
+  // Render Pagination
+  function renderPagination(pagination) {
+    if (pagination.pages <= 1) {
+      paginationWrapper.style.display = 'none';
+      return;
+    }
+
+    const startItem = (pagination.page - 1) * pagination.per_page + 1;
+    const endItem = Math.min(pagination.page * pagination.per_page, pagination.total);
+
+    let paginationHTML = `
+      <div class="pagination-info">
+        Hiển thị <strong>${startItem}</strong> 
+        đến <strong>${endItem}</strong> 
+        trong tổng số <strong>${pagination.total}</strong> yêu cầu
+      </div>
+      
+      <nav class="pagination" aria-label="Phân trang">
+        ${pagination.has_prev ? `
+          <a href="#" class="page-link page-prev" data-page="${pagination.prev_num}" aria-label="Trang trước">
+            <i class="fas fa-chevron-left"></i>
+            <span>Trước</span>
+          </a>
+        ` : `
+          <span class="page-link page-prev disabled" aria-disabled="true">
+            <i class="fas fa-chevron-left"></i>
+            <span>Trước</span>
+          </span>
+        `}
+        
+        <div class="page-numbers">
+    `;
+
+    // First page + ellipsis
+    if (pagination.page > 3) {
+      paginationHTML += `<a href="#" class="page-number" data-page="1">1</a>`;
+      if (pagination.page > 4) {
+        paginationHTML += `<span class="page-ellipsis">...</span>`;
+      }
+    }
+
+    // Page numbers
+    const startPage = Math.max(pagination.page - 2, 1);
+    const endPage = Math.min(pagination.page + 2, pagination.pages);
+
+    for (let p = startPage; p <= endPage; p++) {
+      if (p === pagination.page) {
+        paginationHTML += `<span class="page-number active" aria-current="page">${p}</span>`;
+      } else {
+        paginationHTML += `<a href="#" class="page-number" data-page="${p}">${p}</a>`;
+      }
+    }
+
+    // Ellipsis + last page
+    if (pagination.page < pagination.pages - 2) {
+      if (pagination.page < pagination.pages - 3) {
+        paginationHTML += `<span class="page-ellipsis">...</span>`;
+      }
+      paginationHTML += `<a href="#" class="page-number" data-page="${pagination.pages}">${pagination.pages}</a>`;
+    }
+
+    paginationHTML += `
+        </div>
+        
+        ${pagination.has_next ? `
+          <a href="#" class="page-link page-next" data-page="${pagination.next_num}" aria-label="Trang sau">
+            <span>Sau</span>
+            <i class="fas fa-chevron-right"></i>
+          </a>
+        ` : `
+          <span class="page-link page-next disabled" aria-disabled="true">
+            <span>Sau</span>
+            <i class="fas fa-chevron-right"></i>
+          </span>
+        `}
+      </nav>
+    `;
+
+    paginationWrapper.innerHTML = paginationHTML;
+    paginationWrapper.style.display = 'flex';
+
+    // Add event listeners to pagination links
+    paginationWrapper.querySelectorAll('[data-page]').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+        const page = parseInt(this.dataset.page);
+        if (page && page !== state.currentPage) {
+          loadAttendances(page);
+        }
+      });
+    });
+  }
+
+  // Load Attendances via AJAX
+  async function loadAttendances(page = 1, status = null, search = null) {
+    if (state.isLoading) return;
+
+    showLoading();
+    
+    // Update state
+    state.currentPage = page;
+    if (status !== null) state.currentStatus = status;
+    if (search !== null) state.searchQuery = search;
+
+    try {
+      const params = new URLSearchParams({
+        page: state.currentPage,
+        status: state.currentStatus
+      });
+
+      if (state.searchQuery) {
+        params.append('search', state.searchQuery);
+      }
+
+      const response = await fetch(`/api/attendance/list?${params.toString()}`);
+      const data = await response.json();
+
+      // Update stats
+      updateStats(data.stats);
+
+      // Update search info
+      updateSearchResultsInfo(data.search_query, data.pagination.total);
+
+      // Render cards
+      if (data.items.length === 0) {
+        attendanceGrid.innerHTML = '';
+        attendanceGrid.style.display = 'none';
+        emptyState.style.display = 'flex';
+      } else {
+        emptyState.style.display = 'none';
+        attendanceGrid.style.display = 'grid';
+        attendanceGrid.innerHTML = data.items.map(item => renderAttendanceCard(item)).join('');
+      }
+
+      // Render pagination
+      renderPagination(data.pagination);
+
+      // Scroll to top smoothly
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    } catch (error) {
+      console.error('Error loading attendances:', error);
+      attendanceGrid.innerHTML = '<div class="empty-state"><h3>Có lỗi xảy ra</h3><p>Không thể tải dữ liệu. Vui lòng thử lại.</p></div>';
+    } finally {
+      hideLoading();
+    }
+  }
+
+  // Handle Approve/Reject
+  window.handleApprove = async function(event, attId) {
+    event.preventDefault();
+    
+    if (state.isLoading) return false;
+
+    const form = event.target;
+    const action = event.submitter.value;
+    
+    const confirmMsg = action === 'approve' 
+      ? 'Bạn có chắc chắn muốn duyệt yêu cầu này?' 
+      : 'Bạn có chắc chắn muốn từ chối yêu cầu này?';
+    
+    if (!confirm(confirmMsg)) {
+      return false;
+    }
+
+    showLoading();
+
+    try {
+      const formData = new FormData();
+      formData.append('action', action);
+
+      const response = await fetch(form.action, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (response.ok) {
+        // Reload current page
+        await loadAttendances(state.currentPage, state.currentStatus, state.searchQuery);
+        
+        const message = action === 'approve' ? 'Đã duyệt chấm công!' : 'Đã từ chối chấm công!';
+        alert(message);
+      } else {
+        throw new Error('Request failed');
+      }
+    } catch (error) {
+      console.error('Error approving/rejecting:', error);
+      alert('Có lỗi xảy ra. Vui lòng thử lại.');
+    } finally {
+      hideLoading();
+    }
+
+    return false;
+  };
+
+  // Filter Clicks
   statCards.forEach(card => {
     const filter = card.dataset.filter || 'all';
 
     card.addEventListener('click', () => {
-      // Redirect to page 1 with the selected filter
-      const url = new URL(window.location.href);
-      url.searchParams.set('status', filter);
-      url.searchParams.set('page', '1'); // Reset to page 1 when filtering
-      window.location.href = url.toString();
+      setActiveCard(filter);
+      loadAttendances(1, filter, state.searchQuery);
     });
 
     card.addEventListener('keydown', event => {
@@ -1012,24 +1230,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
   // Search functionality
   if (searchInput) {
-    let searchTimeout;
-    
     searchInput.addEventListener('input', function(e) {
       clearTimeout(searchTimeout);
       const searchTerm = e.target.value.trim();
       
       // Debounce search - wait 500ms after user stops typing
       searchTimeout = setTimeout(() => {
-        const url = new URL(window.location.href);
-        
-        if (searchTerm) {
-          url.searchParams.set('search', searchTerm);
-        } else {
-          url.searchParams.delete('search');
-        }
-        
-        url.searchParams.set('page', '1'); // Reset to page 1 when searching
-        window.location.href = url.toString();
+        loadAttendances(1, state.currentStatus, searchTerm);
       }, 500);
     });
 
@@ -1038,16 +1245,7 @@ document.addEventListener('DOMContentLoaded', function() {
       if (e.key === 'Enter') {
         clearTimeout(searchTimeout);
         const searchTerm = e.target.value.trim();
-        const url = new URL(window.location.href);
-        
-        if (searchTerm) {
-          url.searchParams.set('search', searchTerm);
-        } else {
-          url.searchParams.delete('search');
-        }
-        
-        url.searchParams.set('page', '1');
-        window.location.href = url.toString();
+        loadAttendances(1, state.currentStatus, searchTerm);
       }
     });
   }
@@ -1055,12 +1253,14 @@ document.addEventListener('DOMContentLoaded', function() {
   // Clear search button
   if (clearSearchBtn) {
     clearSearchBtn.addEventListener('click', function() {
-      const url = new URL(window.location.href);
-      url.searchParams.delete('search');
-      url.searchParams.set('page', '1');
-      window.location.href = url.toString();
+      searchInput.value = '';
+      loadAttendances(1, state.currentStatus, '');
     });
   }
+
+  // Initial load
+  setActiveCard(state.currentStatus);
+  loadAttendances(1, state.currentStatus, state.searchQuery);
 });
 </script>
 

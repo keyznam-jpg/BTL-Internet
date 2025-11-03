@@ -38,26 +38,41 @@
   </header>
 
   <section class="room-stats">
-    <article class="room-stat">
-      <span class="room-stat__label">Tổng số phòng</span>
-      <span class="room-stat__value">{{ total_rooms }}</span>
-    </article>
-    <article class="room-stat room-stat--available">
-      <span class="room-stat__label">Phòng trống</span>
-      <span class="room-stat__value">{{ available_rooms }}</span>
-    </article>
-    <article class="room-stat room-stat--booked">
-      <span class="room-stat__label">Đã đặt</span>
-      <span class="room-stat__value">{{ booked_rooms }}</span>
-    </article>
-    <article class="room-stat room-stat--occupied">
-      <span class="room-stat__label">Đang ở</span>
-      <span class="room-stat__value">{{ occupied_rooms }}</span>
-    </article>
-    <article class="room-stat room-stat--overdue">
-      <span class="room-stat__label">Quá giờ / chờ</span>
-      <span class="room-stat__value">{{ overdue_rooms }}</span>
-    </article>
+    <button type="button" class="room-stat room-stat--total is-active" data-filter-status="all">
+      <span class="room-stat__icon"><i class="fas fa-hotel"></i></span>
+      <span class="room-stat__content">
+        <span class="room-stat__label">Tổng số phòng</span>
+        <span class="room-stat__value">{{ total_rooms }}</span>
+      </span>
+    </button>
+    <button type="button" class="room-stat room-stat--available" data-filter-status="trong">
+      <span class="room-stat__icon"><i class="fas fa-door-open"></i></span>
+      <span class="room-stat__content">
+        <span class="room-stat__label">Phòng trống</span>
+        <span class="room-stat__value">{{ available_rooms }}</span>
+      </span>
+    </button>
+    <button type="button" class="room-stat room-stat--booked" data-filter-status="da_dat">
+      <span class="room-stat__icon"><i class="fas fa-calendar-check"></i></span>
+      <span class="room-stat__content">
+        <span class="room-stat__label">Đã đặt</span>
+        <span class="room-stat__value">{{ booked_rooms }}</span>
+      </span>
+    </button>
+    <button type="button" class="room-stat room-stat--occupied" data-filter-status="dang_o">
+      <span class="room-stat__icon"><i class="fas fa-user-check"></i></span>
+      <span class="room-stat__content">
+        <span class="room-stat__label">Đang ở</span>
+        <span class="room-stat__value">{{ occupied_rooms }}</span>
+      </span>
+    </button>
+    <button type="button" class="room-stat room-stat--overdue" data-filter-status="qua_gio">
+      <span class="room-stat__icon"><i class="fas fa-clock"></i></span>
+      <span class="room-stat__content">
+        <span class="room-stat__label">Quá giờ / chờ</span>
+        <span class="room-stat__value">{{ overdue_rooms }}</span>
+      </span>
+    </button>
   </section>
 
   <div class="room-layout">
@@ -333,6 +348,67 @@
     border: 1px solid rgba(148, 163, 184, 0.16);
     box-shadow: 0 16px 35px -28px rgba(15, 23, 42, 0.4);
     display: flex;
+    align-items: center;
+    gap: 16px;
+    font: inherit;
+    color: inherit;
+    width: 100%;
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+    position: relative;
+    outline: none;
+    appearance: none;
+  }
+
+  .room-stat:hover:not(.is-active) {
+    transform: translateY(-2px);
+    box-shadow: 0 20px 40px -28px rgba(15, 23, 42, 0.54);
+  }
+
+  .room-stat:focus-visible {
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.35);
+  }
+
+  .room-stat.is-active {
+    border-color: rgba(34, 197, 94, 0.6);
+    box-shadow: 0 24px 45px -26px rgba(22, 163, 74, 0.55);
+  }
+
+  .room-stat__icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(15, 118, 110, 0.12);
+    color: #0f766e;
+    font-size: 22px;
+  }
+
+  .room-stat--available .room-stat__icon {
+    background: rgba(46, 125, 50, 0.15);
+    color: #1b5e20;
+  }
+
+  .room-stat--booked .room-stat__icon {
+    background: rgba(29, 78, 216, 0.12);
+    color: #1d4ed8;
+  }
+
+  .room-stat--occupied .room-stat__icon {
+    background: rgba(217, 119, 6, 0.14);
+    color: #b45309;
+  }
+
+  .room-stat--overdue .room-stat__icon {
+    background: rgba(220, 38, 38, 0.14);
+    color: #b91c1c;
+  }
+
+  .room-stat__content {
+    display: flex;
     flex-direction: column;
     gap: 6px;
   }
@@ -348,6 +424,7 @@
     font-size: 28px;
     font-weight: 700;
     color: #0f172a;
+    line-height: 1;
   }
 
   .room-stat--available {
@@ -758,6 +835,9 @@
     const clearButton = document.getElementById('room-search-clear');
     const countIndicator = document.getElementById('room-count-indicator');
     const roomCards = Array.from(document.querySelectorAll('.room-card'));
+    const statFilters = Array.from(document.querySelectorAll('.room-stat[data-filter-status]'));
+    let activeStatusFilter = 'all';
+
     function normalize(value) {
       if (!value) { return ''; }
       try {
@@ -774,7 +854,8 @@
       roomCards.forEach(card => {
         const searchData = card.dataset.search || '';
         const matchesKeyword = !keyword || normalize(searchData).includes(keyword);
-        const shouldShow = matchesKeyword;
+        const matchesStatus = activeStatusFilter === 'all' || card.dataset.status === activeStatusFilter;
+        const shouldShow = matchesKeyword && matchesStatus;
         card.style.display = shouldShow ? '' : 'none';
         if (shouldShow) { visible += 1; }
       });
@@ -800,6 +881,35 @@
       });
     }
 
+    function setStatusFilter(status, trigger) {
+      activeStatusFilter = status;
+      statFilters.forEach(button => {
+        button.classList.toggle('is-active', button === trigger);
+      });
+      applyFilters();
+    }
+
+    statFilters.forEach(button => {
+      button.addEventListener('click', () => {
+        const status = button.dataset.filterStatus || 'all';
+        if (status === activeStatusFilter) {
+          activeStatusFilter = 'all';
+          statFilters.forEach(btn => btn.classList.toggle('is-active', btn.dataset.filterStatus === 'all'));
+          applyFilters();
+        } else {
+          setStatusFilter(status, button);
+        }
+      });
+    });
+
+    // Ensure default active (all) button highlighted
+    const defaultFilter = statFilters.find(btn => btn.dataset.filterStatus === 'all');
+    if (defaultFilter) {
+      setStatusFilter('all', defaultFilter);
+    } else {
+      applyFilters();
+    }
+
     document.querySelectorAll('.room-delete-form').forEach(form => {
       form.addEventListener('submit', function (event) {
         const roomName = this.closest('.room-card')?.querySelector('.room-card__title')?.textContent?.trim() || 'phòng';
@@ -808,8 +918,6 @@
         }
       });
     });
-
-    applyFilters();
   });
 </script>
 {% endblock %}

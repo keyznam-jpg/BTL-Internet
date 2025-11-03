@@ -4447,6 +4447,26 @@ def nhan_phong():
             flash('Không tìm thấy thông tin đặt phòng.', 'danger')
         return redirect(url_for('nhan_phong'))
     discount_percent, _ = get_voucher_config()
+    voucher_room_types = (
+        LoaiPhong.query
+        .filter_by(co_voucher=True)
+        .order_by(LoaiPhong.ten.asc())
+        .all()
+    )
+    voucher_room_names = [
+        loai.ten for loai in voucher_room_types
+        if getattr(loai, 'ten', None)
+    ]
+    if voucher_room_names:
+        if len(voucher_room_names) == 1:
+            voucher_room_label = voucher_room_names[0]
+        elif len(voucher_room_names) == 2:
+            voucher_room_label = f"{voucher_room_names[0]} hoặc {voucher_room_names[1]}"
+        else:
+            voucher_room_label = ", ".join(voucher_room_names[:-1]) + f" hoặc {voucher_room_names[-1]}"
+    else:
+        voucher_room_label = ''
+    voucher_rooms_enabled = bool(voucher_room_names)
     cancel_setting = HeThongCauHinh.query.filter_by(key='auto_cancel_minutes').first()
     try:
         auto_cancel_minutes = int(cancel_setting.value) if cancel_setting and cancel_setting.value else 5
@@ -4519,6 +4539,8 @@ def nhan_phong():
         ds_nhan=ds_nhan,
         ds_thue=ds_thue,
         voucher_discount=discount_percent,
+        voucher_room_label=voucher_room_label,
+        voucher_rooms_enabled=voucher_rooms_enabled,
         auto_cancel_minutes=auto_cancel_minutes,
         cancel_data=cancel_data,
         active_tab=active_tab

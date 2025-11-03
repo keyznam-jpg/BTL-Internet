@@ -944,19 +944,8 @@
         background: linear-gradient(135deg, rgba(46, 204, 113, 0.1), rgba(46, 204, 113, 0.05));
     }
 
-    /* === GROUPED MESSAGES - Gộp tin nhắn === */
-    .message.grouped {
-        margin-top: -12px;
-    }
-
-    .message.grouped .message-avatar {
-        opacity: 0;
-        pointer-events: none;
-    }
-
-    .message.grouped .meta {
-        display: none;
-    }
+    /* === GROUPED MESSAGES - Đã TẮT tính năng gộp tin nhắn === */
+    /* Tính năng gộp tin nhắn đã được tắt để luôn hiển thị đầy đủ thông tin người gửi và thời gian */
 
     /* === RESPONSIVE === */
     @media (max-width: 1400px) {
@@ -1502,12 +1491,9 @@
             const isVoucher = text.includes('voucher') || text.includes('Voucher') || text.includes('giảm giá');
             
             // Kiểm tra tin nhắn có cần gộp không (cùng người gửi trong vòng 2 phút)
-            // QUAN TRỌNG: Tin nhắn của nhân viên KHÔNG BAO GIỜ gộp nhóm (luôn hiển thị avatar + tên)
+            // QUAN TRỌNG: TẮT tính năng gộp tin nhắn để luôn hiển thị đầy đủ thông tin
             const currentTime = new Date(msg.thoi_gian || Date.now()).getTime();
-            const shouldGroup = state.lastMessageSender === sender && 
-                               state.lastMessageTime && 
-                               (currentTime - state.lastMessageTime < 120000) && // 2 phút
-                               !isSystem && !isVoucher && !isStaffSender; // Nhân viên không bao giờ group
+            const shouldGroup = false; // TẮT hoàn toàn tính năng gộp tin nhắn
             
             state.lastMessageSender = sender;
             state.lastMessageTime = currentTime;
@@ -1620,9 +1606,8 @@
             const metaContent = metaParts.join(' &bull; ');
             meta.innerHTML = `${metaContent}${statusIcon ? ` ${statusIcon}` : ''}`.trim();
             contentWrap.appendChild(bubble);
-            if (!shouldGroup) {
-                contentWrap.appendChild(meta);
-            }
+            // Luôn hiển thị thông tin người gửi và thời gian
+            contentWrap.appendChild(meta);
             
             if (isSystem) {
                 wrap.appendChild(avatar);

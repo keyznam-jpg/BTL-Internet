@@ -116,7 +116,8 @@ class LoaiPhong(db.Model):
     ten = db.Column(db.String(100), nullable=False)
     so_nguoi_toi_da = db.Column(db.Integer, default=2)
     gia  = db.Column(db.BIGINT, default=0)
-    mo_ta = db.Column(db.Text, nullable=True)  # Thêm trường mô tả
+    mo_ta = db.Column(db.Text, nullable=True)
+    co_voucher = db.Column(db.Boolean, default=False)  # Có tặng voucher khi đặt loại phòng này
     phongs = db.relationship("Phong", backref="loai", lazy=True)
 
 class Phong(db.Model):

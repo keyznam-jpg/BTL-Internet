@@ -357,6 +357,14 @@
   margin-top: 4px;
 }
 
+.room-type-badge--voucher {
+  background: linear-gradient(135deg, #fde68a 0%, #facc15 100%);
+  color: #7c2d12;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .room-type-card input:checked + .room-type-content {
   border-color: #2e7d32;
   background: #f1f8f2;

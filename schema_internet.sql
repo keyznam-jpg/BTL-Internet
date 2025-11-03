@@ -67,7 +67,8 @@ CREATE TABLE loaiphong(
   ten VARCHAR(100) NOT NULL,
   so_nguoi_toi_da INT DEFAULT 2 CHECK (so_nguoi_toi_da > 0),
   gia BIGINT DEFAULT 0 CHECK (gia >= 0),
-  mo_ta TEXT NULL
+  mo_ta TEXT NULL,
+  co_voucher BOOLEAN DEFAULT FALSE COMMENT 'Có tặng voucher khi đặt phòng loại này'
 );
 
 CREATE TABLE phong(

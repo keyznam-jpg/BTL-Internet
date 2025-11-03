@@ -604,6 +604,7 @@ class LoaiPhong(db.Model):
     so_nguoi_toi_da = db.Column(db.Integer, default=2)
     gia  = db.Column(db.BIGINT, default=0)
     mo_ta = db.Column(db.Text, nullable=True)
+    co_voucher = db.Column(db.Boolean, default=False)
     phongs = db.relationship("Phong", backref="loai", lazy=True)
 
 class Phong(db.Model):
@@ -4409,9 +4410,9 @@ def nhan_phong():
                 if email_recipient:
                     email_context = build_booking_email_context(dp)
                     email_context['tong_tien'] = vnd((dp.tong_thanh_toan or dp.tien_coc or 0))
-                # Phát voucher nếu là phòng cao cấp hoặc tổng thống
-                loai_ten = (dp.phong.loai.ten or '').lower()
-                if ('cao cấp' in loai_ten) or ('tổng thống' in loai_ten):
+                # Phát voucher nếu loại phòng được cấu hình tặng voucher
+                loai_phong = getattr(dp.phong, 'loai', None)
+                if loai_phong and getattr(loai_phong, 'co_voucher', False):
                     voucher_new = issue_voucher_for_khachhang(dp.khachhang_id)
                     # Gửi tin nhắn voucher cho khách
                     msg = f"Chúc mừng! Bạn nhận được voucher giảm giá {voucher_new.discount_percent}% cho lần đặt tiếp theo. Mã: {voucher_new.code}. HSD: {voucher_new.expires_at.strftime('%d/%m/%Y')}"
@@ -8361,11 +8362,13 @@ def quan_li_loai_phong():
         so_nguoi = int(request.form.get('so_nguoi_toi_da', 1))
         gia = int(request.form.get('gia', 0))
         mo_ta = request.form.get('mo_ta', '').strip()
+        # Checkbox: nếu được check thì có trong form, không check thì không có
+        co_voucher = bool(request.form.get('co_voucher'))
         
         if LoaiPhong.query.filter_by(ten=ten).first():
             flash(f"Tên loại phòng '{ten}' đã tồn tại.", 'danger')
         else:
-            loai_moi = LoaiPhong(ten=ten, so_nguoi_toi_da=so_nguoi, gia=gia, mo_ta=mo_ta if mo_ta else None)
+            loai_moi = LoaiPhong(ten=ten, so_nguoi_toi_da=so_nguoi, gia=gia, mo_ta=mo_ta if mo_ta else None, co_voucher=co_voucher)
             db.session.add(loai_moi)
             db.session.commit()
             flash('Thêm loại phòng mới thành công!', 'success')
@@ -8383,6 +8386,8 @@ def sua_loai_phong(loai_id):
         lp_edit.gia = int(request.form.get('gia', 0))
         mo_ta = request.form.get('mo_ta', '').strip()
         lp_edit.mo_ta = mo_ta if mo_ta else None
+        # Checkbox: nếu được check thì có trong form, không check thì không có
+        lp_edit.co_voucher = bool(request.form.get('co_voucher'))
         db.session.commit()
         flash('Cập nhật loại phòng thành công!', 'success')
         return redirect(url_for('quan_li_loai_phong'))

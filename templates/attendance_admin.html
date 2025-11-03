@@ -3,6 +3,36 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <div class="admin-attendance-page">
+  <!-- Search Bar -->
+  <div class="search-wrapper">
+    <div class="search-container">
+      <i class="fas fa-search search-icon"></i>
+      <input 
+        type="text" 
+        id="searchInput" 
+        class="search-input" 
+        placeholder="Tìm kiếm theo tên nhân viên hoặc username..."
+        value="{{ request.args.get('search', '') }}"
+      >
+      {% if request.args.get('search') %}
+      <button type="button" id="clearSearch" class="clear-search-btn" title="Xóa tìm kiếm">
+        <i class="fas fa-times"></i>
+      </button>
+      {% endif %}
+    </div>
+    {% if request.args.get('search') %}
+    <div class="search-results-info">
+      <i class="fas fa-info-circle"></i>
+      Đang tìm kiếm: <strong>"{{ request.args.get('search') }}"</strong>
+      {% if pagination.total == 0 %}
+        - Không tìm thấy kết quả
+      {% else %}
+        - Tìm thấy <strong>{{ pagination.total }}</strong> kết quả
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+
   <!-- Stats Mini Cards -->
   <div class="stats-mini-grid">
     <div class="stat-mini-card stat-pending animate-scale" data-filter="pending" role="button" tabindex="0" aria-pressed="false">
@@ -10,7 +40,7 @@
         <i class="fas fa-clock fa-2x" style="color: #ff9500;"></i>
       </div>
       <div class="stat-content">
-        <span class="stat-number">{{ attendances|selectattr('status', 'equalto', 'pending')|list|length }}</span>
+        <span class="stat-number">{{ all_attendances|selectattr('status', 'equalto', 'pending')|list|length }}</span>
         <span class="stat-label">Chờ duyệt</span>
       </div>
     </div>
@@ -20,7 +50,7 @@
         <i class="fas fa-check-circle fa-2x" style="color: #00d4aa;"></i>
       </div>
       <div class="stat-content">
-        <span class="stat-number">{{ attendances|selectattr('status', 'equalto', 'approved')|list|length }}</span>
+        <span class="stat-number">{{ all_attendances|selectattr('status', 'equalto', 'approved')|list|length }}</span>
         <span class="stat-label">Đã duyệt</span>
       </div>
     </div>
@@ -30,7 +60,7 @@
         <i class="fas fa-times-circle fa-2x text-danger"></i>
       </div>
       <div class="stat-content">
-        <span class="stat-number">{{ attendances|selectattr('status', 'equalto', 'rejected')|list|length }}</span>
+        <span class="stat-number">{{ all_attendances|selectattr('status', 'equalto', 'rejected')|list|length }}</span>
         <span class="stat-label">Từ chối</span>
       </div>
     </div>
@@ -40,7 +70,7 @@
         <i class="fas fa-list fa-2x" style="color: #00d4aa;"></i>
       </div>
       <div class="stat-content">
-        <span class="stat-number">{{ attendances|length }}</span>
+        <span class="stat-number">{{ all_attendances|length }}</span>
         <span class="stat-label">Tất cả</span>
       </div>
     </div>
@@ -154,16 +184,78 @@
     </div>
     {% endfor %}
   </div>
-  <div class="filter-empty-state" hidden>
-    <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
-      <line x1="16" y1="2" x2="16" y2="6"></line>
-      <line x1="8" y1="2" x2="8" y2="6"></line>
-      <line x1="3" y1="10" x2="21" y2="10"></line>
-    </svg>
-    <h3>Không có yêu cầu nào</h3>
-    <p>Hãy chọn trạng thái khác hoặc thử lại sau.</p>
+  {% if pagination and pagination.pages > 0 %}
+  <!-- Phân trang -->
+  {% if pagination.pages > 1 %}
+  <div class="pagination-wrapper">
+    <div class="pagination-info">
+      Hiển thị <strong>{{ (pagination.page - 1) * pagination.per_page + 1 }}</strong> 
+      đến <strong>{{ [pagination.page * pagination.per_page, pagination.total]|min }}</strong> 
+      trong tổng số <strong>{{ pagination.total }}</strong> yêu cầu
+    </div>
+    
+    <nav class="pagination" aria-label="Phân trang">
+      <!-- Nút Previous -->
+      {% if pagination.has_prev %}
+        <a href="{{ url_for('attendance_admin', page=pagination.prev_num, status=current_status, search=request.args.get('search', '')) }}" 
+           class="page-link page-prev" 
+           aria-label="Trang trước">
+          <i class="fas fa-chevron-left"></i>
+          <span>Trước</span>
+        </a>
+      {% else %}
+        <span class="page-link page-prev disabled" aria-disabled="true">
+          <i class="fas fa-chevron-left"></i>
+          <span>Trước</span>
+        </span>
+      {% endif %}
+      
+      <!-- Các số trang -->
+      <div class="page-numbers">
+        {% if pagination.page > 3 %}
+          <a href="{{ url_for('attendance_admin', page=1, status=current_status, search=request.args.get('search', '')) }}" 
+             class="page-number">1</a>
+          {% if pagination.page > 4 %}
+            <span class="page-ellipsis">...</span>
+          {% endif %}
+        {% endif %}
+        
+        {% for p in range([pagination.page - 2, 1]|max, [pagination.page + 2, pagination.pages]|min + 1) %}
+          {% if p == pagination.page %}
+            <span class="page-number active" aria-current="page">{{ p }}</span>
+          {% else %}
+            <a href="{{ url_for('attendance_admin', page=p, status=current_status, search=request.args.get('search', '')) }}" 
+               class="page-number">{{ p }}</a>
+          {% endif %}
+        {% endfor %}
+        
+        {% if pagination.page < pagination.pages - 2 %}
+          {% if pagination.page < pagination.pages - 3 %}
+            <span class="page-ellipsis">...</span>
+          {% endif %}
+          <a href="{{ url_for('attendance_admin', page=pagination.pages, status=current_status, search=request.args.get('search', '')) }}" 
+             class="page-number">{{ pagination.pages }}</a>
+        {% endif %}
+      </div>
+      
+      <!-- Nút Next -->
+      {% if pagination.has_next %}
+        <a href="{{ url_for('attendance_admin', page=pagination.next_num, status=current_status, search=request.args.get('search', '')) }}" 
+           class="page-link page-next" 
+           aria-label="Trang sau">
+          <span>Sau</span>
+          <i class="fas fa-chevron-right"></i>
+        </a>
+      {% else %}
+        <span class="page-link page-next disabled" aria-disabled="true">
+          <span>Sau</span>
+          <i class="fas fa-chevron-right"></i>
+        </span>
+      {% endif %}
+    </nav>
   </div>
+  {% endif %}
+  {% endif %}
   {% else %}
   <div class="empty-state">
     <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
@@ -183,6 +275,102 @@
 .admin-attendance-page {
   max-width: 1400px;
   margin: 0 auto;
+}
+
+/* ===== SEARCH BAR ===== */
+.search-wrapper {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.search-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 16px;
+  padding: 0 20px;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.search-container:focus-within {
+  border-color: #2f7d5a;
+  box-shadow: 0 8px 24px rgba(47, 125, 90, 0.15);
+  transform: translateY(-2px);
+}
+
+.search-icon {
+  color: #6c757d;
+  font-size: 1.1em;
+  margin-right: 12px;
+  transition: color 0.3s ease;
+}
+
+.search-container:focus-within .search-icon {
+  color: #2f7d5a;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  padding: 16px 0;
+  font-size: 1em;
+  color: #212529;
+  background: transparent;
+  font-weight: 500;
+}
+
+.search-input::placeholder {
+  color: #adb5bd;
+  font-weight: 400;
+}
+
+.clear-search-btn {
+  background: #f8f9fa;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #6c757d;
+  transition: all 0.2s ease;
+  margin-left: 8px;
+}
+
+.clear-search-btn:hover {
+  background: #e9ecef;
+  color: #dc3545;
+  transform: scale(1.1);
+}
+
+.search-results-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #e3f2fd 0%, #e8f5e9 100%);
+  border-radius: 12px;
+  font-size: 0.9em;
+  color: #495057;
+  border: 1px solid #b3e5fc;
+}
+
+.search-results-info i {
+  color: #2f7d5a;
+  font-size: 1.1em;
+}
+
+.search-results-info strong {
+  color: #2f7d5a;
+  font-weight: 700;
 }
 
 /* ===== STATS MINI GRID ===== */
@@ -289,14 +477,6 @@
 .admin-attendance-card:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 32px rgba(0,0,0,0.12);
-}
-
-.admin-attendance-card.hidden {
-  display: none;
-}
-
-.admin-attendance-card[hidden] {
-  display: none !important;
 }
 
 .card-status-indicator {
@@ -558,41 +738,26 @@
   font-size: 15px;
 }
 
-.filter-empty-state {
-  margin-top: 32px;
-  padding: 48px 24px;
-  background: white;
-  border: 2px dashed #d1d9de;
-  border-radius: 20px;
-  text-align: center;
-  color: #6c757d;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-}
-
-.filter-empty-state[hidden] {
-  display: none !important;
-}
-
-.filter-empty-state svg {
-  color: #adb5bd;
-}
-
-.filter-empty-state h3 {
-  margin: 0;
-  color: #495057;
-  font-size: 1.3em;
-}
-
-.filter-empty-state p {
-  margin: 0;
-  font-size: 0.95em;
-}
-
 /* ===== RESPONSIVE ===== */
 @media (max-width: 768px) {
+  .search-container {
+    padding: 0 16px;
+  }
+  
+  .search-input {
+    padding: 14px 0;
+    font-size: 0.95em;
+  }
+  
+  .search-input::placeholder {
+    font-size: 0.9em;
+  }
+  
+  .search-results-info {
+    padding: 10px 12px;
+    font-size: 0.85em;
+  }
+  
   .stats-mini-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -611,6 +776,30 @@
 }
 
 @media (max-width: 480px) {
+  .search-wrapper {
+    margin-bottom: 16px;
+  }
+  
+  .search-container {
+    padding: 0 12px;
+  }
+  
+  .search-input {
+    padding: 12px 0;
+    font-size: 0.9em;
+  }
+  
+  .search-icon {
+    font-size: 1em;
+    margin-right: 8px;
+  }
+  
+  .clear-search-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.85em;
+  }
+  
   .stats-mini-grid {
     grid-template-columns: 1fr;
   }
@@ -643,47 +832,174 @@
 .text-danger { color: #dc3545; }
 .text-info { color: #17a2b8; }
 
+/* ===== PAGINATION ===== */
+.pagination-wrapper {
+  margin-top: 40px;
+  padding: 24px;
+  background: white;
+  border-radius: 16px;
+  border: 2px solid #e9ecef;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  align-items: center;
+}
+
+.pagination-info {
+  text-align: center;
+  color: #6c757d;
+  font-size: 0.95em;
+}
+
+.pagination-info strong {
+  color: #2f7d5a;
+  font-weight: 700;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.page-link,
+.page-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 12px;
+  border: 2px solid #e9ecef;
+  border-radius: 10px;
+  background: white;
+  color: #495057;
+  font-weight: 600;
+  font-size: 0.9em;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  cursor: pointer;
+  gap: 6px;
+}
+
+.page-link:hover:not(.disabled),
+.page-number:hover:not(.active) {
+  background: #f8f9fa;
+  border-color: #2f7d5a;
+  color: #2f7d5a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(47, 125, 90, 0.2);
+}
+
+.page-number.active {
+  background: linear-gradient(135deg, #2f7d5a 0%, #1e5a3d 100%);
+  border-color: #2f7d5a;
+  color: white;
+  cursor: default;
+  box-shadow: 0 4px 12px rgba(47, 125, 90, 0.3);
+}
+
+.page-link.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.page-prev,
+.page-next {
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.85em;
+}
+
+.page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  color: #adb5bd;
+  font-weight: 700;
+  user-select: none;
+}
+
+/* Responsive pagination */
+@media (max-width: 768px) {
+  .pagination-wrapper {
+    padding: 16px;
+  }
+  
+  .page-link,
+  .page-number {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 10px;
+    font-size: 0.85em;
+  }
+  
+  .page-prev span,
+  .page-next span {
+    display: none;
+  }
+  
+  .page-numbers {
+    display: flex;
+    gap: 4px;
+  }
+}
+
+@media (max-width: 480px) {
+  .pagination {
+    gap: 4px;
+  }
+  
+  .page-link,
+  .page-number {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    font-size: 0.8em;
+  }
+}
+
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const statCards = Array.from(document.querySelectorAll('.stat-mini-card[data-filter]'));
-  const cards = Array.from(document.querySelectorAll('.admin-attendance-card'));
-  const emptyState = document.querySelector('.filter-empty-state');
+  const currentStatus = '{{ current_status }}' || 'all';
+  const searchInput = document.getElementById('searchInput');
+  const clearSearchBtn = document.getElementById('clearSearch');
 
-  if (!statCards.length || !cards.length) {
+  if (!statCards.length) {
     return;
   }
 
-  function setActiveCard(activeCard) {
+  function setActiveCard(filter) {
     statCards.forEach(card => {
-      const isActive = card === activeCard;
+      const cardFilter = card.dataset.filter || 'all';
+      const isActive = cardFilter === filter;
       card.classList.toggle('is-active', isActive);
       card.setAttribute('aria-pressed', isActive ? 'true' : 'false');
     });
   }
 
-  function applyFilter(filter) {
-    let visibleCount = 0;
-    cards.forEach(card => {
-      const match = filter === 'all' || card.dataset.status === filter;
-      card.hidden = !match;
-      if (match) {
-        visibleCount += 1;
-      }
-    });
+  // Set active card based on current status
+  setActiveCard(currentStatus);
 
-    if (emptyState) {
-      emptyState.hidden = visibleCount !== 0;
-    }
-  }
-
+  // Handle filter clicks - redirect to new URL with status parameter
   statCards.forEach(card => {
     const filter = card.dataset.filter || 'all';
 
     card.addEventListener('click', () => {
-      setActiveCard(card);
-      applyFilter(filter);
+      // Redirect to page 1 with the selected filter
+      const url = new URL(window.location.href);
+      url.searchParams.set('status', filter);
+      url.searchParams.set('page', '1'); // Reset to page 1 when filtering
+      window.location.href = url.toString();
     });
 
     card.addEventListener('keydown', event => {
@@ -694,10 +1010,56 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   });
 
-  const defaultCard = statCards.find(card => card.dataset.filter === 'all') || statCards[0];
-  if (defaultCard) {
-    setActiveCard(defaultCard);
-    applyFilter(defaultCard.dataset.filter || 'all');
+  // Search functionality
+  if (searchInput) {
+    let searchTimeout;
+    
+    searchInput.addEventListener('input', function(e) {
+      clearTimeout(searchTimeout);
+      const searchTerm = e.target.value.trim();
+      
+      // Debounce search - wait 500ms after user stops typing
+      searchTimeout = setTimeout(() => {
+        const url = new URL(window.location.href);
+        
+        if (searchTerm) {
+          url.searchParams.set('search', searchTerm);
+        } else {
+          url.searchParams.delete('search');
+        }
+        
+        url.searchParams.set('page', '1'); // Reset to page 1 when searching
+        window.location.href = url.toString();
+      }, 500);
+    });
+
+    // Handle Enter key for immediate search
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        clearTimeout(searchTimeout);
+        const searchTerm = e.target.value.trim();
+        const url = new URL(window.location.href);
+        
+        if (searchTerm) {
+          url.searchParams.set('search', searchTerm);
+        } else {
+          url.searchParams.delete('search');
+        }
+        
+        url.searchParams.set('page', '1');
+        window.location.href = url.toString();
+      }
+    });
+  }
+
+  // Clear search button
+  if (clearSearchBtn) {
+    clearSearchBtn.addEventListener('click', function() {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('search');
+      url.searchParams.set('page', '1');
+      window.location.href = url.toString();
+    });
   }
 });
 </script>

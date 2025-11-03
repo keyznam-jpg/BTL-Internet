@@ -1267,8 +1267,44 @@ def attendance_checkin():
 @login_required
 @permission_required('attendance.manage')
 def attendance_admin():
-    attendances = Attendance.query.order_by(Attendance.checkin_time.desc()).all()
-    return render_template('attendance_admin.html', attendances=attendances)
+    # Lấy tham số phân trang, lọc và tìm kiếm
+    page = request.args.get('page', 1, type=int)
+    per_page = 8  # Mỗi trang hiển thị tối đa 8 yêu cầu
+    status_filter = request.args.get('status', 'all')
+    search_query = request.args.get('search', '').strip()
+    
+    # Query cơ bản với join để tìm kiếm theo tên user
+    query = Attendance.query.join(NguoiDung, Attendance.user_id == NguoiDung.id)
+    
+    # Áp dụng tìm kiếm theo tên hoặc username
+    if search_query:
+        search_pattern = f'%{search_query}%'
+        query = query.filter(
+            db.or_(
+                NguoiDung.ten.ilike(search_pattern),
+                NguoiDung.ten_dang_nhap.ilike(search_pattern)
+            )
+        )
+    
+    # Áp dụng filter theo trạng thái
+    if status_filter and status_filter != 'all':
+        query = query.filter(Attendance.status == status_filter)
+    
+    # Sắp xếp và phân trang
+    pagination = query.order_by(Attendance.checkin_time.desc()).paginate(
+        page=page, 
+        per_page=per_page, 
+        error_out=False
+    )
+    
+    # Lấy tất cả attendances để tính số liệu thống kê
+    all_attendances = Attendance.query.all()
+    
+    return render_template('attendance_admin.html', 
+                         attendances=pagination.items,
+                         pagination=pagination,
+                         all_attendances=all_attendances,
+                         current_status=status_filter)
 
 @app.route('/attendance/approve/<int:att_id>', methods=['POST'])
 @login_required

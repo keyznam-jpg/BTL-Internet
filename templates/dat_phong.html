@@ -75,10 +75,29 @@
         </div>
 
         <div class="booking-section">
-          <h3><i class="fas fa-home"></i> Loại phòng</h3>
-          <div class="room-type-grid">
+          <div class="room-type-header">
+            <h3><i class="fas fa-home"></i> Loại phòng</h3>
+            <div class="room-filter-wrapper">
+              <button type="button" class="room-filter-trigger" id="roomFilterToggle" aria-label="Bật bộ lọc loại phòng">
+                <i class="fas fa-filter"></i>
+                <span class="sr-only">Lọc</span>
+              </button>
+              <div class="room-filter-panel" id="roomFilterPanel">
+                <div class="price-filter">
+                  <label for="priceFilter">Lọc theo giá</label>
+                  <select id="priceFilter" onchange="filterAndPaginateRooms()">
+                    <option value="all">Tất cả</option>
+                    <option value="asc">Giá thấp đến cao</option>
+                    <option value="desc">Giá cao đến thấp</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="room-type-grid" id="roomTypeGrid">
             {% for l in loais %}
-            <label class="room-type-card">
+            <label class="room-type-card" data-price="{{ l.gia }}">
               <input type="radio" name="loai_id" value="{{ l.id }}" data-gia="{{ l.gia }}" data-capacity="{{ l.so_nguoi_toi_da }}" 
                      {% if loop.first %}checked{% endif %} onchange="loadPhong(); updatePrice();">
               <div class="room-type-content">
@@ -100,6 +119,19 @@
               </div>
             </label>
             {% endfor %}
+          </div>
+
+          <!-- Pagination -->
+          <div class="room-type-pagination" id="roomTypePagination">
+            <button class="pagination-btn" id="prevPageBtn" onclick="changePage(-1)" aria-label="Trang trước">
+              <i class="fas fa-chevron-left"></i>
+            </button>
+            <div class="pagination-info">
+              <div class="pagination-counter" id="paginationCounter">1 / 1</div>
+            </div>
+            <button class="pagination-btn" id="nextPageBtn" onclick="changePage(1)" aria-label="Trang tiếp">
+              <i class="fas fa-chevron-right"></i>
+            </button>
           </div>
         </div>
       </div>
@@ -926,11 +958,183 @@ function setNowDefaults() {
   }
 }
 
+// ============ ROOM TYPE PAGINATION & FILTER ============
+let currentPage = 1;
+const itemsPerPage = 4;
+let allRoomCards = [];
+let filteredRoomCards = [];
+let roomFilterPanel = null;
+let roomFilterToggle = null;
+
+function initRoomTypePagination() {
+  allRoomCards = Array.from(document.querySelectorAll('.room-type-card'));
+  filteredRoomCards = [...allRoomCards];
+  
+  const paginationWrapper = document.getElementById('roomTypePagination');
+  if (allRoomCards.length <= itemsPerPage && paginationWrapper) {
+    paginationWrapper.classList.add('hidden');
+  }
+  
+  filterAndPaginateRooms();
+}
+
+function filterAndPaginateRooms() {
+  const priceFilter = document.getElementById('priceFilter');
+  const selectedFilter = priceFilter ? priceFilter.value : 'all';
+  closeRoomFilterPanel();
+  
+  filteredRoomCards = [...allRoomCards];
+  
+  if (selectedFilter !== 'all') {
+    filteredRoomCards.sort((a, b) => {
+      const priceA = parseFloat(a.dataset.price);
+      const priceB = parseFloat(b.dataset.price);
+      if (Number.isNaN(priceA) || Number.isNaN(priceB)) {
+        return 0;
+      }
+      if (selectedFilter === 'asc') {
+        return priceA - priceB;
+      }
+      return priceB - priceA;
+    });
+  }
+  
+  currentPage = 1;
+  updatePagination();
+}
+
+function updatePagination() {
+  const rawTotalPages = Math.ceil(filteredRoomCards.length / itemsPerPage);
+  const totalPages = Math.max(rawTotalPages, 1);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  
+  allRoomCards.forEach(card => card.classList.add('hidden'));
+  
+  filteredRoomCards.slice(startIndex, endIndex).forEach(card => {
+    card.classList.remove('hidden');
+  });
+  
+  const paginationCounter = document.getElementById('paginationCounter');
+  if (paginationCounter) {
+    if (filteredRoomCards.length > 0) {
+      paginationCounter.textContent = `${currentPage} / ${totalPages}`;
+    } else {
+      paginationCounter.textContent = '-- / --';
+    }
+  }
+  
+  const prevBtn = document.getElementById('prevPageBtn');
+  const nextBtn = document.getElementById('nextPageBtn');
+  
+  if (prevBtn) {
+    prevBtn.disabled = currentPage === 1 || filteredRoomCards.length === 0;
+  }
+  if (nextBtn) {
+    nextBtn.disabled = currentPage >= totalPages || filteredRoomCards.length === 0;
+  }
+  
+  const paginationEl = document.getElementById('roomTypePagination');
+  if (paginationEl) {
+    if (filteredRoomCards.length <= itemsPerPage || filteredRoomCards.length === 0) {
+      paginationEl.classList.add('hidden');
+    } else {
+      paginationEl.classList.remove('hidden');
+    }
+  }
+  
+  const visibleCards = filteredRoomCards.slice(startIndex, Math.min(endIndex, filteredRoomCards.length));
+  const checkedInput = document.querySelector('input[name="loai_id"]:checked');
+  
+  if (visibleCards.length > 0) {
+    const checkedCard = checkedInput ? checkedInput.closest('.room-type-card') : null;
+    const isCheckedVisible = checkedCard && visibleCards.includes(checkedCard);
+    
+    if (!isCheckedVisible) {
+      const firstInput = visibleCards[0].querySelector('input[name="loai_id"]');
+      if (firstInput) {
+        firstInput.checked = true;
+        loadPhong();
+        updatePrice();
+      }
+    }
+  }
+}
+
+function changePage(direction) {
+  if (filteredRoomCards.length === 0) {
+    return;
+  }
+  const totalPages = Math.max(Math.ceil(filteredRoomCards.length / itemsPerPage), 1);
+  const targetPage = Math.min(Math.max(currentPage + direction, 1), totalPages);
+  if (targetPage === currentPage) {
+    return;
+  }
+  currentPage = targetPage;
+  updatePagination();
+  scrollToRoomTypes();
+}
+
+function scrollToRoomTypes() {
+  const roomTypeSection = document.querySelector('.room-type-grid');
+  if (roomTypeSection) {
+    roomTypeSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+}
+
+function closeRoomFilterPanel() {
+  if (roomFilterPanel) {
+    roomFilterPanel.classList.remove('open');
+  }
+  if (roomFilterToggle) {
+    roomFilterToggle.classList.remove('active');
+  }
+}
+
+function initRoomFilterToggle() {
+  roomFilterPanel = document.getElementById('roomFilterPanel');
+  roomFilterToggle = document.getElementById('roomFilterToggle');
+  const priceFilter = document.getElementById('priceFilter');
+
+  if (!roomFilterPanel || !roomFilterToggle) {
+    return;
+  }
+
+  roomFilterToggle.addEventListener('click', (event) => {
+    event.preventDefault();
+    const willOpen = !roomFilterPanel.classList.contains('open');
+    if (willOpen) {
+      roomFilterPanel.classList.add('open');
+      roomFilterToggle.classList.add('active');
+    } else {
+      closeRoomFilterPanel();
+    }
+  });
+
+  document.addEventListener('click', (event) => {
+    if (!roomFilterPanel || !roomFilterToggle) {
+      return;
+    }
+    if (!roomFilterPanel.contains(event.target) && !roomFilterToggle.contains(event.target)) {
+      closeRoomFilterPanel();
+    }
+  });
+
+  if (priceFilter) {
+    priceFilter.addEventListener('change', () => {
+      closeRoomFilterPanel();
+    });
+  }
+}
+
 window.onload = function() {
   setNowDefaults();
   updatePrice();
   loadPhong();
+  initRoomTypePagination();
+  initRoomFilterToggle();
 };
+
 
 </script>
 {% endblock %}

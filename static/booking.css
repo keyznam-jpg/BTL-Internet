@@ -372,6 +372,231 @@
   box-shadow: 0 6px 16px rgba(46, 125, 50, 0.2);
 }
 
+/* ========== ROOM TYPE CONTROLS ========== */
+.room-type-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.room-type-header h3 {
+  margin: 0;
+}
+
+.room-filter-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.room-filter-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 50%;
+  border: 1px solid #2e7d32;
+  background: #ffffff;
+  color: #2e7d32;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 6px rgba(46, 125, 50, 0.12);
+}
+
+.room-filter-trigger i {
+  font-size: 16px;
+}
+
+.room-filter-trigger:hover {
+  background: #2e7d32;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.room-filter-trigger.active {
+  background: #2e7d32;
+  color: #ffffff;
+  box-shadow: 0 4px 14px rgba(46, 125, 50, 0.3);
+}
+
+.room-filter-trigger .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+  white-space: nowrap;
+}
+
+.room-filter-panel {
+  display: none;
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 220px;
+  padding: 16px;
+  background: linear-gradient(135deg, #f8fdf8 0%, #ffffff 100%);
+  border-radius: 12px;
+  border: 1px solid #e0e0e0;
+  box-shadow: 0 8px 24px rgba(46, 125, 50, 0.08);
+  z-index: 5;
+}
+
+.room-filter-panel.open {
+  display: block;
+  animation: fadeIn 0.2s ease;
+}
+
+.room-filter-panel .price-filter {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.price-filter {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: space-between;
+}
+
+.price-filter label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #2e7d32;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  margin: 0;
+}
+
+.price-filter select {
+  padding: 8px 32px 8px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  background: white;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%232e7d32' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+}
+
+.price-filter select:hover {
+  border-color: #2e7d32;
+  box-shadow: 0 2px 8px rgba(46, 125, 50, 0.1);
+}
+
+.price-filter select:focus {
+  outline: none;
+  border-color: #2e7d32;
+  box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.1);
+}
+
+/* ========== ROOM TYPE PAGINATION ========== */
+.room-type-pagination {
+  display: grid;
+  grid-template-columns: auto auto auto;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 24px;
+  padding: 16px 18px;
+  background: transparent;
+}
+
+.pagination-btn {
+  width: 52px;
+  height: 52px;
+  border: none;
+  background: linear-gradient(145deg, #7ecb82 0%, #1b5e20 100%);
+  color: #ffffff;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  transition: all 0.3s ease;
+  box-shadow: 0 12px 26px rgba(27, 94, 32, 0.28);
+}
+
+.pagination-btn:hover:not(:disabled) {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 32px rgba(27, 94, 32, 0.35);
+}
+
+.pagination-btn:disabled {
+  opacity: 1;
+  cursor: not-allowed;
+  background: linear-gradient(145deg, #dbeedc 0%, #bcd8be 100%);
+  color: #ffffff;
+  box-shadow: none;
+}
+
+.pagination-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.pagination-counter {
+  padding: 12px 30px;
+  border-radius: 999px;
+  border: 2px solid #2e7d32;
+  background: #ffffff;
+  color: #2e7d32;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  box-shadow: 0 10px 24px rgba(46, 125, 50, 0.2);
+}
+
+.pagination-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #225d35;
+}
+
+.pagination-text span#currentPage,
+.pagination-text span#totalPages {
+  color: #2e7d32;
+  font-weight: 700;
+}
+
+/* Hide pagination when not needed */
+.room-type-pagination.hidden {
+  display: none;
+}
+
+.room-type-card.hidden {
+  display: none;
+}
+
 /* ========== ROOM CARDS ========== */
 .rooms-loading {
   display: flex;

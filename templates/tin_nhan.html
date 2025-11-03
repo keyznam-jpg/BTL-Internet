@@ -272,6 +272,22 @@
         font-size: 1.2rem;
         flex-shrink: 0;
         box-shadow: 0 4px 12px -6px rgba(15, 23, 42, 0.3);
+        overflow: hidden;
+        position: relative;
+    }
+
+    .message-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        position: absolute;
+        top: 0;
+        left: 0;
+    }
+
+    .message-avatar i {
+        color: white;
+        z-index: 1;
     }
 
     .guest .message-avatar {
@@ -1486,11 +1502,12 @@
             const isVoucher = text.includes('voucher') || text.includes('Voucher') || text.includes('giảm giá');
             
             // Kiểm tra tin nhắn có cần gộp không (cùng người gửi trong vòng 2 phút)
+            // QUAN TRỌNG: Tin nhắn của nhân viên KHÔNG BAO GIỜ gộp nhóm (luôn hiển thị avatar + tên)
             const currentTime = new Date(msg.thoi_gian || Date.now()).getTime();
             const shouldGroup = state.lastMessageSender === sender && 
                                state.lastMessageTime && 
                                (currentTime - state.lastMessageTime < 120000) && // 2 phút
-                               !isSystem && !isVoucher;
+                               !isSystem && !isVoucher && !isStaffSender; // Nhân viên không bao giờ group
             
             state.lastMessageSender = sender;
             state.lastMessageTime = currentTime;
@@ -1504,8 +1521,22 @@
             if (isSystem) {
                 avatar.innerHTML = '<i class="fas fa-gift"></i>';
             } else if (isStaffSender) {
-                avatar.innerHTML = '<i class="fas fa-user-tie"></i>';
+                // Hiển thị avatar nhân viên nếu có
+                if (msg.avatar_nhan_vien) {
+                    const img = document.createElement('img');
+                    img.src = msg.avatar_nhan_vien;
+                    img.alt = msg.ten_nhan_vien || 'Nhân viên';
+                    img.onerror = function() {
+                        // Nếu load ảnh lỗi, hiển thị icon mặc định
+                        this.style.display = 'none';
+                        avatar.innerHTML = '<i class="fas fa-user-tie"></i>';
+                    };
+                    avatar.appendChild(img);
+                } else {
+                    avatar.innerHTML = '<i class="fas fa-user-tie"></i>';
+                }
             } else {
+                // Khách hàng giữ nguyên icon mặc định
                 avatar.innerHTML = '<i class="fas fa-user"></i>';
             }
 

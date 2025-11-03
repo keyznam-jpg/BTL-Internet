@@ -1202,9 +1202,14 @@ def persist_message(datphong_id, sender, content_dict_or_text, user_id=None):
 def serialize_message(msg):
     payload = build_message_payload(msg.noi_dung)
     staff_name = msg.nguoidung.ten if msg.nguoidung else ''
+    staff_avatar = ''
+    if msg.nguoidung and hasattr(msg.nguoidung, 'anh_dai_dien') and msg.nguoidung.anh_dai_dien:
+        staff_avatar = url_for('static', filename=msg.nguoidung.anh_dai_dien, _external=False)
+    
     guest_name = ''
     if msg.datphong and getattr(msg.datphong, 'khachhang', None):
         guest_name = msg.datphong.khachhang.ho_ten or ''
+    
     sender_role = (msg.nguoi_gui or '').lower()
     if sender_role in ('nhanvien', 'staff'):
         sender_name = staff_name or 'Nhân viên'
@@ -1214,13 +1219,15 @@ def serialize_message(msg):
         sender_name = 'Hệ thống'
     else:
         sender_name = staff_name or guest_name or ''
+    
     base = {
         'nguoi_gui': msg.nguoi_gui,
         'thoi_gian': msg.thoi_gian.strftime('%H:%M %d/%m'),
         'ten_nhan_vien': staff_name,
         'ten_khach': guest_name,
         'ten_khach_hang': guest_name,
-        'ten_nguoi_gui': sender_name
+        'ten_nguoi_gui': sender_name,
+        'avatar_nhan_vien': staff_avatar
     }
     if payload.get('type') == 'file':
         payload['url'] = url_for('static', filename=payload['path'], _external=False)

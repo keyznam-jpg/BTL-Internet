@@ -408,7 +408,9 @@
     });
 
     socket.on('new_message_from_guest', function(data) {
-        showToast('&#128172;', 'Tin nhắn mới', `Phòng ${data.phong}: "${data.noi_dung}"`);
+        // Lấy nội dung tin nhắn từ field đúng
+        const messageText = data.text || data.noi_dung || '(Tệp đính kèm)';
+        showToast('&#128172;', 'Tin nhắn mới', `Phòng ${data.phong}: "${messageText}"`);
         updateMessageBadge();
     });
 

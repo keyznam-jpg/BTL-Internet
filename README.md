@@ -1,8 +1,5 @@
 # 🏨 HỆ THỐNG QUẢN LÝ KHÁCH SẠN PTIT
 
-<div align="center">
-
-![Hotel Management System](static/img/logo.png)
 
 **Hệ thống quản lý khách sạn toàn diện - Bài tập lớn môn Internet và Giao thức**
 
@@ -1352,5 +1349,6 @@ Nếu bạn thấy dự án này hữu ích, hãy:
 *"Xây dựng giải pháp quản lý khách sạn hiện đại, chuyên nghiệp và bảo mật"*
 
 </div>
+
 
 

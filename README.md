@@ -585,6 +585,23 @@ Hệ thống Quản lý Khách sạn PTIT là một ứng dụng web toàn diệ
 
 </details>
 
+<details>
+<summary><b>🎭 26. Quản lý vai trò và phân quyền</b></summary>
+
+![Quản lý vai trò và phân quyền](screenshots/quanlyvaitrovaphanquyen.png)
+
+**Mô tả**: Giao diện quản lý vai trò (roles) và phân quyền (permissions) chi tiết cho từng vai trò. Admin có thể tạo vai trò mới, gán quyền cụ thể, và quản lý quyền truy cập của nhân viên theo vai trò.
+
+</details>
+
+---
+
+## 💻 CÀI ĐẶT VÀ CHẠY ỨNG DỤNG
+
+**Mô tả**: Giao diện chính cho khách hàng với các chức năng đặt phòng online, xem lịch sử, quản lý voucher.
+
+</details>
+
 ---
 
 ## 💻 CÀI ĐẶT VÀ CHẠY ỨNG DỤNG

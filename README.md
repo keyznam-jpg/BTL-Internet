@@ -1,8 +1,5 @@
 # 🏨 HỆ THỐNG QUẢN LÝ KHÁCH SẠN PTIT
 
-<div align="center">
-
-![Hotel Management System](static/img/logo.png)
 
 **Hệ thống quản lý khách sạn toàn diện - Bài tập lớn môn Internet và Giao thức**
 
@@ -189,8 +186,8 @@ Hệ thống Quản lý Khách sạn PTIT là một ứng dụng web toàn diệ
 ### 8. 🎁 Loyalty Program
 
 #### Tích điểm khách hàng
-- ⭐ **1,000 VNĐ = 1 điểm**
-- 💰 **100 điểm = 10,000 VNĐ giảm giá**
+- ⭐ **100,000 VNĐ = 1 điểm**
+- 💰 **1 điểm = 1% giảm giá**
 - 📊 Theo dõi điểm tích lũy real-time
 - 🏆 Xếp hạng khách hàng thân thiết
 
@@ -1369,4 +1366,6 @@ Nếu bạn thấy dự án này hữu ích, hãy:
 *"Xây dựng giải pháp quản lý khách sạn hiện đại, chuyên nghiệp và bảo mật"*
 
 </div>
+
+
 
